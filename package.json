@@ -14,7 +14,8 @@
     "db:studio": "prisma studio",
     "dispatch": "tsx src/index.ts",
     "import": "tsx src/scripts/import-data.ts",
-    "cache:showcase": "tsx scripts/cache-showcase.ts"
+    "cache:showcase": "tsx scripts/cache-showcase.ts",
+    "deploy": "bash deploy/deploy.sh"
   },
   "keywords": [
     "dispatch",
