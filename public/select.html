@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>选择园区派单 - 招商派单系统</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <div>
+        <h1>选择园区派单</h1>
+        <p>多选园区和员工，数量保持一致后自动生成派单</p>
+      </div>
+      <nav class="header-nav">
+        <a href="/">Excel 上传</a>
+        <a href="/select.html" class="active">选择园区</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- 步骤1: 数据加载 -->
+    <section class="card" id="step-load">
+      <div class="step-badge">步骤 1</div>
+      <h2>加载数据</h2>
+      <p class="hint">上传待派单客户数据 + 员工基础信息表，或直接加载示例数据</p>
+
+      <div class="upload-grid upload-grid-2">
+        <div class="upload-box" data-field="parks">
+          <div class="upload-icon">🏢</div>
+          <div class="upload-title">园区数据</div>
+          <div class="upload-desc">可选，含园区名称/地址</div>
+          <input type="file" accept=".xlsx,.xls" hidden>
+          <div class="file-name"></div>
+        </div>
+        <div class="upload-box" data-field="employees">
+          <div class="upload-icon">👤</div>
+          <div class="upload-title">员工基础信息表 <span class="required">*必填</span></div>
+          <div class="upload-desc">派单前主数据（非派单结果）</div>
+          <input type="file" accept=".xlsx,.xls" hidden>
+          <div class="file-name"></div>
+        </div>
+        <div class="upload-box" data-field="firstVisit">
+          <div class="upload-icon">📋</div>
+          <div class="upload-title">首访数据</div>
+          <input type="file" accept=".xlsx,.xls" hidden>
+          <div class="file-name"></div>
+        </div>
+        <div class="upload-box" data-field="project">
+          <div class="upload-icon">📊</div>
+          <div class="upload-title">项目数据</div>
+          <input type="file" accept=".xlsx,.xls" hidden>
+          <div class="file-name"></div>
+        </div>
+        <div class="upload-box" data-field="followUp">
+          <div class="upload-icon">🔄</div>
+          <div class="upload-title">回访数据</div>
+          <input type="file" accept=".xlsx,.xls" hidden>
+          <div class="file-name"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" id="load-demo-btn">加载演示数据（5园区+5员工）</button>
+        <button class="btn-secondary" id="load-sample-btn">加载完整数据</button>
+        <button class="btn-primary" id="parse-btn" disabled>
+          <span class="btn-text">解析数据</span>
+          <span class="btn-loading" hidden>解析中...</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 步骤2: 选择园区和员工 -->
+    <section class="card" id="step-select" hidden>
+      <div class="step-badge">步骤 2</div>
+      <h2>选择园区与员工</h2>
+      <p class="hint">园区表与员工表为独立主数据，园区不包含员工。多选后数量需一致，由派单规则自动匹配。</p>
+      <div class="pairing-status" id="pairing-status">
+        <span class="status-icon">⚠️</span>
+        已选园区: <strong id="park-count">0</strong> ·
+        已选员工: <strong id="emp-count">0</strong> ·
+        <span id="pairing-hint">数量需保持一致</span>
+      </div>
+
+      <div class="select-dual">
+        <div class="select-panel">
+          <div class="select-panel-header">
+            <span>园区列表</span>
+            <button type="button" class="link-btn" id="select-all-parks">全选</button>
+          </div>
+          <div class="select-list" id="park-list"></div>
+        </div>
+        <div class="select-panel">
+          <div class="select-panel-header">
+            <span>员工列表</span>
+            <button type="button" class="link-btn" id="select-all-employees">全选</button>
+          </div>
+          <div class="select-list" id="employee-list"></div>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <label>
+          派单模式
+          <select id="frontProjectMode">
+            <option value="RANDOM">随机分配</option>
+            <option value="CROSS_TYPE">交叉类型</option>
+            <option value="SAME_TYPE">同类型</option>
+          </select>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="enableDistance" checked>
+          启用通勤距离优化
+        </label>
+      </div>
+
+      <button class="btn-primary" id="dispatch-btn" disabled>
+        <span class="btn-text">生成派单结果</span>
+        <span class="btn-loading" hidden>派单中...</span>
+      </button>
+    </section>
+
+    <!-- 结果区 -->
+    <section class="card" id="result-section" hidden>
+      <div class="result-header">
+        <h2>派单结果</h2>
+        <button class="btn-secondary" id="export-btn">下载 Excel</button>
+      </div>
+      <div id="pairing-summary" class="pairing-summary"></div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="tabs">
+        <button class="tab active" data-tab="by-employee">按员工查看</button>
+        <button class="tab" data-tab="all-results">全部明细</button>
+        <button class="tab" data-tab="failed" id="failed-tab" hidden>未派单</button>
+      </div>
+      <div class="tab-content active" id="tab-by-employee"></div>
+      <div class="tab-content" id="tab-all-results"></div>
+      <div class="tab-content" id="tab-failed"></div>
+    </section>
+
+    <div class="error-toast" id="error-toast" hidden></div>
+  </main>
+
+  <footer class="footer">
+    <p>招商派单系统 v1.1 · 选择园区派单模式</p>
+  </footer>
+
+  <script src="/shared-results.js"></script>
+  <script src="/select.js"></script>
+</body>
+</html>

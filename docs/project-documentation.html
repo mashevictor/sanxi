@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>招商派单系统 - 项目说明文档</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --code-bg: #f1f5f9;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 48px 0;
+      margin-bottom: 32px;
+    }
+    header h1 { font-size: 2.2rem; margin-bottom: 8px; }
+    header p { opacity: 0.9; font-size: 1.1rem; }
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-top: 12px;
+      margin-right: 8px;
+    }
+    nav.toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+      position: sticky;
+      top: 16px;
+      z-index: 100;
+    }
+    nav.toc h3 { margin-bottom: 12px; color: var(--primary); }
+    nav.toc ol { padding-left: 20px; }
+    nav.toc li { margin: 6px 0; }
+    nav.toc a { color: var(--primary); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+    section h2 {
+      color: var(--primary);
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+    section h3 { font-size: 1.15rem; margin: 24px 0 12px; color: var(--text); }
+    section h4 { font-size: 1rem; margin: 16px 0 8px; color: var(--text-light); }
+    p { margin-bottom: 12px; }
+    ul, ol { margin: 12px 0 12px 24px; }
+    li { margin: 6px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+    }
+    th { background: var(--code-bg); font-weight: 600; }
+    tr:nth-child(even) { background: #fafbfc; }
+    code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+      font-size: 0.88em;
+    }
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 16px 0;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    pre code { background: none; color: inherit; padding: 0; }
+    .flow-diagram {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 16px 0;
+      text-align: center;
+      font-family: monospace;
+      line-height: 2;
+    }
+    .rule-card {
+      border-left: 4px solid var(--primary);
+      background: #f0f7ff;
+      padding: 16px 20px;
+      margin: 12px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .rule-card strong { color: var(--primary); }
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .tag-blue { background: #dbeafe; color: #1d4ed8; }
+    .tag-green { background: #dcfce7; color: #15803d; }
+    .tag-orange { background: #ffedd5; color: #c2410c; }
+    .tag-red { background: #fee2e2; color: #b91c1c; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .stat-card {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-card .number { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    .stat-card .label { color: var(--text-light); font-size: 0.9rem; }
+    .file-tree {
+      background: var(--code-bg);
+      padding: 20px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      line-height: 1.8;
+    }
+    .file-tree .dir { color: var(--primary); font-weight: 600; }
+    .file-tree .file { color: var(--text); }
+    .file-tree .comment { color: var(--text-light); }
+    footer {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-light);
+      font-size: 0.9rem;
+    }
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      header h1 { font-size: 1.6rem; }
+      section { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>招商派单系统</h1>
+    <p>基于 TypeScript 的智能客户拜访任务分配系统</p>
+    <span class="badge">v1.0.0</span>
+    <span class="badge">TypeScript</span>
+    <span class="badge">Prisma + SQLite</span>
+    <span class="badge">2026-06-14</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#overview">项目概述</a></li>
+      <li><a href="#business">业务背景与派单逻辑</a></li>
+      <li><a href="#architecture">系统架构</a></li>
+      <li><a href="#dataflow">数据流转</a></li>
+      <li><a href="#database">数据库设计</a></li>
+      <li><a href="#rules">派单规则引擎</a></li>
+      <li><a href="#structure">项目结构</a></li>
+      <li><a href="#api">核心模块说明</a></li>
+      <li><a href="#testdata">测试数据说明</a></li>
+      <li><a href="#usage">使用指南</a></li>
+      <li><a href="#roadmap">后续规划</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1. 项目概述 -->
+  <section id="overview">
+    <h2>1. 项目概述</h2>
+    <p>招商派单系统是一套面向招商拜访业务的智能任务分配系统。系统根据客户预约信息（类型、时间、园区、Plus次数等）和员工能力（职责、园区、单量容量等），自动将客户拜访任务分配给最合适的员工，同时兼顾通勤距离优化和特殊业务规则（指定人、放弃人、牵手单等）。</p>
+
+    <div class="grid-2" style="margin-top: 20px;">
+      <div class="stat-card">
+        <div class="number">45</div>
+        <div class="label">测试客户单</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">27</div>
+        <div class="label">可用员工</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">7</div>
+        <div class="label">匹配规则</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">5</div>
+        <div class="label">招商园区</div>
+      </div>
+    </div>
+
+    <h3>核心能力</h3>
+    <ul>
+      <li>支持三种客户类型：<span class="tag tag-blue">首访（前道）</span> <span class="tag tag-green">项目</span> <span class="tag tag-orange">回访（后道）</span></li>
+      <li>7 条硬性匹配规则 + 距离优化 + Plus 优先级排序</li>
+      <li>牵手单捆绑分配、指定人/放弃人特殊处理</li>
+      <li>Excel 数据导入导出，无缝对接现有工作流</li>
+      <li>前道+项目合并派单 / 后道独立派单双通道</li>
+    </ul>
+  </section>
+
+  <!-- 2. 业务背景 -->
+  <section id="business">
+    <h2>2. 业务背景与派单逻辑</h2>
+
+    <h3>2.1 业务场景</h3>
+    <p>招商团队每天需要拜访大量企业客户，客户按拜访阶段分为三类：</p>
+    <table>
+      <thead>
+        <tr><th>类型</th><th>说明</th><th>对应员工职责</th><th>数据来源</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="tag tag-blue">首访（前道）</span></td><td>首次拜访新客户</td><td>前道</td><td>首访数据.xlsx</td></tr>
+        <tr><td><span class="tag tag-green">项目</span></td><td>项目相关拜访</td><td>项目</td><td>项目数据.xlsx</td></tr>
+        <tr><td><span class="tag tag-orange">回访（后道）</span></td><td>后续回访跟进</td><td>后道</td><td>回访数据.xlsx</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.2 预约时段</h3>
+    <table>
+      <thead>
+        <tr><th>时段</th><th>时间范围</th><th>对应员工单量</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>上午</td><td>12:00 之前</td><td>上午单</td></tr>
+        <tr><td>下午1</td><td>12:00 - 14:30</td><td>下午单-1</td></tr>
+        <tr><td>下午2</td><td>14:30 之后</td><td>下午单-2</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.3 Plus 次数</h3>
+    <p>Plus 次数表示客户被拜访的累计次数，影响派单优先级：</p>
+    <ul>
+      <li><strong>Plus0（0次）</strong>：新客户，优先级最高</li>
+      <li><strong>Plus1（1次）</strong>：回访一次，优先级次之</li>
+      <li><strong>PlusN（2次及以上）</strong>：多次回访，优先级最低</li>
+    </ul>
+    <p>派单时先分配 Plus0/Plus1 客户给只具备 Plus0/Plus1 能力的员工，再分配 PlusN 客户。</p>
+
+    <h3>2.4 派单分组策略</h3>
+    <div class="rule-card">
+      <strong>前道 + 项目 → 合并派单</strong><br>
+      前道单和项目单合并为一个派单池，分配给同时负责"前道"和"项目"职责的员工。支持三种模式：
+      <ul>
+        <li><strong>交叉类型</strong>：员工上午接前道单、下午接项目单（或反之），不能两单同类型</li>
+        <li><strong>同类型</strong>：员工上下午接相同类型单</li>
+        <li><strong>随机</strong>：不做类型强制，随机分配（当前默认模式）</li>
+      </ul>
+    </div>
+    <div class="rule-card">
+      <strong>后道 → 独立派单</strong><br>
+      回访（后道）单单独派单，员工上下午都接后道单，不混合前道/项目单。
+    </div>
+
+    <h3>2.5 距离与通勤要求</h3>
+    <table>
+      <thead>
+        <tr><th>场景</th><th>通勤限制</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>上午+下午各一单</td><td>总通勤时间 ≤ 4 小时</td></tr>
+        <tr><td>全天仅一单</td><td>上午 ≤ 3h，下午 ≤ 3.5h（建议值）</td></tr>
+        <tr><td>上午1单+下午2单</td><td>总通勤 ≤ 4h，下午第二单 ≤ 1h</td></tr>
+        <tr><td>牵手单</td><td>不受通勤限制，整组分给同一员工</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 3. 系统架构 -->
+  <section id="architecture">
+    <h2>3. 系统架构</h2>
+    <div class="flow-diagram">
+      ┌─────────────┐     ┌──────────────┐     ┌─────────────────┐     ┌──────────────┐<br>
+      │  Excel 数据  │ ──▶ │  数据导入层   │ ──▶ │   派单引擎核心   │ ──▶ │  结果输出层   │<br>
+      │  (4个文件)   │     │ excel-importer│     │ dispatch-engine │     │ Excel / 报告  │<br>
+      └─────────────┘     └──────────────┘     └─────────────────┘     └──────────────┘<br>
+                                    │                    │<br>
+                                    ▼                    ▼<br>
+                            ┌──────────────┐     ┌─────────────────┐<br>
+                            │  数据解析层   │     │   匹配规则引擎   │<br>
+                            │   parsers    │     │   match-rules   │<br>
+                            └──────────────┘     └─────────────────┘<br>
+                                                          │<br>
+                                                          ▼<br>
+                                                  ┌─────────────────┐<br>
+                                                  │   通勤估算模块   │<br>
+                                                  │     commute     │<br>
+                                                  └─────────────────┘<br>
+    </div>
+
+    <h3>技术栈</h3>
+    <table>
+      <thead>
+        <tr><th>层级</th><th>技术选型</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>语言</td><td>TypeScript 5.8</td><td>类型安全，便于维护扩展</td></tr>
+        <tr><td>运行时</td><td>Node.js + tsx</td><td>开发热加载，生产编译</td></tr>
+        <tr><td>数据库</td><td>Prisma + SQLite</td><td>开发用 SQLite，可切换 PostgreSQL</td></tr>
+        <tr><td>Excel</td><td>xlsx (SheetJS)</td><td>读写 .xlsx / .xls 格式</td></tr>
+        <tr><td>ORM</td><td>Prisma Client</td><td>类型安全的数据库访问</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 4. 数据流转 -->
+  <section id="dataflow">
+    <h2>4. 数据流转</h2>
+
+    <h3>4.1 完整数据流</h3>
+    <div class="flow-diagram" style="text-align: left; line-height: 2.2;">
+      <strong>阶段一：数据输入</strong><br>
+      &nbsp;&nbsp;首访数据.xlsx ──┐<br>
+      &nbsp;&nbsp;项目数据.xlsx ──┼──▶ ExcelImporter.importAllData()<br>
+      &nbsp;&nbsp;回访数据.xlsx ──┤&nbsp;&nbsp;&nbsp;&nbsp;├── 解析字段、时段、Plus次数<br>
+      &nbsp;&nbsp;派单员工表.xls ──┘&nbsp;&nbsp;&nbsp;&nbsp;├── 识别牵手单分组<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── 输出 Customer[] + Employee[]<br><br>
+
+      <strong>阶段二：派单处理</strong><br>
+      &nbsp;&nbsp;Customer[] + Employee[] ──▶ DispatchEngine.dispatch()<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;├── 按职责分组（前道+项目 / 后道）<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;├── 处理牵手单（优先整组分配）<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;├── Plus 优先级排序（Plus0 → Plus1 → PlusN）<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;├── 逐单匹配（7条规则过滤 + 评分）<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;├── 通勤距离优化<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;└── 输出 DispatchBatch（含结果 + 统计）<br><br>
+
+      <strong>阶段三：结果输出</strong><br>
+      &nbsp;&nbsp;DispatchBatch ──▶ formatDispatchReport() → 控制台报告<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──▶ exportDispatchResults() → 派单结果.xlsx<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──▶ (未来) 写入数据库 dispatch_results 表
+    </div>
+
+    <h3>4.2 客户数据字段映射</h3>
+    <table>
+      <thead>
+        <tr><th>Excel 列名</th><th>系统字段</th><th>类型</th><th>转换逻辑</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>企业全称 *</td><td>companyName</td><td>string</td><td>直接映射</td></tr>
+        <tr><td>首访/项目/回访+日期时间</td><td>appointmentTime</td><td>Date</td><td>parseDateTime()</td></tr>
+        <tr><td>首访/项目/回访+地址</td><td>address</td><td>string</td><td>直接映射</td></tr>
+        <tr><td>招商园区</td><td>parkName → parkId</td><td>string/int</td><td>自动创建园区 ID</td></tr>
+        <tr><td>首访/项目/回访PlusN次</td><td>plusCount, plusLevel</td><td>int/enum</td><td>parsePlusCount() → getPlusLevel()</td></tr>
+        <tr><td>指定人</td><td>designatedPerson</td><td>string?</td><td>直接映射</td></tr>
+        <tr><td>放弃人</td><td>rejectedPerson</td><td>string?</td><td>直接映射</td></tr>
+        <tr><td>备注</td><td>remark, isHandInHand</td><td>string/bool</td><td>detectHandInHand()</td></tr>
+        <tr><td>(推导)</td><td>timeSlot</td><td>enum</td><td>parseTimeSlot() 根据时间判断</td></tr>
+        <tr><td>(推导)</td><td>customerType</td><td>enum</td><td>根据来源文件确定</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.3 员工数据字段映射</h3>
+    <table>
+      <thead>
+        <tr><th>Excel 列</th><th>系统字段</th><th>类型</th><th>转换逻辑</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>姓名</td><td>name</td><td>string</td><td>直接映射</td></tr>
+        <tr><td>地区</td><td>cityName → cityId</td><td>string/int</td><td>自动创建城市 ID</td></tr>
+        <tr><td>招商园区</td><td>parkName → parkId</td><td>string/int</td><td>自动创建园区 ID</td></tr>
+        <tr><td>职责</td><td>roles</td><td>EmployeeRole[]</td><td>parseEmployeeRoles() "前道,项目" → [FRONT, PROJECT]</td></tr>
+        <tr><td>状态</td><td>status</td><td>enum</td><td>parseEmployeeStatus() "正常" → ACTIVE</td></tr>
+        <tr><td>出发地址</td><td>departureAddress</td><td>string</td><td>直接映射</td></tr>
+        <tr><td>回访PlusN次</td><td>plusCapabilities</td><td>JSON</td><td>parsePlusCapabilities()</td></tr>
+        <tr><td>单量</td><td>orderCapacity</td><td>TimeSlot[]</td><td>parseOrderCapacity() "上午单,下午单-1" → [MORNING, AFTERNOON_1]</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 5. 数据库设计 -->
+  <section id="database">
+    <h2>5. 数据库设计</h2>
+    <p>系统使用 Prisma ORM 管理数据库，开发环境默认 SQLite，生产可切换 PostgreSQL。完整 SQL 参考见 <code>database/schema.sql</code>，Prisma Schema 见 <code>prisma/schema.prisma</code>。</p>
+
+    <h3>5.1 ER 关系图</h3>
+    <div class="flow-diagram" style="text-align: left;">
+      cities (城市)<br>
+      &nbsp;&nbsp;├── employees.city_id<br>
+      &nbsp;&nbsp;└── customers.city_id<br><br>
+      investment_parks (招商园区)<br>
+      &nbsp;&nbsp;├── employees.park_id<br>
+      &nbsp;&nbsp;└── customers.park_id<br><br>
+      employees (员工) ──▶ dispatch_results.employee_id<br>
+      customers (客户) ──▶ dispatch_results.customer_id<br>
+      dispatch_batches (派单批次) ──▶ dispatch_results.batch_id<br>
+      system_configs (系统配置)
+    </div>
+
+    <h3>5.2 核心表结构</h3>
+
+    <h4>customers（客户/订单表）</h4>
+    <table>
+      <thead>
+        <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>id</td><td>INT PK</td><td>主键</td></tr>
+        <tr><td>company_name</td><td>VARCHAR(200)</td><td>企业全称</td></tr>
+        <tr><td>address</td><td>TEXT</td><td>拜访地址</td></tr>
+        <tr><td>customer_type</td><td>ENUM</td><td>FIRST_VISIT / PROJECT / FOLLOW_UP</td></tr>
+        <tr><td>appointment_time</td><td>TIMESTAMP</td><td>预约日期时间</td></tr>
+        <tr><td>time_slot</td><td>ENUM</td><td>MORNING / AFTERNOON_1 / AFTERNOON_2</td></tr>
+        <tr><td>city_id</td><td>INT FK</td><td>关联城市</td></tr>
+        <tr><td>park_id</td><td>INT FK</td><td>关联招商园区</td></tr>
+        <tr><td>plus_count</td><td>INT</td><td>Plus 次数 (0, 1, 2...)</td></tr>
+        <tr><td>designated_person</td><td>VARCHAR(50)</td><td>指定人（可选）</td></tr>
+        <tr><td>rejected_person</td><td>VARCHAR(50)</td><td>放弃人（可选）</td></tr>
+        <tr><td>is_hand_in_hand</td><td>BOOLEAN</td><td>是否牵手单</td></tr>
+        <tr><td>hand_in_hand_group</td><td>VARCHAR(50)</td><td>牵手单组 ID</td></tr>
+        <tr><td>dispatch_status</td><td>ENUM</td><td>PENDING / ASSIGNED / CONFIRMED / COMPLETED</td></tr>
+      </tbody>
+    </table>
+
+    <h4>employees（员工表）</h4>
+    <table>
+      <thead>
+        <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>id</td><td>INT PK</td><td>主键</td></tr>
+        <tr><td>name</td><td>VARCHAR(50)</td><td>员工姓名</td></tr>
+        <tr><td>city_id</td><td>INT FK</td><td>所在城市</td></tr>
+        <tr><td>park_id</td><td>INT FK</td><td>负责招商园区</td></tr>
+        <tr><td>roles</td><td>JSON</td><td>职责数组 ["FRONT","PROJECT"] 或 ["BACK"]</td></tr>
+        <tr><td>status</td><td>ENUM</td><td>ACTIVE / INACTIVE / LEAVE</td></tr>
+        <tr><td>departure_address</td><td>TEXT</td><td>出发地址</td></tr>
+        <tr><td>plus_capabilities</td><td>JSON</td><td>Plus 能力 {"BACK":["Plus0","Plus1","PlusN"]}</td></tr>
+        <tr><td>order_capacity</td><td>JSON</td><td>单量容量 ["MORNING","AFTERNOON_1"]</td></tr>
+      </tbody>
+    </table>
+
+    <h4>dispatch_results（派单结果表）</h4>
+    <table>
+      <thead>
+        <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>id</td><td>INT PK</td><td>主键</td></tr>
+        <tr><td>batch_id</td><td>INT FK</td><td>派单批次</td></tr>
+        <tr><td>customer_id</td><td>INT FK</td><td>客户</td></tr>
+        <tr><td>employee_id</td><td>INT FK</td><td>分配员工</td></tr>
+        <tr><td>commute_minutes</td><td>INT</td><td>预估通勤时间（分钟）</td></tr>
+        <tr><td>match_score</td><td>DECIMAL</td><td>匹配得分</td></tr>
+        <tr><td>match_details</td><td>JSON</td><td>各规则匹配详情</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 6. 派单规则 -->
+  <section id="rules">
+    <h2>6. 派单规则引擎</h2>
+    <p>派单引擎按优先级依次执行以下规则，所有规则必须同时满足才能分配（硬性约束），之后按评分和通勤距离选择最优员工。</p>
+
+    <div class="rule-card">
+      <strong>规则 1：城市匹配</strong><br>
+      客户所在城市必须和员工所在城市一致。例：上海客户 → 上海员工。
+    </div>
+    <div class="rule-card">
+      <strong>规则 2：职责匹配</strong><br>
+      客户类型必须对应员工职责：首访→前道、项目→项目、回访→后道。
+    </div>
+    <div class="rule-card">
+      <strong>规则 3：时段/单量匹配</strong><br>
+      客户预约时段必须在员工单量容量内。例：上午客户 → 有"上午单"容量的员工。
+    </div>
+    <div class="rule-card">
+      <strong>规则 4：指定人</strong><br>
+      若客户有指定人，且指定人在候选员工列表中，<strong>必须</strong>分配给该指定人；若不在列表中，可分配给任何人。
+    </div>
+    <div class="rule-card">
+      <strong>规则 5：放弃人</strong><br>
+      若客户有放弃人，且放弃人在候选列表中，<strong>不能</strong>分配给该放弃人。
+    </div>
+    <div class="rule-card">
+      <strong>规则 6：招商园区匹配</strong><br>
+      客户所属招商园区必须和员工负责的园区一致。
+    </div>
+    <div class="rule-card">
+      <strong>规则 7：Plus 次数匹配</strong><br>
+      客户的 Plus 等级必须在员工对应职责的 Plus 能力范围内。
+    </div>
+
+    <h3>6.1 优先级排序</h3>
+    <ol>
+      <li><strong>硬性规则</strong>：上述 7 条规则全部通过</li>
+      <li><strong>指定人加分</strong>：+50 分</li>
+      <li><strong>Plus 优先级</strong>：Plus0 先于 Plus1 先于 PlusN 分配</li>
+      <li><strong>Plus 能力匹配</strong>：优先分配给只具备 Plus0/Plus1 的员工（+20/+15 分）</li>
+      <li><strong>负载均衡</strong>：已分配单数多的员工扣分（-5/单）</li>
+      <li><strong>通勤优化</strong>：在满足以上条件后，选择通勤时间最短的组合</li>
+    </ol>
+
+    <h3>6.2 特殊规则</h3>
+    <table>
+      <thead>
+        <tr><th>特殊场景</th><th>处理方式</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>牵手单</td><td>备注含"牵手单"的客户整组分配给同一员工，不受通勤限制</td></tr>
+        <tr><td>指定人（刘帅）</td><td>江苏镇江项目单必须分给刘帅</td></tr>
+        <tr><td>放弃人（黄健）</td><td>江苏徐州项目单不能分给黄健</td></tr>
+        <tr><td>下午跑2单（姚焕）</td><td>姚焕有下午单-2容量，可接下午第二单</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 7. 项目结构 -->
+  <section id="structure">
+    <h2>7. 项目结构</h2>
+    <div class="file-tree">
+      <span class="dir">派单系统/</span><br>
+      ├── <span class="file">package.json</span> <span class="comment"># 项目配置与依赖</span><br>
+      ├── <span class="file">tsconfig.json</span> <span class="comment"># TypeScript 编译配置</span><br>
+      ├── <span class="file">.env</span> <span class="comment"># 环境变量（数据库连接）</span><br>
+      │<br>
+      ├── <span class="dir">prisma/</span><br>
+      │&nbsp;&nbsp; └── <span class="file">schema.prisma</span> <span class="comment"># Prisma 数据库模型定义</span><br>
+      │<br>
+      ├── <span class="dir">database/</span><br>
+      │&nbsp;&nbsp; └── <span class="file">schema.sql</span> <span class="comment"># SQL 建表脚本（PostgreSQL 参考）</span><br>
+      │<br>
+      ├── <span class="dir">src/</span><br>
+      │&nbsp;&nbsp; ├── <span class="file">index.ts</span> <span class="comment"># 系统入口，执行完整派单流程</span><br>
+      │&nbsp;&nbsp; ├── <span class="dir">types/</span><br>
+      │&nbsp;&nbsp; │&nbsp;&nbsp; └── <span class="file">index.ts</span> <span class="comment"># 核心类型、枚举、接口定义</span><br>
+      │&nbsp;&nbsp; ├── <span class="dir">utils/</span><br>
+      │&nbsp;&nbsp; │&nbsp;&nbsp; ├── <span class="file">parsers.ts</span> <span class="comment"># 数据解析（时段、Plus、职责等）</span><br>
+      │&nbsp;&nbsp; │&nbsp;&nbsp; └── <span class="file">commute.ts</span> <span class="comment"># 通勤时间估算</span><br>
+      │&nbsp;&nbsp; └── <span class="dir">services/</span><br>
+      │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── <span class="file">excel-importer.ts</span> <span class="comment"># Excel 导入导出</span><br>
+      │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── <span class="file">match-rules.ts</span> <span class="comment"># 7条匹配规则</span><br>
+      │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── <span class="file">dispatch-engine.ts</span> <span class="comment"># 派单引擎核心</span><br>
+      │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; └── <span class="file">index.ts</span> <span class="comment"># 服务层统一导出</span><br>
+      │<br>
+      ├── <span class="dir">docs/</span><br>
+      │&nbsp;&nbsp; └── <span class="file">project-documentation.html</span> <span class="comment"># 本文档</span><br>
+      │<br>
+      ├── <span class="file">首访数据.xlsx</span> <span class="comment"># 测试数据 - 前道客户</span><br>
+      ├── <span class="file">项目数据.xlsx</span> <span class="comment"># 测试数据 - 项目客户</span><br>
+      ├── <span class="file">回访数据.xlsx</span> <span class="comment"># 测试数据 - 后道客户</span><br>
+      ├── <span class="file">派单员工表 (1).xls</span> <span class="comment"># 测试数据 - 员工信息</span><br>
+      ├── <span class="file">派单逻辑.pptx</span> <span class="comment"># 业务规则说明</span><br>
+      └── <span class="file">派单结果.xlsx</span> <span class="comment"># 运行后生成的派单结果</span>
+    </div>
+  </section>
+
+  <!-- 8. 核心模块 -->
+  <section id="api">
+    <h2>8. 核心模块说明</h2>
+
+    <h3>8.1 DispatchEngine（派单引擎）</h3>
+    <pre><code>import { DispatchEngine } from './services/dispatch-engine';
+
+const engine = new DispatchEngine({
+  frontProjectMode: FrontProjectMode.RANDOM,  // 前道+项目派单模式
+  maxTotalCommuteMinutes: 240,                 // 总通勤上限 4h
+  enableDistanceOptimization: true,            // 启用距离优化
+  allowCommuteOverridePlus: true,              // 允许通勤覆盖Plus优先级
+});
+
+const batch = engine.dispatch(customers, employees);
+// batch.results     → 派单结果数组
+// batch.statistics  → 统计数据</code></pre>
+
+    <h3>8.2 ExcelImporter（数据导入）</h3>
+    <pre><code>import { importAllData, exportDispatchResults } from './services/excel-importer';
+
+// 导入所有测试 Excel 数据
+const data = importAllData('./data目录');
+// data.customers  → Customer[]
+// data.employees  → Employee[]
+// data.stats      → 导入统计
+
+// 导出派单结果
+exportDispatchResults(results, './派单结果.xlsx');</code></pre>
+
+    <h3>8.3 MatchRules（匹配规则）</h3>
+    <pre><code>import { findEligibleEmployees, sortCustomersByPlusPriority } from './services/match-rules';
+
+// 查找符合所有规则的员工（按评分排序）
+const eligible = findEligibleEmployees(customer, employees, assignments);
+
+// 按 Plus 优先级排序客户
+const sorted = sortCustomersByPlusPriority(customers);</code></pre>
+
+    <h3>8.4 类型定义</h3>
+    <pre><code>// 核心枚举
+CustomerType: FIRST_VISIT | PROJECT | FOLLOW_UP
+TimeSlot:     MORNING | AFTERNOON_1 | AFTERNOON_2
+EmployeeRole: FRONT | PROJECT | BACK
+PlusLevel:    Plus0 | Plus1 | PlusN
+
+// 核心接口
+Customer    → 客户拜访单
+Employee    → 派单员工
+DispatchResult → 单条派单结果
+DispatchBatch  → 一次派单的完整结果
+DispatchConfig → 派单配置参数</code></pre>
+  </section>
+
+  <!-- 9. 测试数据 -->
+  <section id="testdata">
+    <h2>9. 测试数据说明</h2>
+
+    <h3>9.1 数据概览</h3>
+    <table>
+      <thead>
+        <tr><th>文件</th><th>记录数</th><th>类型</th><th>园区分布</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>首访数据.xlsx</td><td>4</td><td>前道</td><td>加盟-金山资本现代产业园</td></tr>
+        <tr><td>项目数据.xlsx</td><td>4</td><td>项目</td><td>山东济南(2)、江苏徐州(1)、江苏镇江(1)</td></tr>
+        <tr><td>回访数据.xlsx</td><td>37</td><td>后道</td><td>加盟-金山(30)、宝山高新(7)</td></tr>
+        <tr><td>派单员工表.xls</td><td>27</td><td>员工</td><td>5个园区，前道+项目(6人)、后道(21人)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>9.2 运行结果（2026-06-14）</h3>
+    <table>
+      <thead>
+        <tr><th>指标</th><th>数值</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>客户总数</td><td>45</td></tr>
+        <tr><td>成功派单</td><td>35（77.8%）</td></tr>
+        <tr><td>未派单</td><td>10（园区/时段无匹配员工）</td></tr>
+        <tr><td>平均通勤</td><td>26 分钟</td></tr>
+        <tr><td>最大通勤</td><td>45 分钟</td></tr>
+        <tr><td>牵手单</td><td>1 组（2单）成功捆绑分配</td></tr>
+      </tbody>
+    </table>
+    <p>未派单的 10 条记录主要原因是：首访（前道）客户需要"前道"职责员工，但测试数据中前道+项目员工仅 6 人且园区不匹配；部分宝山高新 Plus0 客户无对应能力的员工等。这符合业务规则的预期行为。</p>
+  </section>
+
+  <!-- 10. 使用指南 -->
+  <section id="usage">
+    <h2>10. 使用指南</h2>
+
+    <h3>10.1 环境准备</h3>
+    <pre><code># 安装 Node.js 18+ 后执行
+cd 派单系统
+npm install
+
+# (可选) 初始化数据库
+npm run db:generate
+npm run db:push</code></pre>
+
+    <h3>10.2 运行派单</h3>
+    <pre><code># 使用测试 Excel 数据执行派单
+npm run dispatch
+
+# 输出:
+# 1. 控制台派单报告
+# 2. 派单结果.xlsx 文件</code></pre>
+
+    <h3>10.3 开发调试</h3>
+    <pre><code># TypeScript 编译
+npm run build
+
+# 编译后运行
+npm start
+
+# 开发模式（热加载）
+npm run dev</code></pre>
+
+    <h3>10.4 自定义派单配置</h3>
+    <pre><code>const engine = new DispatchEngine({
+  frontProjectMode: FrontProjectMode.CROSS_TYPE,  // 交叉类型模式
+  maxTotalCommuteMinutes: 180,                   // 缩短通勤限制到3小时
+  maxMorningCommuteMinutes: 120,                 // 上午单程2小时
+  enableDistanceOptimization: false,             // 关闭距离优化
+});</code></pre>
+  </section>
+
+  <!-- 11. 后续规划 -->
+  <section id="roadmap">
+    <h2>11. 后续规划</h2>
+    <table>
+      <thead>
+        <tr><th>阶段</th><th>功能</th><th>优先级</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Phase 1（当前）</td><td>框架搭建、规则引擎、Excel 导入导出</td><td><span class="tag tag-green">已完成</span></td></tr>
+        <tr><td>Phase 2</td><td>Web 管理界面（客户录入、派单操作、结果查看）</td><td><span class="tag tag-blue">高</span></td></tr>
+        <tr><td>Phase 3</td><td>高德/百度地图 API 精确通勤计算</td><td><span class="tag tag-blue">高</span></td></tr>
+        <tr><td>Phase 4</td><td>数据库持久化、历史派单查询、数据统计</td><td><span class="tag tag-orange">中</span></td></tr>
+        <tr><td>Phase 5</td><td>手动调单、派单审批流程</td><td><span class="tag tag-orange">中</span></td></tr>
+        <tr><td>Phase 6</td><td>多城市扩展、权限管理、消息通知</td><td><span class="tag tag-red">低</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<footer>
+  <p>招商派单系统 v1.0.0 · 项目说明文档 · 生成日期 2026-06-14</p>
+</footer>
+
+</body>
+</html>

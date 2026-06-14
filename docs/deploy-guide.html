@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>招商派单系统 - 服务器部署指南</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --info: #0284c7;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --code-bg: #0f172a;
+      --code-text: #e2e8f0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+    }
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 24px 64px; }
+    header {
+      background: linear-gradient(135deg, #312e81 0%, var(--primary) 55%, #6366f1 100%);
+      color: white;
+      padding: 56px 0 48px;
+      margin-bottom: 32px;
+    }
+    header h1 { font-size: 2.25rem; margin-bottom: 10px; font-weight: 800; }
+    header p { opacity: 0.92; font-size: 1.05rem; max-width: 720px; }
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      margin-top: 16px;
+      margin-right: 8px;
+    }
+    nav.toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 28px;
+      position: sticky;
+      top: 14px;
+      z-index: 50;
+      box-shadow: 0 4px 24px rgba(15,23,42,.06);
+    }
+    nav.toc h3 { margin-bottom: 14px; color: var(--primary); font-size: 1rem; }
+    nav.toc ol { padding-left: 22px; columns: 2; column-gap: 32px; }
+    nav.toc li { margin: 5px 0; break-inside: avoid; }
+    nav.toc a { color: var(--primary); text-decoration: none; font-size: 0.92rem; }
+    nav.toc a:hover { text-decoration: underline; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 32px 34px;
+      margin-bottom: 22px;
+      box-shadow: 0 2px 12px rgba(15,23,42,.04);
+    }
+    section h2 {
+      color: var(--primary-dark);
+      font-size: 1.45rem;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+    section h3 { font-size: 1.12rem; margin: 26px 0 10px; color: var(--text); }
+    section h4 { font-size: 0.98rem; margin: 18px 0 8px; color: var(--text-light); }
+    p { margin-bottom: 12px; }
+    ul, ol { margin: 10px 0 14px 24px; }
+    li { margin: 5px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f8fafc; font-weight: 700; color: var(--primary-dark); }
+    tr:nth-child(even) td { background: #fafbfc; }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 0.88em;
+    }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 18px 20px;
+      border-radius: 10px;
+      overflow-x: auto;
+      margin: 14px 0;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+    pre code { background: none; color: inherit; padding: 0; }
+    .alert {
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.92rem;
+    }
+    .alert-info { background: #eff6ff; border-left: 4px solid var(--info); color: #0c4a6e; }
+    .alert-warn { background: #fffbeb; border-left: 4px solid var(--warning); color: #92400e; }
+    .alert-danger { background: #fef2f2; border-left: 4px solid var(--danger); color: #991b1b; }
+    .alert-success { background: #f0fdf4; border-left: 4px solid var(--success); color: #166534; }
+    .flow {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      margin: 18px 0; font-size: 0.88rem;
+    }
+    .flow-step {
+      background: #eef2ff; color: var(--primary-dark);
+      padding: 8px 14px; border-radius: 8px; font-weight: 600;
+    }
+    .flow-arrow { color: var(--text-light); font-weight: 700; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    .card-mini {
+      border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+      background: #fafbfc;
+    }
+    .card-mini h4 { margin-top: 0; color: var(--primary); }
+    .checklist { list-style: none; margin-left: 0; }
+    .checklist li::before { content: "☐ "; color: var(--primary); font-weight: 700; }
+    footer {
+      text-align: center; color: var(--text-light); font-size: 0.85rem;
+      padding: 32px 0 16px;
+    }
+    @media (max-width: 800px) {
+      nav.toc ol { columns: 1; }
+      .grid-2 { grid-template-columns: 1fr; }
+      header h1 { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>招商派单系统 · 服务器部署指南</h1>
+    <p>本文档说明如何将派单系统从本地开发环境部署到 Linux 云服务器，包含环境准备、上传代码、构建运行、Nginx 反代、进程守护与日常运维。</p>
+    <span class="badge">Node.js 18+</span>
+    <span class="badge">默认端口 3004</span>
+    <span class="badge">Express + 静态页面</span>
+    <span class="badge">PM2 守护</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#overview">1. 系统概览</a></li>
+      <li><a href="#requirements">2. 服务器要求</a></li>
+      <li><a href="#structure">3. 项目结构与文件清单</a></li>
+      <li><a href="#upload">4. 上传代码到服务器</a></li>
+      <li><a href="#install">5. 安装依赖与构建</a></li>
+      <li><a href="#env">6. 环境变量配置</a></li>
+      <li><a href="#run">7. 启动服务</a></li>
+      <li><a href="#pm2">8. PM2 进程守护（推荐）</a></li>
+      <li><a href="#nginx">9. Nginx 反向代理与域名</a></li>
+      <li><a href="#https">10. HTTPS 证书</a></li>
+      <li><a href="#firewall">11. 防火墙与安全</a></li>
+      <li><a href="#verify">12. 部署验证</a></li>
+      <li><a href="#update">13. 更新与回滚</a></li>
+      <li><a href="#troubleshoot">14. 常见问题</a></li>
+      <li><a href="#checklist">15. 部署检查清单</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 概览 -->
+  <section id="overview">
+    <h2>1. 系统概览</h2>
+    <p>派单系统是一个基于 <strong>TypeScript + Express</strong> 的 Web 应用，主要提供两个页面：</p>
+    <table>
+      <tr><th>页面</th><th>路径</th><th>功能</th></tr>
+      <tr><td>Excel 上传派单</td><td><code>/</code> 或 <code>/index.html</code></td><td>上传 Excel 文件，执行批量自动派单</td></tr>
+      <tr><td>选择公司派单看板</td><td><code>/match.html</code></td><td>左侧勾选公司，AI/规则自动匹配员工，支持增量匹配、一人多单、员工行程</td></tr>
+    </table>
+
+    <h3>架构示意</h3>
+    <div class="flow">
+      <span class="flow-step">用户浏览器</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Nginx :80/443</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Node.js Express :3004</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Excel 数据 / 内存会话</span>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>说明：</strong>当前 Web 派单使用<strong>内存会话</strong>（约 30 分钟过期），重启服务后需重新加载数据。DeepSeek API 为可选功能，未配置或余额不足时自动使用本地通勤估算。
+    </div>
+    <div class="alert alert-info" style="margin-top:20px">
+      <strong>在线阅读：</strong>服务启动后也可通过浏览器访问
+      <code>http://你的域名/docs/deploy-guide.html</code>
+      （本地开发：<code>http://localhost:3004/docs/deploy-guide.html</code>）
+    </div>
+  </section>
+
+  <!-- 2 要求 -->
+  <section id="requirements">
+    <h2>2. 服务器要求</h2>
+    <table>
+      <tr><th>项目</th><th>最低配置</th><th>推荐配置</th></tr>
+      <tr><td>操作系统</td><td>Ubuntu 20.04+ / CentOS 7+ / Debian 11+</td><td>Ubuntu 22.04 LTS</td></tr>
+      <tr><td>CPU / 内存</td><td>1 核 / 1 GB</td><td>2 核 / 2 GB</td></tr>
+      <tr><td>磁盘</td><td>5 GB 可用空间</td><td>20 GB</td></tr>
+      <tr><td>Node.js</td><td colspan="2">18.x 或 20.x LTS（必须）</td></tr>
+      <tr><td>网络</td><td colspan="2">开放 80、443（对外）；3004 仅本机或内网</td></tr>
+    </table>
+
+    <h3>需要安装的软件</h3>
+    <pre><code># Ubuntu / Debian 示例
+sudo apt update
+sudo apt install -y curl git nginx
+
+# 安装 Node.js 20 LTS（推荐用 nvm 或 NodeSource）
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# 验证
+node -v    # 应显示 v18+ 或 v20+
+npm -v</code></pre>
+  </section>
+
+  <!-- 3 结构 -->
+  <section id="structure">
+    <h2>3. 项目结构与文件清单</h2>
+    <p>部署时，请将整个项目目录上传到服务器，建议路径：<code>/opt/dispatch-system</code> 或 <code>/home/你的用户名/派单系统</code>。</p>
+
+    <h3>必须上传的文件/目录</h3>
+    <table>
+      <tr><th>路径</th><th>说明</th><th>是否必须</th></tr>
+      <tr><td><code>src/</code></td><td>TypeScript 源代码</td><td>是（用于构建）</td></tr>
+      <tr><td><code>public/</code></td><td>前端页面（index.html、match.html 等）</td><td>是</td></tr>
+      <tr><td><code>package.json</code>、<code>package-lock.json</code></td><td>依赖声明</td><td>是</td></tr>
+      <tr><td><code>tsconfig.json</code></td><td>TypeScript 编译配置</td><td>是</td></tr>
+      <tr><td><code>园区数据.xlsx</code></td><td>园区主数据</td><td>是（示例/默认数据）</td></tr>
+      <tr><td><code>首访数据.xlsx</code></td><td>首访客户</td><td>至少一份客户表</td></tr>
+      <tr><td><code>项目数据.xlsx</code></td><td>项目客户</td><td>至少一份客户表</td></tr>
+      <tr><td><code>回访数据.xlsx</code></td><td>回访客户</td><td>至少一份客户表</td></tr>
+      <tr><td><code>派单员工表 (1).xls</code></td><td>员工基础信息</td><td>是</td></tr>
+      <tr><td><code>.env</code></td><td>环境变量（端口、API Key）</td><td>是（在服务器上创建，勿泄露）</td></tr>
+    </table>
+
+    <h3>不需要上传（服务器上重新生成）</h3>
+    <ul>
+      <li><code>node_modules/</code> — 在服务器执行 <code>npm install</code> 生成</li>
+      <li><code>dist/</code> — 在服务器执行 <code>npm run build</code> 生成</li>
+    </ul>
+
+    <div class="alert alert-warn">
+      <strong>注意：</strong><code>.env</code> 含有 DeepSeek API Key，已在 <code>.gitignore</code> 中忽略。请用 SFTP/SSH 手动上传到服务器，<strong>不要提交到 Git 仓库</strong>。可参考项目根目录的 <code>.env.example</code> 创建。
+    </div>
+  </section>
+
+  <!-- 4 上传 -->
+  <section id="upload">
+    <h2>4. 上传代码到服务器</h2>
+
+    <h3>方式 A：SCP / SFTP（最简单）</h3>
+    <p>在本地 Windows PowerShell 或终端执行（替换 IP 和路径）：</p>
+    <pre><code># 将整个项目文件夹上传到服务器
+scp -r "C:\Users\你的用户名\Desktop\派单系统" root@你的服务器IP:/opt/dispatch-system</code></pre>
+    <p>也可使用 WinSCP、FileZilla 等图形工具，把文件夹拖到服务器 <code>/opt/dispatch-system</code>。</p>
+
+    <h3>方式 B：Git（适合持续更新）</h3>
+    <pre><code># 服务器上
+cd /opt
+git clone 你的仓库地址 dispatch-system
+cd dispatch-system
+
+# 单独上传 Excel 和 .env（Git 中通常不包含）
+# 用 scp 上传数据文件和 .env</code></pre>
+
+    <h3>方式 C：压缩包</h3>
+    <pre><code># 本地打包（排除 node_modules）
+# 上传 dispatch-system.zip 到服务器后：
+cd /opt
+unzip dispatch-system.zip -d dispatch-system
+cd dispatch-system</code></pre>
+  </section>
+
+  <!-- 5 安装 -->
+  <section id="install">
+    <h2>5. 安装依赖与构建</h2>
+    <p>SSH 登录服务器后，进入项目目录执行：</p>
+    <pre><code>cd /opt/dispatch-system
+
+# 1. 安装生产依赖
+npm install --production=false
+
+# 2. 编译 TypeScript
+npm run build
+
+# 3. 确认 dist 目录已生成
+ls dist/server.js</code></pre>
+
+    <div class="alert alert-success">
+      构建成功后，生产环境使用 <code>npm run start:web</code> 启动（运行 <code>node dist/server.js</code>），无需安装 tsx 到生产常驻进程。
+    </div>
+  </section>
+
+  <!-- 6 环境变量 -->
+  <section id="env">
+    <h2>6. 环境变量配置</h2>
+    <p>在项目根目录创建 <code>.env</code> 文件：</p>
+    <pre><code>cd /opt/dispatch-system
+cp .env.example .env
+nano .env</code></pre>
+
+    <table>
+      <tr><th>变量名</th><th>说明</th><th>示例</th></tr>
+      <tr><td><code>PORT</code></td><td>服务监听端口</td><td><code>3004</code></td></tr>
+      <tr><td><code>DEEPSEEK_API_KEY</code></td><td>DeepSeek API 密钥（可选）</td><td><code>sk-xxxx</code></td></tr>
+      <tr><td><code>DATABASE_URL</code></td><td>数据库连接（当前 Web 功能可不依赖）</td><td><code>file:./dev.db</code></td></tr>
+    </table>
+
+    <div class="alert alert-info">
+      不配置 <code>DEEPSEEK_API_KEY</code> 时，系统仍可正常运行，通勤时间使用本地算法估算。配置后可在匹配看板看到「DeepSeek / AI+本地」来源标识。
+    </div>
+  </section>
+
+  <!-- 7 启动 -->
+  <section id="run">
+    <h2>7. 启动服务</h2>
+
+    <h3>临时启动（测试用）</h3>
+    <pre><code>cd /opt/dispatch-system
+npm run start:web</code></pre>
+    <p>看到以下输出表示成功：</p>
+    <pre><code>派单系统 Web 服务已启动: http://localhost:3004
+  Excel上传派单: http://localhost:3004/
+  选择公司派单: http://localhost:3004/match.html</code></pre>
+
+    <h3>后台启动（简单方式）</h3>
+    <pre><code>nohup npm run start:web > logs/app.log 2>&1 &</code></pre>
+    <p>建议创建日志目录：<code>mkdir -p logs</code></p>
+  </section>
+
+  <!-- 8 PM2 -->
+  <section id="pm2">
+    <h2>8. PM2 进程守护（推荐）</h2>
+    <p>PM2 可在崩溃后自动重启、开机自启，适合生产环境。</p>
+
+    <pre><code># 全局安装 PM2
+sudo npm install -g pm2
+
+cd /opt/dispatch-system
+
+# 启动应用
+pm2 start dist/server.js --name dispatch-system
+
+# 查看状态
+pm2 status
+pm2 logs dispatch-system
+
+# 开机自启
+pm2 save
+pm2 startup
+# 按提示执行输出的 sudo 命令</code></pre>
+
+    <h3>使用 ecosystem 配置文件（可选）</h3>
+    <p>项目可创建 <code>ecosystem.config.cjs</code>：</p>
+    <pre><code>module.exports = {
+  apps: [{
+    name: 'dispatch-system',
+    script: 'dist/server.js',
+    cwd: '/opt/dispatch-system',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '512M',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3004
+    }
+  }]
+};</code></pre>
+    <pre><code>pm2 start ecosystem.config.cjs
+pm2 save</code></pre>
+
+    <div class="alert alert-warn">
+      <strong>多实例注意：</strong>当前会话数据存在内存中，<strong>不要</strong>使用 PM2 的 cluster 多实例模式（<code>instances: 1</code>）。否则不同请求可能落到不同进程，导致「数据会话已过期」。
+    </div>
+  </section>
+
+  <!-- 9 Nginx -->
+  <section id="nginx">
+    <h2>9. Nginx 反向代理与域名</h2>
+    <p>推荐只对外暴露 80/443，Node 服务监听本机 3004。</p>
+
+    <pre><code>sudo nano /etc/nginx/sites-available/dispatch</code></pre>
+    <pre><code>server {
+    listen 80;
+    server_name dispatch.你的域名.com;   # 或服务器公网 IP
+
+    client_max_body_size 20M;   # 允许上传 Excel
+
+    location / {
+        proxy_pass http://127.0.0.1:3004;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+
+        # 匹配接口可能较慢（通勤计算）
+        proxy_read_timeout 120s;
+        proxy_connect_timeout 60s;
+    }
+}</code></pre>
+
+    <pre><code># 启用站点
+sudo ln -s /etc/nginx/sites-available/dispatch /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx</code></pre>
+
+    <p>配置完成后访问：</p>
+    <ul>
+      <li>派单看板：<code>http://dispatch.你的域名.com/match.html</code></li>
+      <li>Excel 派单：<code>http://dispatch.你的域名.com/</code></li>
+    </ul>
+  </section>
+
+  <!-- 10 HTTPS -->
+  <section id="https">
+    <h2>10. HTTPS 证书</h2>
+    <p>有域名时，推荐使用 Let's Encrypt 免费证书：</p>
+    <pre><code>sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d dispatch.你的域名.com</code></pre>
+    <p>按提示输入邮箱并同意条款，Certbot 会自动修改 Nginx 配置并配置自动续期。</p>
+  </section>
+
+  <!-- 11 防火墙 -->
+  <section id="firewall">
+    <h2>11. 防火墙与安全</h2>
+
+    <h3>UFW 示例（Ubuntu）</h3>
+    <pre><code>sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw enable
+sudo ufw status</code></pre>
+    <p>不要对公网开放 3004，仅通过 Nginx 反代访问。</p>
+
+    <h3>安全建议</h3>
+    <ul>
+      <li><code>.env</code> 权限设为仅所有者可读：<code>chmod 600 .env</code></li>
+      <li>定期更新系统：<code>sudo apt update && sudo apt upgrade</code></li>
+      <li>如需限制访问，可在 Nginx 增加 IP 白名单或 HTTP 基本认证</li>
+      <li>生产环境勿将 DeepSeek Key 写入代码或提交 Git</li>
+    </ul>
+  </section>
+
+  <!-- 12 验证 -->
+  <section id="verify">
+    <h2>12. 部署验证</h2>
+
+    <h3>命令行检查</h3>
+    <pre><code># 服务是否在监听
+curl -s http://127.0.0.1:3004/api/sample-data | head -c 200
+
+# 通过 Nginx 检查
+curl -s http://dispatch.你的域名.com/match.html | head -c 100</code></pre>
+
+    <h3>浏览器检查</h3>
+    <ol>
+      <li>打开 <code>/match.html</code>，页面应加载出公司列表（约 55 家，含「演示」标签项）</li>
+      <li>勾选几家公司，右侧应出现匹配结果</li>
+      <li>点击「一键演示匹配」，应匹配 10 家演示公司</li>
+      <li>切换到「员工行程」标签，查看多单行程</li>
+      <li>打开首页 <code>/</code>，测试 Excel 上传派单</li>
+    </ol>
+
+    <h3>API 端点一览</h3>
+    <table>
+      <tr><th>方法</th><th>路径</th><th>用途</th></tr>
+      <tr><td>GET</td><td><code>/api/sample-data</code></td><td>加载整合数据（原始 + 演示）</td></tr>
+      <tr><td>POST</td><td><code>/api/dispatch/select</code></td><td>选择公司自动匹配</td></tr>
+      <tr><td>POST</td><td><code>/api/dispatch/validate-pair</code></td><td>手动改派校验</td></tr>
+      <tr><td>POST</td><td><code>/api/dispatch</code></td><td>Excel 上传批量派单</td></tr>
+      <tr><td>POST</td><td><code>/api/export</code></td><td>导出派单结果 Excel</td></tr>
+    </table>
+  </section>
+
+  <!-- 13 更新 -->
+  <section id="update">
+    <h2>13. 更新与回滚</h2>
+
+    <h3>常规更新流程</h3>
+    <pre><code>cd /opt/dispatch-system
+
+# 1. 拉取/上传新代码
+git pull   # 或重新 scp 覆盖
+
+# 2. 安装新依赖（如有）
+npm install
+
+# 3. 重新构建
+npm run build
+
+# 4. 重启服务
+pm2 restart dispatch-system
+
+# 5. 查看日志确认
+pm2 logs dispatch-system --lines 50</code></pre>
+
+    <h3>仅更新 Excel 数据</h3>
+    <p>替换项目根目录下的 xlsx/xls 文件后，重启服务即可。用户刷新页面会重新从 <code>/api/sample-data</code> 加载。</p>
+
+    <h3>回滚</h3>
+    <pre><code>git checkout 上一个版本号
+npm run build
+pm2 restart dispatch-system</code></pre>
+  </section>
+
+  <!-- 14 故障 -->
+  <section id="troubleshoot">
+    <h2>14. 常见问题</h2>
+
+    <table>
+      <tr><th>现象</th><th>可能原因</th><th>解决办法</th></tr>
+      <tr>
+        <td><code>EADDRINUSE</code> 端口被占用</td>
+        <td>3004 已有进程</td>
+        <td><code>sudo lsof -i :3004</code> 查 PID 后 <code>kill</code>，或改 <code>.env</code> 中 PORT</td>
+      </tr>
+      <tr>
+        <td>页面空白 / 加载失败</td>
+        <td>服务未启动或 Nginx 配置错误</td>
+        <td>检查 <code>pm2 status</code>、<code>nginx -t</code>、防火墙</td>
+      </tr>
+      <tr>
+        <td>「数据会话已过期」</td>
+        <td>会话 30 分钟过期或服务重启</td>
+        <td>刷新页面重新加载数据</td>
+      </tr>
+      <tr>
+        <td>公司列表为空</td>
+        <td>Excel 文件未上传或路径不对</td>
+        <td>确认根目录有 首访/项目/回访/员工 表，文件名完全一致</td>
+      </tr>
+      <tr>
+        <td>通勤显示「本地」而非 AI</td>
+        <td>未配置 Key 或余额不足</td>
+        <td>检查 <code>.env</code> 中 DEEPSEEK_API_KEY，重启服务</td>
+      </tr>
+      <tr>
+        <td>上传 Excel 报错 413</td>
+        <td>Nginx 请求体限制</td>
+        <td>在 Nginx 配置中加 <code>client_max_body_size 20M;</code></td>
+      </tr>
+      <tr>
+        <td><code>npm run build</code> 失败</td>
+        <td>Node 版本过低或缺依赖</td>
+        <td>升级 Node 到 18+，执行 <code>npm install</code></td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 15 清单 -->
+  <section id="checklist">
+    <h2>15. 部署检查清单</h2>
+    <p>上线前逐项确认：</p>
+    <ul class="checklist">
+      <li>服务器已安装 Node.js 18+ 和 npm</li>
+      <li>项目代码已上传到 <code>/opt/dispatch-system</code>（或目标目录）</li>
+      <li>Excel 数据文件（园区、首访、项目、回访、员工表）已在项目根目录</li>
+      <li><code>.env</code> 已创建，PORT 与防火墙策略一致</li>
+      <li>已执行 <code>npm install</code> 和 <code>npm run build</code></li>
+      <li>PM2 已启动且 <code>pm2 status</code> 显示 online</li>
+      <li>Nginx 反代配置完成，<code>nginx -t</code> 通过</li>
+      <li>域名 DNS 已解析到服务器 IP（如使用域名）</li>
+      <li>HTTPS 证书已配置（推荐）</li>
+      <li>浏览器可打开 <code>/match.html</code> 并正常匹配</li>
+      <li>已设置 PM2 开机自启 <code>pm2 save && pm2 startup</code></li>
+    </ul>
+
+    <div class="grid-2">
+      <div class="card-mini">
+        <h4>快速命令备忘</h4>
+        <pre><code>pm2 restart dispatch-system
+pm2 logs dispatch-system
+pm2 monit</code></pre>
+      </div>
+      <div class="card-mini">
+        <h4>相关文档</h4>
+        <ul>
+          <li><a href="project-documentation.html">项目功能说明文档</a></li>
+          <li><a href="DATA_MODEL.md">数据模型说明</a>（Markdown）</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    招商派单系统 · 部署指南 · 生成于项目 docs/deploy-guide.html
+  </footer>
+</div>
+
+</body>
+</html>

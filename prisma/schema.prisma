@@ -1,0 +1,197 @@
+// Prisma Schema - 派单系统数据库定义
+//
+// 数据分层：
+//   主数据（派单前）: City, InvestmentPark(园区表), Employee(员工基础表), CustomerOrder(待派单客户)
+//   派单输出（派单后）: DispatchBatch, DispatchResult(派单结果), DispatchEmployeeSheet(派单员工信息表)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum CustomerType {
+  FIRST_VISIT
+  PROJECT
+  FOLLOW_UP
+}
+
+enum TimeSlot {
+  MORNING
+  AFTERNOON_1
+  AFTERNOON_2
+}
+
+enum EmployeeRole {
+  FRONT
+  PROJECT
+  BACK
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  LEAVE
+}
+
+enum DispatchStatus {
+  PENDING
+  ASSIGNED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum FrontProjectMode {
+  CROSS_TYPE
+  SAME_TYPE
+  RANDOM
+}
+
+// 城市表
+model City {
+  id        Int              @id @default(autoincrement())
+  name      String           @unique
+  code      String?          @unique
+  parks     InvestmentPark[]
+  employees Employee[]
+  customers CustomerOrder[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+// 园区表（主数据 - 派单前）
+// 园区是独立实体，不包含员工；仅描述园区自身信息
+model InvestmentPark {
+  id        Int              @id @default(autoincrement())
+  name      String           @unique
+  cityId    Int
+  city      City             @relation(fields: [cityId], references: [id])
+  address   String?          // 园区地址
+  contact   String?          // 联系人
+  phone     String?          // 联系电话
+  status    String           @default("ACTIVE")
+  customers CustomerOrder[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([cityId])
+}
+
+// 员工基础表（主数据 - 派单前）
+// 员工独立存在；serviceParkId 表示「负责服务的园区」，仅用于派单规则匹配，非归属关系
+model Employee {
+  id               Int                    @id @default(autoincrement())
+  name             String
+  cityId           Int
+  city             City                   @relation(fields: [cityId], references: [id])
+  serviceParkId    Int                    // 负责服务的园区（规则6匹配用）
+  serviceParkName  String                 // 冗余字段，方便查询
+  roles            String                 // JSON: ["FRONT","PROJECT"] 或 ["BACK"]
+  status           EmployeeStatus         @default(ACTIVE)
+  departureAddress String                 // 出发地址
+  plusCapabilities String                 // JSON
+  orderCapacity    String                 // JSON: ["MORNING","AFTERNOON_1"]
+  remark           String?
+  dispatchResults  DispatchResult[]
+  employeeSheets   DispatchEmployeeSheet[]
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@index([cityId])
+  @@index([serviceParkId])
+  @@index([status])
+}
+
+// 待派单客户表（主数据 - 派单前）
+model CustomerOrder {
+  id               Int              @id @default(autoincrement())
+  companyName      String
+  address          String           // 拜访地址
+  customerType     CustomerType
+  appointmentTime  DateTime
+  timeSlot         TimeSlot
+  cityId           Int
+  city             City             @relation(fields: [cityId], references: [id])
+  parkId           Int              // 客户所属招商园区
+  park             InvestmentPark   @relation(fields: [parkId], references: [id])
+  plusCount        Int              @default(0)
+  designatedPerson String?
+  rejectedPerson   String?
+  isHandInHand     Boolean          @default(false)
+  handInHandGroup  String?
+  remark           String?
+  dispatchStatus   DispatchStatus   @default(PENDING)
+  dispatchResults  DispatchResult[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([customerType])
+  @@index([timeSlot])
+  @@index([parkId])
+  @@index([dispatchStatus])
+}
+
+// 派单批次
+model DispatchBatch {
+  id               Int                     @id @default(autoincrement())
+  batchDate        DateTime
+  frontProjectMode FrontProjectMode        @default(RANDOM)
+  totalCustomers   Int
+  totalEmployees   Int
+  status           String                  @default("COMPLETED")
+  remark           String?
+  results          DispatchResult[]
+  employeeSheets   DispatchEmployeeSheet[]
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+}
+
+// 派单结果表（派单后输出）- 每条客户分配记录
+model DispatchResult {
+  id              Int           @id @default(autoincrement())
+  batchId         Int
+  batch           DispatchBatch @relation(fields: [batchId], references: [id])
+  customerId      Int
+  customer        CustomerOrder @relation(fields: [customerId], references: [id])
+  employeeId      Int
+  employee        Employee      @relation(fields: [employeeId], references: [id])
+  commuteMinutes  Int?
+  matchScore      Float?
+  matchDetails    String?
+  createdAt       DateTime      @default(now())
+
+  @@unique([batchId, customerId])
+  @@index([batchId])
+  @@index([employeeId])
+}
+
+// 派单员工信息表（派单后输出）- 每位员工当天的派单汇总
+model DispatchEmployeeSheet {
+  id              Int           @id @default(autoincrement())
+  batchId         Int
+  batch           DispatchBatch @relation(fields: [batchId], references: [id])
+  employeeId      Int
+  employee        Employee      @relation(fields: [employeeId], references: [id])
+  employeeName    String
+  serviceParkName String
+  totalOrders     Int
+  morningOrders   Int           @default(0)
+  afternoon1Orders Int          @default(0)
+  afternoon2Orders Int           @default(0)
+  totalCommute    Int?
+  orderDetails    String        // JSON: 各单明细
+  createdAt       DateTime      @default(now())
+
+  @@unique([batchId, employeeId])
+  @@index([batchId])
+}
+
+model SystemConfig {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}

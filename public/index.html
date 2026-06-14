@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>招商派单系统</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <div>
+        <h1>招商派单系统</h1>
+        <p>上传 Excel 数据，一键生成智能派单结果</p>
+      </div>
+      <nav class="header-nav">
+        <a href="/" class="active">Excel 上传</a>
+        <a href="/select.html">选择园区</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- 上传区 -->
+    <section class="card" id="upload-section">
+      <h2>数据上传</h2>
+      <p class="hint">员工表为必填项，客户数据至少上传一份（首访 / 项目 / 回访）</p>
+
+      <div class="upload-grid">
+        <div class="upload-box" data-field="employees">
+          <div class="upload-icon">👤</div>
+          <div class="upload-title">员工基础信息表 <span class="required">*必填</span></div>
+          <div class="upload-desc">派单前主数据</div>
+          <input type="file" accept=".xlsx,.xls" hidden>
+          <div class="file-name"></div>
+        </div>
+
+        <div class="upload-box" data-field="firstVisit">
+          <div class="upload-icon">📋</div>
+          <div class="upload-title">首访数据</div>
+          <div class="upload-desc">前道客户</div>
+          <input type="file" accept=".xlsx,.xls" hidden>
+          <div class="file-name"></div>
+        </div>
+
+        <div class="upload-box" data-field="project">
+          <div class="upload-icon">📊</div>
+          <div class="upload-title">项目数据</div>
+          <div class="upload-desc">项目客户</div>
+          <input type="file" accept=".xlsx,.xls" hidden>
+          <div class="file-name"></div>
+        </div>
+
+        <div class="upload-box" data-field="followUp">
+          <div class="upload-icon">🔄</div>
+          <div class="upload-title">回访数据</div>
+          <div class="upload-desc">后道客户</div>
+          <input type="file" accept=".xlsx,.xls" hidden>
+          <div class="file-name"></div>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <label>
+          前道+项目派单模式
+          <select id="frontProjectMode">
+            <option value="RANDOM">随机分配</option>
+            <option value="CROSS_TYPE">交叉类型（上午前道+下午项目）</option>
+            <option value="SAME_TYPE">同类型（上下午相同类型）</option>
+          </select>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="enableDistance" checked>
+          启用通勤距离优化
+        </label>
+      </div>
+
+      <button class="btn-primary" id="dispatch-btn" disabled>
+        <span class="btn-text">开始派单</span>
+        <span class="btn-loading" hidden>派单中...</span>
+      </button>
+    </section>
+
+    <!-- 结果区 -->
+    <section class="card" id="result-section" hidden>
+      <div class="result-header">
+        <h2>派单结果</h2>
+        <button class="btn-secondary" id="export-btn">下载 Excel</button>
+      </div>
+
+      <div class="stats-grid" id="stats-grid"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="by-employee">按员工查看</button>
+        <button class="tab" data-tab="all-results">全部明细</button>
+        <button class="tab" data-tab="failed" id="failed-tab" hidden>未派单</button>
+      </div>
+
+      <div class="tab-content active" id="tab-by-employee"></div>
+      <div class="tab-content" id="tab-all-results"></div>
+      <div class="tab-content" id="tab-failed"></div>
+    </section>
+
+    <div class="error-toast" id="error-toast" hidden></div>
+  </main>
+
+  <footer class="footer">
+    <p>招商派单系统 v1.0 · 基于 TypeScript 智能匹配引擎</p>
+  </footer>
+
+  <script src="/shared-results.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
