@@ -51,9 +51,18 @@ function switchView(view) {
   document.querySelectorAll('.view-tab').forEach((t) => {
     t.classList.toggle('active', t.dataset.view === view);
   });
-  document.getElementById('dispatch-board').hidden = view !== 'results';
-  document.getElementById('schedule-board').hidden = view !== 'schedules';
-  if (view === 'schedules') renderSchedules();
+  const resultsBoard = document.getElementById('dispatch-board');
+  const scheduleBoard = document.getElementById('schedule-board');
+  if (view === 'results') {
+    resultsBoard.hidden = false;
+    scheduleBoard.hidden = true;
+    resultsBoard.style.animation = 'fadeUp .35s ease';
+  } else {
+    resultsBoard.hidden = true;
+    scheduleBoard.hidden = false;
+    scheduleBoard.style.animation = 'fadeUp .35s ease';
+    renderSchedules();
+  }
 }
 
 async function loadIntegratedData() {
@@ -365,7 +374,7 @@ function renderExpandContent(entry) {
   return html;
 }
 
-function renderDispatchRow(customerId, entry) {
+function renderDispatchRow(customerId, entry, animIndex = 0) {
   const company = allCompanies.find((c) => c.id === customerId);
   const expanded = expandedRows.has(customerId);
   const used = getUsedEmployeeIds(customerId);
@@ -373,9 +382,10 @@ function renderDispatchRow(customerId, entry) {
 
   if (entry.type === 'ok') {
     const p = entry.data;
-    const rowCls = ['dispatch-row', 'row-ok', entry.manual ? 'row-manual' : '', isDup ? 'row-dup' : ''].filter(Boolean).join(' ');
+    const rowCls = ['dispatch-row', 'row-ok', 'row-enter', entry.manual ? 'row-manual' : '', isDup ? 'row-dup' : ''].filter(Boolean).join(' ');
+    const animStyle = `style="animation-delay:${animIndex * 0.06}s"`;
     return `
-      <div class="${rowCls}" data-cid="${customerId}">
+      <div class="${rowCls}" data-cid="${customerId}" ${animStyle}>
         <div class="row-grid">
           <div class="status-dot ok"></div>
           <div class="cell-company">
@@ -400,8 +410,9 @@ function renderDispatchRow(customerId, entry) {
   }
 
   const u = entry.data;
+  const animStyle = `style="animation-delay:${animIndex * 0.06}s"`;
   return `
-    <div class="dispatch-row row-fail" data-cid="${customerId}">
+    <div class="dispatch-row row-fail row-enter" data-cid="${customerId}" ${animStyle}>
       <div class="row-grid">
         <div class="status-dot fail"></div>
         <div class="cell-company">
@@ -428,7 +439,11 @@ function renderBoard() {
   const selectedIds = getSelectedIds();
 
   if (isMatching) {
-    board.innerHTML = '<div class="thinking">AI 正在匹配并计算通勤时间...</div>';
+    board.innerHTML = `
+      <div class="thinking">
+        <div class="ai-orbit"></div>
+        <div>AI 正在匹配并计算通勤<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span></div>
+      </div>`;
     return;
   }
 
@@ -458,7 +473,8 @@ function renderBoard() {
       `);
       return;
     }
-    const html = renderDispatchRow(id, entry);
+    const animIndex = okRows.length + failRows.length;
+    const html = renderDispatchRow(id, entry, animIndex);
     if (entry.type === 'ok') okRows.push(html);
     else failRows.push(html);
   });
@@ -472,7 +488,7 @@ function renderBoard() {
           <span>✓ 匹配成功</span>
           <span class="section-count">${okRows.length} 家</span>
         </div>
-        ${okRows.join('')}
+        <div class="section-body">${okRows.join('')}</div>
       </div>
     `;
   }
@@ -484,7 +500,7 @@ function renderBoard() {
           <span>✗ 匹配失败 / 待匹配</span>
           <span class="section-count">${failRows.length} 家</span>
         </div>
-        ${failRows.join('')}
+        <div class="section-body">${failRows.join('')}</div>
       </div>
     `;
   }
@@ -500,7 +516,7 @@ function renderSchedules() {
     return;
   }
 
-  board.innerHTML = employeeSchedules.map((s) => {
+  board.innerHTML = employeeSchedules.map((s, idx) => {
     const orders = s.orders.map((o) => `
       <div class="schedule-order">
         <span class="slot-tag">${esc(o.timeSlot)}</span>
@@ -521,7 +537,7 @@ function renderSchedules() {
     `).join('');
 
     return `
-      <div class="schedule-card">
+      <div class="schedule-card" style="animation-delay:${idx * 0.08}s">
         <div class="schedule-hd">
           <div>
             <div class="schedule-name">${esc(s.employeeName)}</div>
@@ -866,5 +882,10 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.hidden = false;
-  setTimeout(() => { t.hidden = true; }, 2800);
+  requestAnimationFrame(() => t.classList.add('show'));
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => { t.hidden = true; }, 350);
+  }, 2800);
 }
