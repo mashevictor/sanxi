@@ -8,6 +8,10 @@ import { Customer, Employee, CustomerType } from '../types';
 
 export const SHOWCASE_TAG = '演示';
 
+/** 固定 ID，确保各环境（有无 Excel）缓存一致 */
+export const SHOWCASE_EMPLOYEE_IDS = [90001, 90002, 90003, 90004, 90005];
+export const SHOWCASE_CUSTOMER_ID_BASE = 90100;
+
 export interface IntegratedData extends ImportResult {
   showcaseCustomerIds: number[];
   showcaseEmployeeIds: number[];
@@ -29,12 +33,10 @@ export function buildIntegratedData(dataDir: string): IntegratedData {
 
   const maxEmpId = Math.max(0, ...base.employees.map((e) => e.id));
   const showcaseEmployeeIds: number[] = [];
-  const showcaseEmpIdMap = new Map<number, number>();
 
   const mergedEmployees: Employee[] = [...base.employees];
   showcase.employees.forEach((se, idx) => {
-    const newId = maxEmpId + idx + 1;
-    showcaseEmpIdMap.set(se.id, newId);
+    const newId = SHOWCASE_EMPLOYEE_IDS[idx] ?? maxEmpId + idx + 1;
     showcaseEmployeeIds.push(newId);
     const parkId = parkIdByName.get(se.serviceParkName || '') || se.serviceParkId;
     mergedEmployees.push({
@@ -47,19 +49,17 @@ export function buildIntegratedData(dataDir: string): IntegratedData {
 
   const existingCustomerIds = new Set(base.customers.map((c) => c.id));
   const showcaseCustomerIds: number[] = [];
-  let nextCustomerId = Math.max(0, ...base.customers.map((c) => c.id)) + 1;
 
   const mergedCustomers: Customer[] = [...base.customers];
-  for (const sc of showcase.customers) {
-    let newId = sc.id;
-    if (existingCustomerIds.has(newId)) {
-      newId = nextCustomerId++;
-    }
+  showcase.customers.forEach((sc, idx) => {
+    let newId = SHOWCASE_CUSTOMER_ID_BASE + (sc.id - 100);
+    if (newId <= SHOWCASE_CUSTOMER_ID_BASE) newId = SHOWCASE_CUSTOMER_ID_BASE + idx + 1;
+    while (existingCustomerIds.has(newId)) newId++;
     existingCustomerIds.add(newId);
     showcaseCustomerIds.push(newId);
     const parkId = parkIdByName.get(sc.parkName) || sc.parkId;
     mergedCustomers.push({ ...sc, id: newId, parkId });
-  }
+  });
 
   const showcaseFirst = showcase.customers.filter((c) => c.customerType === CustomerType.FIRST_VISIT).length;
   const showcaseProject = showcase.customers.filter((c) => c.customerType === CustomerType.PROJECT).length;
@@ -77,6 +77,39 @@ export function buildIntegratedData(dataDir: string): IntegratedData {
       employeeCount: mergedEmployees.length,
       handInHandGroups: base.stats.handInHandGroups,
     },
+    showcaseCustomerIds,
+    showcaseEmployeeIds,
+  };
+}
+
+/** 仅演示数据 + 固定 ID，用于生成跨环境一致的匹配缓存 */
+export function buildShowcaseSnapshot(): IntegratedData {
+  const raw = buildShowcaseData();
+  const showcaseEmployeeIds: number[] = [];
+  const showcaseCustomerIds: number[] = [];
+
+  const employees = raw.employees.map((e, idx) => {
+    const id = SHOWCASE_EMPLOYEE_IDS[idx];
+    showcaseEmployeeIds.push(id);
+    return {
+      ...e,
+      id,
+      remark: e.remark ? `${e.remark} [${SHOWCASE_TAG}]` : `[${SHOWCASE_TAG}]`,
+    };
+  });
+
+  const customers = raw.customers.map((c, idx) => {
+    const id = SHOWCASE_CUSTOMER_ID_BASE + idx + 1;
+    showcaseCustomerIds.push(id);
+    return { ...c, id };
+  });
+
+  return {
+    parks: raw.parks,
+    customers,
+    employees,
+    cities: raw.cities,
+    stats: raw.stats,
     showcaseCustomerIds,
     showcaseEmployeeIds,
   };

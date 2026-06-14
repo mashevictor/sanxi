@@ -19,6 +19,9 @@ let pickerSearch = '';
 let activeView = 'results';
 
 let showcaseCustomerIds = [];
+let showcaseMatchCache = null;
+
+const SHOWCASE_CACHE_URL = '/cache/showcase-match.json';
 
 const dispatchBtn = document.getElementById('dispatch-btn');
 const pageLoader = document.getElementById('page-loader');
@@ -33,6 +36,7 @@ document.querySelectorAll('.view-tab').forEach((tab) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadIntegratedData();
+  preloadShowcaseCache();
   document.addEventListener('click', (e) => {
     if (openPickerId !== null && !e.target.closest('.emp-picker')) {
       openPickerId = null;
@@ -68,38 +72,57 @@ async function loadIntegratedData() {
   }
 }
 
+async function preloadShowcaseCache() {
+  try {
+    await fetchShowcaseCache();
+  } catch {
+    /* 缓存可选，失败时一键演示会提示 */
+  }
+}
+
+async function fetchShowcaseCache() {
+  if (showcaseMatchCache) return showcaseMatchCache;
+  const res = await fetch(SHOWCASE_CACHE_URL);
+  if (!res.ok) throw new Error('演示缓存未找到，请运行 npm run cache:showcase');
+  showcaseMatchCache = await res.json();
+  return showcaseMatchCache;
+}
+
 async function loadShowcaseAndMatch() {
   if (!sessionId) {
     await loadIntegratedData();
   }
-  pageLoader.classList.remove('hide');
+  if (!showcaseCustomerIds.length) {
+    showToast('未找到演示公司数据');
+    return;
+  }
+
   try {
-    if (!showcaseCustomerIds.length) {
-      showToast('未找到演示公司数据');
-      return;
-    }
+    const cache = await fetchShowcaseCache();
 
     selectedCompanies.clear();
     showcaseCustomerIds.forEach((id) => selectedCompanies.add(id));
     renderCompanies();
 
-    isMatching = true;
     activeView = 'results';
     switchView('results');
-    renderBoard();
-    updateStats();
 
-    const result = await callSelectApi({ fullMatch: true });
+    const result = {
+      pairings: cache.pairings || [],
+      unmatchedCompanies: cache.unmatchedCompanies || [],
+      employeeSchedules: cache.employeeSchedules || [],
+      message: (cache.message || '演示匹配完成') + '（缓存）',
+      distanceSource: cache.distanceSource || 'local',
+      maxCommuteMinutes: cache.maxCommuteMinutes || 60,
+    };
+
     applyDispatchResult(result);
-    showToast(result.message || '全量演示匹配完成');
-  } catch (err) {
-    showToast(err.message);
-  } finally {
-    isMatching = false;
-    pageLoader.classList.add('hide');
     renderBoard();
     renderSchedules();
     updateStats();
+    showToast(result.message);
+  } catch (err) {
+    showToast(err.message);
   }
 }
 
