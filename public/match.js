@@ -37,14 +37,30 @@ document.querySelectorAll('.view-tab').forEach((tab) => {
 document.addEventListener('DOMContentLoaded', () => {
   loadIntegratedData();
   preloadShowcaseCache();
+  document.getElementById('dispatch-board').addEventListener('click', handleBoardClick);
   document.addEventListener('click', (e) => {
     if (openPickerId !== null && !e.target.closest('.emp-picker')) {
       openPickerId = null;
       pickerSearch = '';
-      renderBoard();
+      renderBoard({ animate: false });
     }
   });
 });
+
+function handleBoardClick(e) {
+  const detailBtn = e.target.closest('.btn-detail');
+  if (detailBtn) {
+    e.stopPropagation();
+    toggleRowDetail(parseInt(detailBtn.dataset.cid, 10));
+    return;
+  }
+  const rulesBtn = e.target.closest('.btn-rules');
+  if (rulesBtn) {
+    e.stopPropagation();
+    toggleRowRules(parseInt(rulesBtn.dataset.cid, 10));
+    return;
+  }
+}
 
 function switchView(view) {
   activeView = view;
@@ -101,38 +117,141 @@ async function loadShowcaseAndMatch() {
   if (!sessionId) {
     await loadIntegratedData();
   }
-  if (!showcaseCustomerIds.length) {
-    showToast('未找到演示公司数据');
-    return;
-  }
 
   try {
     const cache = await fetchShowcaseCache();
+    const remapped = remapCacheResult(cache);
+    const ids = resolveShowcaseSelectIds(remapped);
+
+    if (!ids.length) {
+      showToast('未找到演示公司数据');
+      return;
+    }
 
     selectedCompanies.clear();
-    showcaseCustomerIds.forEach((id) => selectedCompanies.add(id));
-    renderCompanies();
+    ids.forEach((id) => selectedCompanies.add(id));
+
+    if (!document.querySelector('#company-list input')) {
+      renderCompanies();
+    } else {
+      syncCompanySelectionUI();
+    }
+    scrollToFirstSelectedCompany();
+    updateStats();
 
     activeView = 'results';
     switchView('results');
 
-    const result = {
-      pairings: cache.pairings || [],
-      unmatchedCompanies: cache.unmatchedCompanies || [],
-      employeeSchedules: cache.employeeSchedules || [],
-      message: (cache.message || '演示匹配完成') + '（缓存）',
-      distanceSource: cache.distanceSource || 'local',
-      maxCommuteMinutes: cache.maxCommuteMinutes || 60,
-    };
-
-    applyDispatchResult(result);
-    renderBoard();
+    applyDispatchResult({
+      pairings: remapped.pairings || [],
+      unmatchedCompanies: remapped.unmatchedCompanies || [],
+      employeeSchedules: remapped.employeeSchedules || [],
+      message: (remapped.message || '演示匹配完成') + '（缓存）',
+      distanceSource: remapped.distanceSource || 'local',
+      maxCommuteMinutes: remapped.maxCommuteMinutes || 60,
+    });
+    renderBoard({ animate: true });
     renderSchedules();
     updateStats();
-    showToast(result.message);
+    showToast((remapped.message || '演示匹配完成') + '（缓存）');
   } catch (err) {
     showToast(err.message);
   }
+}
+
+function resolveShowcaseSelectIds(cache) {
+  const byTag = allCompanies.filter((c) => c.sourceTag === '演示').map((c) => c.id);
+  if (byTag.length) return byTag;
+  if (cache?.showcaseCustomerIds?.length) return cache.showcaseCustomerIds;
+  return showcaseCustomerIds;
+}
+
+function findEmployeeInSession(name, departureAddress, preferDemo = false) {
+  if (preferDemo) {
+    const demo = allEmployees.find((e) => e.name === name && e.sourceTag === '演示');
+    if (demo) return demo;
+  }
+  return (
+    allEmployees.find((e) => e.name === name && departureAddress && e.departureAddress === departureAddress)
+    || allEmployees.find((e) => e.name === name)
+  );
+}
+
+function remapCacheResult(cache) {
+  const companyByName = new Map(allCompanies.map((c) => [c.companyName, c]));
+  const pairings = (cache.pairings || []).map((p) => {
+    const company = companyByName.get(p.companyName);
+    const emp = findEmployeeInSession(p.employeeName, p.departureAddress, true);
+    return {
+      ...p,
+      customerId: company?.id ?? p.customerId,
+      employeeId: emp?.id ?? p.employeeId,
+      employeeName: emp?.name ?? p.employeeName,
+      departureAddress: emp?.departureAddress ?? p.departureAddress,
+      locked: true,
+    };
+  });
+  const employeeSchedules = (cache.employeeSchedules || []).map((s) => {
+    const emp = findEmployeeInSession(s.employeeName, s.departureAddress, true);
+    return {
+      ...s,
+      employeeId: emp?.id ?? s.employeeId,
+      orders: (s.orders || []).map((o) => {
+        const company = companyByName.get(o.companyName);
+        return { ...o, customerId: company?.id ?? o.customerId };
+      }),
+    };
+  });
+  return { ...cache, pairings, employeeSchedules };
+}
+
+function syncCompanySelectionUI() {
+  document.querySelectorAll('#company-list input[type="checkbox"]').forEach((cb) => {
+    const id = parseInt(cb.value, 10);
+    const on = selectedCompanies.has(id);
+    cb.checked = on;
+    cb.closest('.co-item')?.classList.toggle('checked', on);
+  });
+}
+
+function scrollToFirstSelectedCompany() {
+  const first = document.querySelector('#company-list .co-item.checked');
+  if (first) first.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function toggleRowDetail(customerId) {
+  if (expandedRows.has(customerId)) expandedRows.delete(customerId);
+  else expandedRows.add(customerId);
+
+  const row = document.querySelector(`.dispatch-row[data-cid="${customerId}"]`);
+  if (!row) return;
+
+  const entry = assignmentMap.get(customerId);
+  const expand = row.querySelector(':scope > .row-expand');
+  const btn = row.querySelector('.btn-detail');
+  if (!expand || !btn) return;
+
+  const isOpen = expandedRows.has(customerId);
+  expand.hidden = !isOpen;
+  btn.textContent = isOpen ? '收起' : (entry?.type === 'ok' ? '详情' : '原因');
+  btn.classList.toggle('open', isOpen);
+}
+
+function toggleRowRules(customerId) {
+  if (expandedRules.has(customerId)) expandedRules.delete(customerId);
+  else expandedRules.add(customerId);
+
+  const row = document.querySelector(`.dispatch-row[data-cid="${customerId}"]`);
+  if (!row) return;
+
+  const rulesBody = row.querySelector('.rules-body');
+  const rulesBtn = row.querySelector(`.btn-rules[data-cid="${customerId}"]`);
+  if (!rulesBody || !rulesBtn) return;
+
+  const isOpen = expandedRules.has(customerId);
+  rulesBody.hidden = !isOpen;
+  const arrow = rulesBtn.querySelector('.arrow');
+  if (arrow) arrow.textContent = isOpen ? '▲ 收起' : '▼ 展开';
 }
 
 function applySessionData(data) {
@@ -374,7 +493,7 @@ function renderExpandContent(entry) {
   return html;
 }
 
-function renderDispatchRow(customerId, entry, animIndex = 0) {
+function renderDispatchRow(customerId, entry, animIndex = 0, animate = true) {
   const company = allCompanies.find((c) => c.id === customerId);
   const expanded = expandedRows.has(customerId);
   const used = getUsedEmployeeIds(customerId);
@@ -382,8 +501,8 @@ function renderDispatchRow(customerId, entry, animIndex = 0) {
 
   if (entry.type === 'ok') {
     const p = entry.data;
-    const rowCls = ['dispatch-row', 'row-ok', 'row-enter', entry.manual ? 'row-manual' : '', isDup ? 'row-dup' : ''].filter(Boolean).join(' ');
-    const animStyle = `style="animation-delay:${animIndex * 0.06}s"`;
+    const rowCls = ['dispatch-row', 'row-ok', animate ? 'row-enter' : '', entry.manual ? 'row-manual' : '', isDup ? 'row-dup' : ''].filter(Boolean).join(' ');
+    const animStyle = animate ? `style="animation-delay:${animIndex * 0.06}s"` : '';
     return `
       <div class="${rowCls}" data-cid="${customerId}" ${animStyle}>
         <div class="row-grid">
@@ -410,9 +529,9 @@ function renderDispatchRow(customerId, entry, animIndex = 0) {
   }
 
   const u = entry.data;
-  const animStyle = `style="animation-delay:${animIndex * 0.06}s"`;
+  const animStyle = animate ? `style="animation-delay:${animIndex * 0.06}s"` : '';
   return `
-    <div class="dispatch-row row-fail row-enter" data-cid="${customerId}" ${animStyle}>
+    <div class="dispatch-row row-fail${animate ? ' row-enter' : ''}" data-cid="${customerId}" ${animStyle}>
       <div class="row-grid">
         <div class="status-dot fail"></div>
         <div class="cell-company">
@@ -434,7 +553,8 @@ function renderDispatchRow(customerId, entry, animIndex = 0) {
   `;
 }
 
-function renderBoard() {
+function renderBoard(options = {}) {
+  const animate = options.animate !== false;
   const board = document.getElementById('dispatch-board');
   const selectedIds = getSelectedIds();
 
@@ -474,7 +594,7 @@ function renderBoard() {
       return;
     }
     const animIndex = okRows.length + failRows.length;
-    const html = renderDispatchRow(id, entry, animIndex);
+    const html = renderDispatchRow(id, entry, animIndex, animate);
     if (entry.type === 'ok') okRows.push(html);
     else failRows.push(html);
   });
@@ -558,25 +678,6 @@ function renderSchedules() {
 }
 
 function bindBoardEvents() {
-  document.querySelectorAll('.btn-detail').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const cid = parseInt(btn.dataset.cid, 10);
-      if (expandedRows.has(cid)) expandedRows.delete(cid);
-      else expandedRows.add(cid);
-      renderBoard();
-    });
-  });
-
-  document.querySelectorAll('.btn-rules').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const cid = parseInt(btn.dataset.cid, 10);
-      if (expandedRules.has(cid)) expandedRules.delete(cid);
-      else expandedRules.add(cid);
-      renderBoard();
-    });
-  });
-
   document.querySelectorAll('.emp-picker-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -589,7 +690,7 @@ function bindBoardEvents() {
         openPickerId = cid;
         pickerSearch = '';
       }
-      renderBoard();
+      renderBoard({ animate: false });
       if (openPickerId) {
         const input = document.querySelector(`.emp-search[data-cid="${openPickerId}"]`);
         if (input) input.focus();
@@ -600,7 +701,7 @@ function bindBoardEvents() {
   document.querySelectorAll('.emp-search').forEach((input) => {
     input.addEventListener('input', () => {
       pickerSearch = input.value;
-      renderBoard();
+      renderBoard({ animate: false });
       const el = document.querySelector(`.emp-search[data-cid="${openPickerId}"]`);
       if (el) {
         el.focus();
