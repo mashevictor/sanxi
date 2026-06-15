@@ -71,7 +71,13 @@ const uploadFields = upload.fields([
 ]);
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
 app.use('/docs', express.static(path.join(__dirname, '../docs')));
 
 function getFilesFromRequest(files: Record<string, Express.Multer.File[]> | undefined) {

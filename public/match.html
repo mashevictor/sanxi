@@ -6,7 +6,7 @@
   <title>派单匹配看板</title>
   <link rel="preload" href="/cache/sample-data.json" as="fetch" crossorigin="anonymous">
   <link rel="preload" href="/api/bootstrap" as="fetch" crossorigin="anonymous">
-  <script src="/match-shared.js"></script>
+  <script src="/match-shared.js?v=20260614-nav"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -419,11 +419,26 @@
     .rule-chips { display: flex; flex-wrap: wrap; gap: 5px; }
     .fail-reason { color: #fca5a5; margin-top: 4px; }
 
-    .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .toolbar {
+      display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+      background: rgba(15,23,42,.55); border: 1px solid rgba(99,102,241,.22);
+      border-radius: 14px; padding: 6px 8px;
+    }
+    .page-nav {
+      display: flex; align-items: center; gap: 10px; padding: 4px 10px 4px 6px;
+    }
+    .nav-label, .actions-label {
+      font-size: 0.65rem; font-weight: 700; color: #64748b;
+      letter-spacing: .06em; white-space: nowrap;
+    }
+    .nav-tabs {
+      display: flex; gap: 4px; padding: 4px;
+      background: rgba(0,0,0,.28); border-radius: 10px;
+    }
     .toolbar-actions {
-      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-      margin-left: auto; padding-left: 12px;
-      border-left: 1px solid rgba(99,102,241,.22);
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      margin-left: auto; padding: 4px 8px 4px 18px;
+      border-left: 2px solid rgba(99,102,241,.28);
     }
     button {
       padding: 10px 22px; border: none; border-radius: 12px; cursor: pointer;
@@ -535,12 +550,15 @@
     .manual-tag.fail-reason-tag { background: rgba(248,113,113,.2); color: #fca5a5; }
     .page-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .nav-link {
-      padding: 8px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 600;
-      text-decoration: none; color: #c4b5fd; border: 1px solid rgba(99,102,241,.35);
-      background: rgba(99,102,241,.12); transition: all .2s;
+      padding: 8px 18px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+      text-decoration: none; color: #94a3b8; border: none;
+      background: transparent; transition: all .2s;
     }
-    .nav-link:hover { background: rgba(99,102,241,.25); transform: translateY(-1px); }
-    .nav-link.active { background: linear-gradient(135deg, var(--primary), #7c3aed); color: #fff; border-color: transparent; }
+    .nav-link:hover { color: #e0e7ff; background: rgba(99,102,241,.15); }
+    .nav-link.active {
+      background: linear-gradient(135deg, #6366f1, #7c3aed); color: #fff;
+      box-shadow: 0 2px 12px rgba(99,102,241,.35);
+    }
     .ai-hint {
       margin: 0 0 10px; padding: 10px 12px; border-radius: 10px;
       background: rgba(99,102,241,.1); border: 1px solid rgba(99,102,241,.25);
@@ -576,10 +594,14 @@
       </div>
       <div class="toolbar">
         <nav class="page-nav" aria-label="页面导航">
-          <a class="nav-link active" href="match.html">AI 匹配</a>
-          <a class="nav-link" href="manual-match.html">手动派单</a>
+          <span class="nav-label">导航</span>
+          <div class="nav-tabs">
+            <a class="nav-link active" href="match.html">AI 匹配</a>
+            <a class="nav-link" href="manual-match.html">手动派单</a>
+          </div>
         </nav>
-        <div class="toolbar-actions">
+        <div class="toolbar-actions" aria-label="页面操作">
+          <span class="actions-label">操作</span>
           <button class="btn-secondary" id="full-match-btn">全量匹配</button>
           <button type="button" class="btn-secondary" id="ai-history-btn">匹配历史</button>
         </div>
@@ -631,6 +653,6 @@
       <button type="button" class="close-btn" id="emp-modal-close">关闭</button>
     </div>
   </div>
-  <script src="/match.js"></script>
+  <script src="/match.js?v=20260614-nav"></script>
 </body>
 </html>

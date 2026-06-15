@@ -28,10 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadData();
   document.getElementById('manual-history-btn').addEventListener('click', openManualMatchHistory);
   document.getElementById('manual-match-btn').addEventListener('click', onManualMatch);
-  document.getElementById('goto-full-match-btn').addEventListener('click', () => {
-    sessionStorage.setItem('dispatch-auto-full-match', '1');
-    window.location.href = 'match.html';
-  });
   document.getElementById('manual-clear-btn').addEventListener('click', clearManualSelection);
   document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
     const ids = Array.from(manualSelectedEmployees);
