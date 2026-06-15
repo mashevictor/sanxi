@@ -2,6 +2,32 @@
 const DISPATCH_STORE_KEY = 'dispatch-board-state';
 const SAMPLE_DATA_CACHE_URL = '/cache/sample-data.json';
 
+let _sampleDataPrefetch = null;
+
+function prefetchSampleData() {
+  if (!_sampleDataPrefetch) {
+    _sampleDataPrefetch = fetch(SAMPLE_DATA_CACHE_URL)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+  }
+  return _sampleDataPrefetch;
+}
+
+/** 脚本加载时立即预取静态数据 */
+prefetchSampleData();
+
+function showPageLoader(message) {
+  const loader = document.getElementById('page-loader');
+  if (!loader) return;
+  loader.classList.remove('hide');
+  const text = loader.querySelector('.loader-text');
+  if (text && message) text.textContent = message;
+}
+
+function hidePageLoader() {
+  document.getElementById('page-loader')?.classList.add('hide');
+}
+
 function esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -109,9 +135,7 @@ function showEmployeeModal(employeeId, allEmployees) {
  * @param {{ onCacheReady?: (data: object) => void }} [options]
  */
 async function bootstrapIntegratedData(options = {}) {
-  const cachePromise = fetch(SAMPLE_DATA_CACHE_URL)
-    .then((r) => (r.ok ? r.json() : null))
-    .catch(() => null);
+  const cachePromise = prefetchSampleData();
   const bootstrapPromise = fetch('/api/bootstrap')
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null);

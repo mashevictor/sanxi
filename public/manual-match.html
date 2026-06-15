@@ -367,7 +367,8 @@
     .manual-table tbody tr:hover { background: rgba(99,102,241,.08); }
     .manual-table tr.selected { background: rgba(99,102,241,.15); }
     .manual-table tr.selected td { color: #e0e7ff; }
-    .manual-table .co-name-cell { font-weight: 600; max-width: 160px; word-break: break-all; }
+    .manual-table .co-name-cell { font-weight: 600; max-width: 140px; word-break: break-all; }
+    .manual-table .park-cell { font-size: 0.68rem; color: #a5b4fc; max-width: 120px; word-break: break-all; }
     .manual-table .sub-cell { font-size: 0.68rem; color: var(--muted); }
     .manual-table input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
 
@@ -482,6 +483,7 @@
       border: 1px solid rgba(99,102,241,.35);
     }
     .btn-secondary:hover { background: rgba(99,102,241,.22); transform: translateY(-1px); }
+    .btn-secondary.loading { animation: pulse .9s infinite; opacity: .75; }
 
     .view-tabs { display: flex; gap: 6px; background: rgba(0,0,0,.2); padding: 4px; border-radius: 10px; }
     .view-tab {
@@ -594,7 +596,7 @@
 <body class="manual-page">
   <div class="page-loader" id="page-loader">
     <div class="loader-ring"></div>
-    <div>加载派单数据...</div>
+    <div class="loader-text">加载派单数据...</div>
   </div>
 
   <div class="wrap">
@@ -604,9 +606,10 @@
         <div class="sub">表格多选公司与员工 · 确认匹配 · 规则校验</div>
       </div>
       <div class="toolbar">
+        <button type="button" class="btn-secondary" id="goto-full-match-btn">全量匹配</button>
         <nav class="page-nav">
-          <a class="nav-link" href="match.html">AI 匹配</a>
           <a class="nav-link active" href="manual-match.html">手动派单</a>
+          <a class="nav-link" href="match.html">AI 匹配</a>
         </nav>
       </div>
     </div>
@@ -641,6 +644,7 @@
                   <tr>
                     <th style="width:28px"><input type="checkbox" id="manual-co-all" title="全选"></th>
                     <th>公司</th>
+                    <th>园区</th>
                     <th>类型</th>
                     <th>时段</th>
                   </tr>
@@ -662,7 +666,8 @@
                     <th style="width:28px"><input type="checkbox" id="manual-emp-all" title="全选"></th>
                     <th>姓名</th>
                     <th>职责</th>
-                    <th>出发地 · 时段</th>
+                    <th>出发地</th>
+                    <th>时段</th>
                     <th style="width:40px"></th>
                   </tr>
                 </thead>

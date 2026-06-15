@@ -26,7 +26,6 @@ let fullMatchCache = null;
 const FULL_MATCH_CACHE_URL = '/cache/full-match.json';
 
 const fullMatchBtn = document.getElementById('full-match-btn');
-const pageLoader = document.getElementById('page-loader');
 
 fullMatchBtn.addEventListener('click', loadFullMatchAndMatch);
 document.getElementById('sel-all-co').addEventListener('click', toggleAllCompanies);
@@ -36,7 +35,13 @@ document.querySelectorAll('.view-tab').forEach((tab) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadIntegratedData();
+  showPageLoader('加载派单数据...');
+  loadIntegratedData().then(() => {
+    if (sessionStorage.getItem('dispatch-auto-full-match') === '1') {
+      sessionStorage.removeItem('dispatch-auto-full-match');
+      loadFullMatchAndMatch();
+    }
+  });
   preloadFullMatchCache();
   document.getElementById('dispatch-board').addEventListener('click', handleBoardClick);
   document.getElementById('emp-modal-close').addEventListener('click', () => {
@@ -110,7 +115,7 @@ async function loadIntegratedData() {
         renderCompanies();
         renderBoard();
         updateStats();
-        pageLoader.classList.add('hide');
+        hidePageLoader();
       },
     });
     applySessionData(data);
@@ -129,7 +134,7 @@ async function loadIntegratedData() {
   } catch (err) {
     showToast(err.message);
   } finally {
-    pageLoader.classList.add('hide');
+    hidePageLoader();
   }
 }
 

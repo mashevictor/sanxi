@@ -12,11 +12,22 @@ let progressTimer = null;
 let lastMatchPairings = [];
 let lastMatchUnmatched = [];
 
-const pageLoader = document.getElementById('page-loader');
-
 document.addEventListener('DOMContentLoaded', () => {
+  showPageLoader('加载公司与员工列表…');
+  prefetchSampleData().then((cached) => {
+    if (cached?.companies?.length) {
+      allCompanies = cached.companies;
+      allEmployees = cached.employees || [];
+      renderManualTables();
+      hidePageLoader();
+    }
+  });
   loadData();
   document.getElementById('manual-match-btn').addEventListener('click', onManualMatch);
+  document.getElementById('goto-full-match-btn').addEventListener('click', () => {
+    sessionStorage.setItem('dispatch-auto-full-match', '1');
+    window.location.href = 'match.html';
+  });
   document.getElementById('manual-clear-btn').addEventListener('click', clearManualSelection);
   document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
     const ids = Array.from(manualSelectedEmployees);
@@ -47,7 +58,7 @@ async function loadData() {
         renderManualTables();
         renderManualResults();
         updateManualStats();
-        pageLoader.classList.add('hide');
+        hidePageLoader();
       },
     });
     sessionId = data.sessionId;
@@ -65,7 +76,7 @@ async function loadData() {
   } catch (err) {
     showToast(err.message);
   } finally {
-    pageLoader.classList.add('hide');
+    hidePageLoader();
   }
 }
 
@@ -115,30 +126,35 @@ function renderManualTables() {
 
   coBody.innerHTML = companies.map((c) => {
     const on = manualSelectedCompanies.has(c.id);
+    const tag = c.sourceTag ? `<span class="source-tag" style="font-size:0.58rem;margin-left:4px">${esc(c.sourceTag)}</span>` : '';
     return `
       <tr class="${on ? 'selected' : ''}" data-cid="${c.id}">
         <td><input type="checkbox" class="manual-co-cb" value="${c.id}" ${on ? 'checked' : ''}></td>
-        <td class="co-name-cell">${esc(c.companyName)}</td>
+        <td class="co-name-cell">${esc(c.companyName)}${tag}</td>
+        <td class="park-cell">${esc(c.parkName || '—')}</td>
         <td class="sub-cell">${esc(c.customerType)}</td>
         <td class="sub-cell">${esc(c.timeSlot)}</td>
       </tr>
     `;
-  }).join('') || '<tr><td colspan="4" class="sub-cell" style="padding:12px;text-align:center">无匹配公司</td></tr>';
+  }).join('') || '<tr><td colspan="5" class="sub-cell" style="padding:12px;text-align:center">无匹配公司</td></tr>';
 
   empBody.innerHTML = employees.map((e) => {
     const on = manualSelectedEmployees.has(e.id);
-    const roles = (e.tags || e.roles || []).slice(0, 2).join(' · ');
+    const roles = (e.tags || e.roles || []).join(' · ');
     const tag = e.sourceTag ? `<span class="source-tag" style="font-size:0.58rem">${esc(e.sourceTag)}</span>` : '';
+    const dep = e.departureAddress || '未填写';
+    const slots = getEmpSlotLabels(e);
     return `
       <tr class="${on ? 'selected' : ''}" data-eid="${e.id}">
         <td><input type="checkbox" class="manual-emp-cb" value="${e.id}" ${on ? 'checked' : ''}></td>
         <td class="co-name-cell">${esc(e.name)} ${tag}</td>
         <td class="sub-cell">${esc(roles)}</td>
-        <td class="sub-cell">${renderEmpDepSlots(e)}</td>
+        <td class="sub-cell">${esc(dep)}</td>
+        <td class="sub-cell" style="color:#a5b4fc">${esc(slots)}</td>
         <td><button type="button" class="btn-emp-info manual-emp-info-row" data-eid="${e.id}">ⓘ</button></td>
       </tr>
     `;
-  }).join('') || '<tr><td colspan="5" class="sub-cell" style="padding:12px;text-align:center">无匹配员工</td></tr>';
+  }).join('') || '<tr><td colspan="6" class="sub-cell" style="padding:12px;text-align:center">无匹配员工</td></tr>';
 
   document.getElementById('manual-co-count').textContent = `已选 ${manualSelectedCompanies.size}`;
   document.getElementById('manual-emp-count').textContent = `已选 ${manualSelectedEmployees.size}`;
