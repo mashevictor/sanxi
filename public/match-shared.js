@@ -3,6 +3,7 @@ const DISPATCH_STORE_KEY = 'dispatch-board-state';
 const SAMPLE_DATA_CACHE_URL = '/cache/sample-data.json';
 
 let _sampleDataPrefetch = null;
+let _bootstrapPrefetch = null;
 
 function prefetchSampleData() {
   if (!_sampleDataPrefetch) {
@@ -13,8 +14,18 @@ function prefetchSampleData() {
   return _sampleDataPrefetch;
 }
 
-/** 脚本加载时立即预取静态数据 */
+function prefetchBootstrap() {
+  if (!_bootstrapPrefetch) {
+    _bootstrapPrefetch = fetch('/api/bootstrap')
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+  }
+  return _bootstrapPrefetch;
+}
+
+/** 脚本加载时立即预取静态数据与会话 */
 prefetchSampleData();
+prefetchBootstrap();
 
 function showPageLoader(message) {
   const loader = document.getElementById('page-loader');
@@ -135,17 +146,12 @@ function showEmployeeModal(employeeId, allEmployees) {
  * @param {{ onCacheReady?: (data: object) => void }} [options]
  */
 async function bootstrapIntegratedData(options = {}) {
-  const cachePromise = prefetchSampleData();
-  const bootstrapPromise = fetch('/api/bootstrap')
-    .then((r) => (r.ok ? r.json() : null))
-    .catch(() => null);
+  const [cached, boot] = await Promise.all([prefetchSampleData(), prefetchBootstrap()]);
 
-  const cached = await cachePromise;
   if (cached && typeof options.onCacheReady === 'function') {
     options.onCacheReady(cached);
   }
 
-  const boot = await bootstrapPromise;
   if (cached && boot?.sessionId) {
     return { ...cached, sessionId: boot.sessionId };
   }

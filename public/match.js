@@ -36,13 +36,25 @@ document.querySelectorAll('.view-tab').forEach((tab) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   showPageLoader('加载派单数据...');
+  prefetchSampleData().then((cached) => {
+    if (cached?.companies?.length) {
+      allCompanies = cached.companies;
+      allEmployees = cached.employees || [];
+      showcaseCustomerIds = cached.showcaseCustomerIds || [];
+      fullMatchCustomerIds = cached.fullMatchCustomerIds || [];
+      maxCommuteMinutes = cached.maxCommuteMinutes || 60;
+      renderCompanies();
+      renderBoard();
+      updateStats();
+      hidePageLoader();
+    }
+  });
   loadIntegratedData().then(() => {
     if (sessionStorage.getItem('dispatch-auto-full-match') === '1') {
       sessionStorage.removeItem('dispatch-auto-full-match');
       loadFullMatchAndMatch();
     }
   });
-  preloadFullMatchCache();
   document.getElementById('dispatch-board').addEventListener('click', handleBoardClick);
   document.getElementById('emp-modal-close').addEventListener('click', () => {
     document.getElementById('emp-modal').hidden = true;
@@ -105,6 +117,7 @@ function switchView(view) {
 
 async function loadIntegratedData() {
   try {
+    const stored = loadDispatchState();
     const data = await bootstrapIntegratedData({
       onCacheReady: (cached) => {
         allCompanies = cached.companies || [];
@@ -118,8 +131,7 @@ async function loadIntegratedData() {
         hidePageLoader();
       },
     });
-    applySessionData(data);
-    const stored = loadDispatchState();
+    applySessionMeta(data);
     if (stored?.selectedCompanies?.length) {
       stored.selectedCompanies.forEach((id) => selectedCompanies.add(id));
     }
@@ -138,20 +150,28 @@ async function loadIntegratedData() {
   }
 }
 
-async function preloadFullMatchCache() {
-  try {
-    await fetchFullMatchCache();
-  } catch {
-    /* 缓存可选，全量匹配时会回退实时 API */
-  }
+/** 仅更新会话元数据，不清空已选公司与匹配结果 */
+function applySessionMeta(data) {
+  sessionId = data.sessionId;
+  allCompanies = data.companies;
+  allEmployees = data.employees;
+  showcaseCustomerIds = data.showcaseCustomerIds || [];
+  fullMatchCustomerIds = data.fullMatchCustomerIds || [];
+  maxCommuteMinutes = data.maxCommuteMinutes || 60;
 }
 
 async function fetchFullMatchCache() {
   if (fullMatchCache) return fullMatchCache;
-  const res = await fetch(FULL_MATCH_CACHE_URL);
-  if (!res.ok) throw new Error('全量匹配缓存未找到，请运行 npm run cache:showcase');
-  fullMatchCache = await res.json();
-  return fullMatchCache;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(FULL_MATCH_CACHE_URL, { signal: controller.signal });
+    if (!res.ok) throw new Error('全量匹配缓存未找到，请运行 npm run cache:showcase');
+    fullMatchCache = await res.json();
+    return fullMatchCache;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function getRemapMissingIds(remapped, expectedIds) {
