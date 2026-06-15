@@ -364,4 +364,5 @@ app.listen(PORT, () => {
   console.log(`派单系统 Web 服务已启动: http://localhost:${PORT}`);
   console.log(`  Excel上传派单: http://localhost:${PORT}/`);
   console.log(`  选择公司派单: http://localhost:${PORT}/match.html`);
+  console.log(`  手动派单: http://localhost:${PORT}/manual-match.html`);
 });

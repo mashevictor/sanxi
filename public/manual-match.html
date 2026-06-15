@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>派单匹配看板</title>
+  <title>手动派单</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -552,7 +552,7 @@
     .manual-result-item.fail { border-color: rgba(248,113,113,.3); color: #fca5a5; }
   </style>
 </head>
-<body>
+<body class="manual-page">
   <div class="page-loader" id="page-loader">
     <div class="loader-ring"></div>
     <div>加载派单数据...</div>
@@ -561,54 +561,83 @@
   <div class="wrap">
     <div class="topbar">
       <div>
-        <h1>派单匹配看板</h1>
-        <div class="sub">AI 智能匹配 · 增量派单 · 一人多单 · 员工行程</div>
-        <div class="ai-badge"><span class="dot"></span> AI 派单引擎运行中</div>
+        <h1>手动派单</h1>
+        <div class="sub">表格多选公司与员工 · 批量指派 · 规则校验</div>
       </div>
       <div class="toolbar">
         <nav class="page-nav">
-          <a class="nav-link active" href="match.html">AI 匹配</a>
-          <a class="nav-link" href="manual-match.html">手动派单</a>
+          <a class="nav-link" href="match.html">AI 匹配</a>
+          <a class="nav-link active" href="manual-match.html">手动派单</a>
         </nav>
-        <button class="btn-secondary" id="showcase-btn">一键演示（缓存）</button>
-        <button class="btn-secondary" id="full-match-btn">全量55家匹配（缓存）</button>
-        <button class="btn-primary" id="dispatch-btn" disabled>重新 AI 匹配</button>
       </div>
     </div>
 
     <div class="stat-grid">
-      <div class="stat-card info"><div class="num" id="stat-selected">0</div><div class="lbl">已选公司</div></div>
-      <div class="stat-card ok"><div class="num" id="stat-matched">0</div><div class="lbl">匹配成功</div></div>
-      <div class="stat-card fail"><div class="num" id="stat-failed">0</div><div class="lbl">匹配失败</div></div>
-      <div class="stat-card info"><div class="num" id="stat-commute">—</div><div class="lbl">平均通勤(分)</div></div>
+      <div class="stat-card info"><div class="num" id="stat-co-picked">0</div><div class="lbl">已选公司</div></div>
+      <div class="stat-card info"><div class="num" id="stat-emp-picked">0</div><div class="lbl">已选员工</div></div>
+      <div class="stat-card ok"><div class="num" id="stat-manual-ok">0</div><div class="lbl">指派成功</div></div>
+      <div class="stat-card fail"><div class="num" id="stat-manual-fail">0</div><div class="lbl">不合规</div></div>
     </div>
 
-    <div class="layout">
-      <div class="panel">
-        <div class="panel-head">
-          选择公司
-          <button class="link" id="sel-all-co">全选</button>
+    <div class="panel">
+      <div class="panel-head">
+        <span>手动派单 · 表格多选</span>
+        <div class="manual-actions" style="display:flex;gap:6px">
+          <button type="button" class="btn-sm" id="manual-clear-btn">清空选择</button>
+          <button type="button" class="btn-sm" id="manual-emp-info-btn">查看员工</button>
+          <button type="button" class="btn-sm primary" id="manual-assign-btn">确认指派</button>
         </div>
-        <div class="scroll" id="company-list"></div>
       </div>
-
-      <div class="panel">
-        <div class="panel-head">
-          <div class="view-tabs">
-            <button class="view-tab active" id="tab-results" data-view="results">派单结果</button>
-            <button class="view-tab" id="tab-schedules" data-view="schedules">员工行程</button>
+      <div class="manual-panel" style="margin:0;border:none;border-radius:0">
+        <div class="manual-tables">
+          <div class="manual-table-wrap">
+            <div class="manual-table-hd">
+              <span>选择公司</span>
+              <span class="count" id="manual-co-count">已选 0</span>
+            </div>
+            <input type="text" class="manual-search" id="manual-co-search" placeholder="搜索公司 / 园区 / 时段">
+            <div class="manual-table-scroll">
+              <table class="manual-table" id="manual-co-table">
+                <thead>
+                  <tr>
+                    <th style="width:28px"><input type="checkbox" id="manual-co-all" title="全选"></th>
+                    <th>公司</th>
+                    <th>类型</th>
+                    <th>时段</th>
+                  </tr>
+                </thead>
+                <tbody id="manual-co-tbody"></tbody>
+              </table>
+            </div>
           </div>
-          <span id="distance-tag">通勤上限 60 分钟</span>
+          <div class="manual-table-wrap">
+            <div class="manual-table-hd">
+              <span>选择员工</span>
+              <span class="count" id="manual-emp-count">已选 0</span>
+            </div>
+            <input type="text" class="manual-search" id="manual-emp-search" placeholder="搜索姓名 / 出发地 / 时段">
+            <div class="manual-table-scroll">
+              <table class="manual-table" id="manual-emp-table">
+                <thead>
+                  <tr>
+                    <th style="width:28px"><input type="checkbox" id="manual-emp-all" title="全选"></th>
+                    <th>姓名</th>
+                    <th>职责</th>
+                    <th>出发地 · 时段</th>
+                    <th style="width:40px"></th>
+                  </tr>
+                </thead>
+                <tbody id="manual-emp-tbody"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div class="ai-hint" id="manual-hint">
-          勾选左侧公司后 AI 自动匹配；点击每行<strong>选择员工</strong>下拉可改派，合规指派将<strong>锁定</strong>。手动批量派单请前往 <a href="manual-match.html" style="color:#e9d5ff">手动派单页</a>。
-        </div>
-        <div class="scroll" id="dispatch-board">
-          <div class="empty">勾选左侧公司，AI 将自动匹配并在此展示结果</div>
-        </div>
-        <div class="scroll" id="schedule-board" hidden>
-          <div class="empty">匹配成功后，可在此查看每位员工的当日行程</div>
-        </div>
+      </div>
+      <div class="ai-hint">
+        勾选公司与员工后点「确认指派」：1 名员工可派多家，或等数量一一配对。不合规将显示具体原因（如<strong>时段不匹配</strong>）。
+      </div>
+      <div class="manual-result" id="manual-result">
+        <div class="empty" style="padding:24px">指派结果将显示在这里</div>
       </div>
     </div>
   </div>
@@ -622,6 +651,6 @@
     </div>
   </div>
   <script src="/match-shared.js"></script>
-  <script src="/match.js"></script>
+  <script src="/manual-match.js"></script>
 </body>
 </html>

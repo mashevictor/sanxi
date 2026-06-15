@@ -16,11 +16,7 @@ let distanceSource = '';
 let maxCommuteMinutes = 60;
 let openPickerId = null;
 let pickerSearch = '';
-const manualSelectedCompanies = new Set();
-const manualSelectedEmployees = new Set();
-let manualCoSearch = '';
-let manualEmpSearch = '';
-let manualTablesBound = false;
+let pickerPortalBound = false;
 let activeView = 'results';
 
 let showcaseCustomerIds = [];
@@ -48,14 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
   preloadShowcaseCache();
   preloadFullMatchCache();
   document.getElementById('dispatch-board').addEventListener('click', handleBoardClick);
-  document.getElementById('manual-assign-btn').addEventListener('click', onManualAssign);
-  document.getElementById('manual-clear-btn').addEventListener('click', clearManualSelection);
-  document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
-    const ids = Array.from(manualSelectedEmployees);
-    if (ids.length === 1) showEmployeeModal(ids[0]);
-    else if (ids.length > 1) showToast('已选多名员工，请只勾选 1 人查看详情');
-    else showToast('请先在表格中勾选员工');
-  });
   document.getElementById('emp-modal-close').addEventListener('click', () => {
     document.getElementById('emp-modal').hidden = true;
   });
@@ -63,12 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.id === 'emp-modal') document.getElementById('emp-modal').hidden = true;
   });
   window.addEventListener('resize', positionOpenPicker);
-  document.getElementById('dispatch-board').closest('.scroll')?.addEventListener('scroll', positionOpenPicker);
+  window.addEventListener('scroll', positionOpenPicker, true);
   document.addEventListener('click', (e) => {
-    if (openPickerId !== null && !e.target.closest('.emp-picker')) {
+    if (openPickerId !== null && !e.target.closest('.emp-picker') && !e.target.closest('#emp-picker-portal')) {
       openPickerId = null;
       pickerSearch = '';
       renderBoard({ animate: false });
+      renderPickerPortal();
     }
   });
 });
@@ -78,7 +67,7 @@ function handleBoardClick(e) {
   if (infoBtn) {
     e.stopPropagation();
     const eid = parseInt(infoBtn.dataset.eid, 10);
-    if (eid) showEmployeeModal(eid);
+    if (eid) showEmployeeModal(eid, allEmployees);
     return;
   }
   const detailBtn = e.target.closest('.btn-detail');
@@ -120,10 +109,21 @@ async function loadIntegratedData() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '加载失败');
     applySessionData(data);
+    const stored = loadDispatchState();
+    if (stored?.sessionId) {
+      sessionId = stored.sessionId;
+      if (stored.selectedCompanies?.length) {
+        stored.selectedCompanies.forEach((id) => selectedCompanies.add(id));
+      }
+      if (stored.assignmentMap?.length) {
+        assignmentMap = deserializeAssignmentMap(stored.assignmentMap);
+        syncPreviewFromAssignment();
+      }
+    }
     renderCompanies();
-    renderManualTables();
     renderBoard();
     updateStats();
+    persistDispatchState();
   } catch (err) {
     showToast(err.message);
   } finally {
@@ -435,22 +435,16 @@ function countManualAssignments() {
   return n;
 }
 
+function persistDispatchState() {
+  saveDispatchState({
+    sessionId,
+    selectedCompanies: Array.from(selectedCompanies),
+    assignmentMap: serializeAssignmentMap(assignmentMap),
+  });
+}
+
 function updateManualHint() {
-  const hint = document.getElementById('manual-hint');
-  const el = document.getElementById('manual-hint-text');
-  if (!el || !hint) return;
-  if (getSelectedIds().length === 0 || isMatching) {
-    hint.hidden = true;
-    return;
-  }
-  hint.hidden = false;
-  const manual = countManualAssignments();
-  const base = '在上方<strong>表格</strong>多选公司与员工后点「确认指派」（1 名员工可派多家，或等数量一一配对），也可点击每行员工下拉改派；合规指派将<strong>锁定</strong>。';
-  if (manual > 0) {
-    el.innerHTML = `${base} <span class="manual-count">（已手动调整 ${manual} 条）</span>`;
-  } else {
-    el.innerHTML = base;
-  }
+  /* AI 页使用静态提示 */
 }
 
 function getMatchOnlyIds() {
@@ -514,24 +508,19 @@ function getUsedEmployeeIds(excludeCustomerId) {
   return used;
 }
 
-function renderEmployeePicker(customerId, currentEmployeeId, disabled) {
+function buildPickerListHtml(customerId, currentEmployeeId) {
   const used = getUsedEmployeeIds(customerId);
-  const current = allEmployees.find((e) => e.id === currentEmployeeId);
-  const isOpen = openPickerId === customerId;
-
   const filtered = allEmployees.filter((e) => {
-    if (!isOpen) return false;
     if (!pickerSearch) return true;
     const q = pickerSearch.toLowerCase();
     const tags = (e.tags || e.roles || []).join(' ');
-    const hay = `${e.name} ${e.departureAddress || ''} ${tags}`.toLowerCase();
+    const hay = `${e.name} ${e.departureAddress || ''} ${tags} ${getEmpSlotLabels(e)}`.toLowerCase();
     return hay.includes(q);
   });
 
   const clearOption = currentEmployeeId
     ? `<div class="emp-option clear-option" data-cid="${customerId}" data-eid="0" data-clear="1">
          <div class="emp-option-top"><span class="emp-option-name">✕ 清除指派</span></div>
-         <div class="emp-option-dep">清除后可重新选择员工或让 AI 再次匹配</div>
        </div>`
     : '';
 
@@ -541,32 +530,108 @@ function renderEmployeePicker(customerId, currentEmployeeId, disabled) {
     const showcaseTag = e.sourceTag ? `<span class="source-tag">${esc(e.sourceTag)}</span>` : '';
     return `
       <div class="emp-option ${taken ? 'disabled' : ''} ${e.id === currentEmployeeId ? 'selected' : ''}"
-           data-cid="${customerId}" data-eid="${e.id}" data-taken="${taken ? '1' : '0'}">
+           data-cid="${customerId}" data-eid="${e.id}">
         <div class="emp-option-top">
           <span class="emp-option-name">${esc(e.name)} ${showcaseTag}</span>
           <button type="button" class="btn-emp-info" data-eid="${e.id}" title="查看员工信息">ⓘ</button>
         </div>
         <div class="emp-option-tags">${tags.map((t) => `<span class="etag">${esc(t)}</span>`).join('')}</div>
-        <div class="emp-option-dep">出发：${esc(e.departureAddress || '未填写')}</div>
+        ${renderEmpDepSlots(e)}
       </div>
     `;
   }).join('');
 
+  return `${clearOption}${items || (allEmployees.length
+    ? '<div style="padding:12px;color:var(--muted);font-size:0.8rem">无匹配员工</div>'
+    : '<div style="padding:12px;color:var(--muted);font-size:0.8rem">员工数据未加载</div>')}`;
+}
+
+function renderEmployeePicker(customerId, currentEmployeeId, disabled) {
+  const current = allEmployees.find((e) => e.id === currentEmployeeId);
+  const isOpen = openPickerId === customerId;
   return `
     <div class="emp-picker ${isOpen ? 'open' : ''}" data-cid="${customerId}">
       <button type="button" class="emp-picker-btn" data-cid="${customerId}" ${disabled ? 'disabled' : ''}>
         <span>
           <div class="picker-name">${current ? esc(current.name) : '选择员工'}</div>
-          ${current ? `<div class="picker-sub">${esc((current.tags || current.roles || []).slice(0, 2).join(' · '))}${current.sourceTag ? ` · ${esc(current.sourceTag)}` : ''}</div>` : ''}
+          ${current ? `<div class="picker-sub">${renderEmpDepSlots(current)}</div>` : ''}
         </span>
         <span class="picker-arrow">▼</span>
       </button>
-      <div class="emp-picker-panel" ${isOpen ? '' : 'hidden'} data-cid="${customerId}">
-        <input type="text" class="emp-search" placeholder="搜索姓名 / 出发地 / 标签" value="${esc(pickerSearch)}" data-cid="${customerId}">
-        <div class="emp-picker-list">${clearOption}${items || (isOpen ? (allEmployees.length ? '<div style="padding:12px;color:var(--muted);font-size:0.8rem">无匹配员工</div>' : '<div style="padding:12px;color:var(--muted);font-size:0.8rem">员工数据未加载</div>') : '')}</div>
-      </div>
     </div>
   `;
+}
+
+function ensurePickerPortal() {
+  let portal = document.getElementById('emp-picker-portal');
+  if (!portal) {
+    portal = document.createElement('div');
+    portal.id = 'emp-picker-portal';
+    portal.className = 'emp-picker-panel';
+    portal.hidden = true;
+    document.body.appendChild(portal);
+    bindPickerPortalEvents(portal);
+  }
+  return portal;
+}
+
+function bindPickerPortalEvents(portal) {
+  if (pickerPortalBound) return;
+  pickerPortalBound = true;
+
+  portal.addEventListener('click', (e) => e.stopPropagation());
+
+  portal.addEventListener('input', (e) => {
+    const input = e.target.closest('.emp-search');
+    if (!input || openPickerId === null) return;
+    pickerSearch = input.value;
+    renderPickerPortal();
+    const el = portal.querySelector('.emp-search');
+    if (el) {
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }
+  });
+
+  portal.addEventListener('click', async (e) => {
+    const infoBtn = e.target.closest('.btn-emp-info');
+    if (infoBtn) {
+      e.stopPropagation();
+      showEmployeeModal(parseInt(infoBtn.dataset.eid, 10), allEmployees);
+      return;
+    }
+    const opt = e.target.closest('.emp-option:not(.disabled)');
+    if (!opt) return;
+    e.stopPropagation();
+    const customerId = parseInt(opt.dataset.cid, 10);
+    openPickerId = null;
+    pickerSearch = '';
+    renderPickerPortal();
+    if (opt.dataset.clear === '1') {
+      await clearEmployeeAssignment(customerId);
+      return;
+    }
+    await applyEmployeeChange(customerId, parseInt(opt.dataset.eid, 10));
+  });
+}
+
+function renderPickerPortal() {
+  const portal = ensurePickerPortal();
+  if (openPickerId === null) {
+    portal.hidden = true;
+    return;
+  }
+  const customerId = openPickerId;
+  let currentEmployeeId = null;
+  const entry = assignmentMap.get(customerId);
+  if (entry?.type === 'ok') currentEmployeeId = entry.data.employeeId;
+
+  portal.hidden = false;
+  portal.innerHTML = `
+    <input type="text" class="emp-search" placeholder="搜索姓名 / 出发地 / 时段 / 标签" value="${esc(pickerSearch)}">
+    <div class="emp-picker-list">${buildPickerListHtml(customerId, currentEmployeeId)}</div>
+  `;
+  requestAnimationFrame(() => positionOpenPicker());
 }
 
 function renderCommuteCell(minutes, route) {
@@ -622,7 +687,9 @@ function renderExpandContent(entry) {
   const u = entry.data;
   let html = `<div class="fail-reason">${esc(u.reason)}</div>`;
   if (u.nearestAttempt) {
-    html += `<div style="margin-top:6px;color:var(--muted)">最近候选 <strong>${esc(u.nearestAttempt.employeeName)}</strong>（${esc(u.nearestAttempt.departureAddress)}）</div>`;
+    html += `<div style="margin-top:6px;color:var(--muted)">最近候选 <strong>${esc(u.nearestAttempt.employeeName)}</strong></div>`;
+    const nearEmp = allEmployees.find((e) => e.name === u.nearestAttempt.employeeName);
+    html += `<div style="margin-top:4px">${nearEmp ? renderEmpDepSlots(nearEmp) : esc(u.nearestAttempt.departureAddress)}</div>`;
     if (u.nearestAttempt.route?.pathSummary) {
       html += `<div class="route-line">${esc(u.nearestAttempt.route.pathSummary)}</div>`;
     }
@@ -716,7 +783,7 @@ function renderDispatchRow(customerId, entry, animIndex = 0, animate = true) {
         <div class="cell-employee">
           ${renderEmployeePicker(customerId, null, isMatching)}
           ${entry.manual
-            ? '<span class="manual-tag">手动不合规</span>'
+            ? `<span class="manual-tag fail-reason-tag">${esc(extractFailReason(entry))}</span>`
             : '<span class="manual-tag hint-tag">可手动改派</span>'}
         </div>
         <div class="cell-commute"><span class="commute-none">—</span></div>
@@ -793,297 +860,33 @@ function renderBoard(options = {}) {
 
   board.innerHTML = html || '<div class="empty">暂无结果</div>';
   bindBoardEvents();
-  renderManualTables();
+  renderPickerPortal();
   updateManualHint();
-}
-
-function filterManualCompanies() {
-  const q = manualCoSearch.toLowerCase();
-  if (!q) return allCompanies;
-  return allCompanies.filter((c) => {
-    const hay = `${c.companyName} ${c.customerType} ${c.timeSlot} ${c.parkName}`.toLowerCase();
-    return hay.includes(q);
-  });
-}
-
-function filterManualEmployees() {
-  const q = manualEmpSearch.toLowerCase();
-  if (!q) return allEmployees;
-  return allEmployees.filter((e) => {
-    const tags = (e.tags || e.roles || []).join(' ');
-    const hay = `${e.name} ${e.departureAddress || ''} ${tags}`.toLowerCase();
-    return hay.includes(q);
-  });
-}
-
-function renderManualTables() {
-  const coBody = document.getElementById('manual-co-tbody');
-  const empBody = document.getElementById('manual-emp-tbody');
-  const coCount = document.getElementById('manual-co-count');
-  const empCount = document.getElementById('manual-emp-count');
-  if (!coBody || !empBody) return;
-
-  const companies = filterManualCompanies();
-  const employees = filterManualEmployees();
-
-  coBody.innerHTML = companies.map((c) => {
-    const on = manualSelectedCompanies.has(c.id);
-    const mark = selectedCompanies.has(c.id) ? '<span class="source-tag" style="font-size:0.58rem">已勾选</span>' : '';
-    return `
-      <tr class="${on ? 'selected' : ''}" data-cid="${c.id}">
-        <td><input type="checkbox" class="manual-co-cb" value="${c.id}" ${on ? 'checked' : ''}></td>
-        <td class="co-name-cell">${esc(c.companyName)} ${mark}</td>
-        <td class="sub-cell">${esc(c.customerType)}</td>
-        <td class="sub-cell">${esc(c.timeSlot)}</td>
-      </tr>
-    `;
-  }).join('') || '<tr><td colspan="4" class="sub-cell" style="padding:12px;text-align:center">无匹配公司</td></tr>';
-
-  empBody.innerHTML = employees.map((e) => {
-    const on = manualSelectedEmployees.has(e.id);
-    const roles = (e.tags || e.roles || []).slice(0, 2).join(' · ');
-    const tag = e.sourceTag ? `<span class="source-tag" style="font-size:0.58rem">${esc(e.sourceTag)}</span>` : '';
-    return `
-      <tr class="${on ? 'selected' : ''}" data-eid="${e.id}">
-        <td><input type="checkbox" class="manual-emp-cb" value="${e.id}" ${on ? 'checked' : ''}></td>
-        <td class="co-name-cell">${esc(e.name)} ${tag}</td>
-        <td class="sub-cell">${esc(roles)}</td>
-        <td class="sub-cell">${esc((e.departureAddress || '').slice(0, 18))}</td>
-        <td><button type="button" class="btn-emp-info manual-emp-info-row" data-eid="${e.id}">ⓘ</button></td>
-      </tr>
-    `;
-  }).join('') || '<tr><td colspan="5" class="sub-cell" style="padding:12px;text-align:center">无匹配员工</td></tr>';
-
-  if (coCount) coCount.textContent = `已选 ${manualSelectedCompanies.size}`;
-  if (empCount) empCount.textContent = `已选 ${manualSelectedEmployees.size}`;
-
-  syncManualTableSelectAll('manual-co-all', companies, manualSelectedCompanies);
-  syncManualTableSelectAll('manual-emp-all', employees, manualSelectedEmployees);
-  bindManualTableEvents();
-}
-
-function syncManualTableSelectAll(allId, visibleItems, selectedSet) {
-  const allCb = document.getElementById(allId);
-  if (!allCb) return;
-  const visibleIds = visibleItems.map((x) => x.id);
-  const selectedVisible = visibleIds.filter((id) => selectedSet.has(id)).length;
-  allCb.checked = visibleIds.length > 0 && selectedVisible === visibleIds.length;
-  allCb.indeterminate = selectedVisible > 0 && selectedVisible < visibleIds.length;
-}
-
-function bindManualTableEvents() {
-  if (manualTablesBound) return;
-  manualTablesBound = true;
-
-  document.getElementById('manual-co-search')?.addEventListener('input', (e) => {
-    manualCoSearch = e.target.value;
-    renderManualTables();
-  });
-  document.getElementById('manual-emp-search')?.addEventListener('input', (e) => {
-    manualEmpSearch = e.target.value;
-    renderManualTables();
-  });
-
-  document.getElementById('manual-co-all')?.addEventListener('change', (e) => {
-    const on = e.target.checked;
-    filterManualCompanies().forEach((c) => {
-      if (on) manualSelectedCompanies.add(c.id);
-      else manualSelectedCompanies.delete(c.id);
-    });
-    renderManualTables();
-  });
-  document.getElementById('manual-emp-all')?.addEventListener('change', (e) => {
-    const on = e.target.checked;
-    filterManualEmployees().forEach((emp) => {
-      if (on) manualSelectedEmployees.add(emp.id);
-      else manualSelectedEmployees.delete(emp.id);
-    });
-    renderManualTables();
-  });
-
-  document.getElementById('manual-co-tbody')?.addEventListener('change', (e) => {
-    const cb = e.target.closest('.manual-co-cb');
-    if (!cb) return;
-    const id = parseInt(cb.value, 10);
-    if (cb.checked) manualSelectedCompanies.add(id);
-    else manualSelectedCompanies.delete(id);
-    cb.closest('tr')?.classList.toggle('selected', cb.checked);
-    document.getElementById('manual-co-count').textContent = `已选 ${manualSelectedCompanies.size}`;
-    syncManualTableSelectAll('manual-co-all', filterManualCompanies(), manualSelectedCompanies);
-  });
-
-  document.getElementById('manual-emp-tbody')?.addEventListener('change', (e) => {
-    const cb = e.target.closest('.manual-emp-cb');
-    if (!cb) return;
-    const id = parseInt(cb.value, 10);
-    if (cb.checked) manualSelectedEmployees.add(id);
-    else manualSelectedEmployees.delete(id);
-    cb.closest('tr')?.classList.toggle('selected', cb.checked);
-    document.getElementById('manual-emp-count').textContent = `已选 ${manualSelectedEmployees.size}`;
-    syncManualTableSelectAll('manual-emp-all', filterManualEmployees(), manualSelectedEmployees);
-  });
-
-  document.getElementById('manual-co-tbody')?.addEventListener('click', (e) => {
-    if (e.target.closest('input, button')) return;
-    const row = e.target.closest('tr[data-cid]');
-    if (!row) return;
-    const cb = row.querySelector('.manual-co-cb');
-    if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }
-  });
-
-  document.getElementById('manual-emp-tbody')?.addEventListener('click', (e) => {
-    const infoBtn = e.target.closest('.manual-emp-info-row');
-    if (infoBtn) {
-      e.stopPropagation();
-      showEmployeeModal(parseInt(infoBtn.dataset.eid, 10));
-      return;
-    }
-    if (e.target.closest('input, button')) return;
-    const row = e.target.closest('tr[data-eid]');
-    if (!row) return;
-    const cb = row.querySelector('.manual-emp-cb');
-    if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }
-  });
-}
-
-function clearManualSelection() {
-  manualSelectedCompanies.clear();
-  manualSelectedEmployees.clear();
-  renderManualTables();
-  showToast('已清空表格选择');
-}
-
-function ensureCompaniesInSelection(companyIds) {
-  for (const id of companyIds) {
-    if (!selectedCompanies.has(id)) {
-      selectedCompanies.add(id);
-      const cb = document.querySelector(`#company-list input[value="${id}"]`);
-      if (cb) {
-        cb.checked = true;
-        cb.closest('.co-item')?.classList.add('checked');
-      }
-    }
-  }
-  if (companyIds.some((id) => !document.querySelector(`#company-list input[value="${id}"]`))) {
-    renderCompanies();
-  }
-  updateStats();
-}
-
-function buildManualAssignPairs() {
-  const coIds = Array.from(manualSelectedCompanies).sort((a, b) => a - b);
-  const empIds = Array.from(manualSelectedEmployees).sort((a, b) => a - b);
-  if (!coIds.length || !empIds.length) return null;
-
-  if (empIds.length === 1) {
-    return coIds.map((cid) => ({ customerId: cid, employeeId: empIds[0] }));
-  }
-  if (coIds.length === empIds.length) {
-    return coIds.map((cid, i) => ({ customerId: cid, employeeId: empIds[i] }));
-  }
-  if (coIds.length === 1 && empIds.length > 1) {
-    return null;
-  }
-  return null;
-}
-
-async function onManualAssign() {
-  const pairs = buildManualAssignPairs();
-  const coN = manualSelectedCompanies.size;
-  const empN = manualSelectedEmployees.size;
-
-  if (!coN) {
-    showToast('请先在表格中勾选公司');
-    return;
-  }
-  if (!empN) {
-    showToast('请先在表格中勾选员工');
-    return;
-  }
-  if (!pairs) {
-    showToast('请选 1 名员工派给多家公司，或等数量的公司与员工一一配对');
-    return;
-  }
-
-  ensureCompaniesInSelection(pairs.map((p) => p.customerId));
-  openPickerId = null;
-  pickerSearch = '';
-
-  let ok = 0;
-  let fail = 0;
-  for (const { customerId, employeeId } of pairs) {
-    const before = assignmentMap.get(customerId);
-    await applyEmployeeChange(customerId, employeeId, { silent: true });
-    const after = assignmentMap.get(customerId);
-    if (after?.type === 'ok' && after.manual) ok++;
-    else fail++;
-    void before;
-  }
-
-  renderBoard({ animate: false });
-  renderSchedules();
-  updateStats();
-
-  if (fail === 0) {
-    showToast(`✓ 手动指派完成：${ok} 条全部合规`);
-  } else if (ok === 0) {
-    showToast(`✗ ${fail} 条均不合规，请查看失败原因`);
-  } else {
-    showToast(`手动指派：${ok} 条成功，${fail} 条不合规`);
-  }
-}
-
-function showEmployeeModal(employeeId) {
-  const emp = allEmployees.find((e) => e.id === employeeId);
-  if (!emp) {
-    showToast('未找到该员工');
-    return;
-  }
-  const modal = document.getElementById('emp-modal');
-  const title = document.getElementById('emp-modal-title');
-  const body = document.getElementById('emp-modal-body');
-  if (!modal || !title || !body) return;
-
-  const roles = (emp.roles || emp.tags || []).join('、') || '—';
-  const capacity = (emp.capacityLabels || emp.orderCapacity || []).join('、') || '—';
-  const tags = (emp.tags || []).join('、');
-
-  title.textContent = emp.name;
-  body.innerHTML = `
-    <div class="info-row"><span class="k">姓名</span><span class="v">${esc(emp.name)}</span></div>
-    <div class="info-row"><span class="k">出发地</span><span class="v">${esc(emp.departureAddress || '未填写')}</span></div>
-    <div class="info-row"><span class="k">职责</span><span class="v">${esc(roles)}</span></div>
-    <div class="info-row"><span class="k">接单时段</span><span class="v">${esc(capacity)}</span></div>
-    ${tags ? `<div class="info-row"><span class="k">标签</span><span class="v">${esc(tags)}</span></div>` : ''}
-    ${emp.sourceTag ? `<div class="info-row"><span class="k">来源</span><span class="v">${esc(emp.sourceTag)}</span></div>` : ''}
-    ${emp.remark ? `<div class="info-row"><span class="k">备注</span><span class="v">${esc(emp.remark)}</span></div>` : ''}
-  `;
-  modal.hidden = false;
 }
 
 function positionOpenPicker() {
   if (openPickerId === null) return;
-  const picker = document.querySelector(`.emp-picker[data-cid="${openPickerId}"]`);
-  const panel = document.querySelector(`.emp-picker-panel[data-cid="${openPickerId}"]`);
-  if (!picker || !panel || panel.hidden) return;
+  const btn = document.querySelector(`.emp-picker[data-cid="${openPickerId}"] .emp-picker-btn`);
+  const portal = document.getElementById('emp-picker-portal');
+  if (!btn || !portal || portal.hidden) return;
 
-  const rect = picker.getBoundingClientRect();
+  const rect = btn.getBoundingClientRect();
   const gap = 4;
   const panelMax = 320;
   const spaceBelow = window.innerHeight - rect.bottom - gap - 12;
   const spaceAbove = rect.top - gap - 12;
   const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
 
-  panel.style.width = `${Math.max(rect.width, 220)}px`;
-  panel.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - Math.max(rect.width, 220) - 8)}px`;
+  portal.style.width = `${Math.max(rect.width, 280)}px`;
+  portal.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - Math.max(rect.width, 280) - 8)}px`;
 
   if (openUp) {
     const h = Math.min(panelMax, spaceAbove);
-    panel.style.top = `${rect.top - gap - h}px`;
-    panel.style.maxHeight = `${h}px`;
+    portal.style.top = `${rect.top - gap - h}px`;
+    portal.style.maxHeight = `${h}px`;
   } else {
-    panel.style.top = `${rect.bottom + gap}px`;
-    panel.style.maxHeight = `${Math.min(panelMax, spaceBelow)}px`;
+    portal.style.top = `${rect.bottom + gap}px`;
+    portal.style.maxHeight = `${Math.min(panelMax, Math.max(spaceBelow, 120))}px`;
   }
 }
 
@@ -1149,52 +952,13 @@ function bindBoardEvents() {
         pickerSearch = '';
       }
       renderBoard({ animate: false });
+      renderPickerPortal();
       if (openPickerId) {
         requestAnimationFrame(() => {
-          positionOpenPicker();
-          const input = document.querySelector(`.emp-search[data-cid="${openPickerId}"]`);
+          const input = document.getElementById('emp-picker-portal')?.querySelector('.emp-search');
           if (input) input.focus();
         });
       }
-    });
-  });
-
-  document.querySelectorAll('.emp-search').forEach((input) => {
-    input.addEventListener('input', () => {
-      pickerSearch = input.value;
-      renderBoard({ animate: false });
-      requestAnimationFrame(() => {
-        positionOpenPicker();
-        const el = document.querySelector(`.emp-search[data-cid="${openPickerId}"]`);
-        if (el) {
-          el.focus();
-          el.setSelectionRange(el.value.length, el.value.length);
-        }
-      });
-    });
-    input.addEventListener('click', (e) => e.stopPropagation());
-  });
-
-  document.querySelectorAll('.emp-option .btn-emp-info').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      showEmployeeModal(parseInt(btn.dataset.eid, 10));
-    });
-  });
-
-  document.querySelectorAll('.emp-option:not(.disabled)').forEach((opt) => {
-    opt.addEventListener('click', async (e) => {
-      if (e.target.closest('.btn-emp-info')) return;
-      e.stopPropagation();
-      const customerId = parseInt(opt.dataset.cid, 10);
-      openPickerId = null;
-      pickerSearch = '';
-      if (opt.dataset.clear === '1') {
-        await clearEmployeeAssignment(customerId);
-        return;
-      }
-      const employeeId = parseInt(opt.dataset.eid, 10);
-      await applyEmployeeChange(customerId, employeeId);
     });
   });
 }
@@ -1209,6 +973,7 @@ async function clearEmployeeAssignment(customerId) {
   renderBoard({ animate: false });
   renderSchedules();
   updateStats();
+  persistDispatchState();
   showToast('已清除指派，可重新选择员工');
 }
 
@@ -1270,7 +1035,7 @@ async function applyEmployeeChange(customerId, employeeId, options = {}) {
           parkName: data.parkName,
           address: data.address,
           customerType: data.customerType,
-          reason: `手动指派不合规（${data.failedRules.map((r) => r.rule).join('、')} 不满足）`,
+          reason: data.failedRules?.map((r) => `${r.rule}不匹配`).join('、') || '不合规',
           nearestAttempt: {
             employeeName: data.employeeName,
             departureAddress: data.departureAddress,
@@ -1290,6 +1055,7 @@ async function applyEmployeeChange(customerId, employeeId, options = {}) {
       renderSchedules();
       updateStats();
     }
+    persistDispatchState();
   } catch (err) {
     if (!silent) showToast(err.message);
     if (!silent) renderBoard();
@@ -1340,6 +1106,7 @@ function applyDispatchResult(data) {
   if (data.maxCommuteMinutes) maxCommuteMinutes = data.maxCommuteMinutes;
   syncAssignmentFromApi(previewPairings, previewUnmatched);
   syncPreviewFromAssignment();
+  persistDispatchState();
 }
 
 function updateStats() {
@@ -1473,22 +1240,4 @@ async function callSelectApi(opts = {}) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error);
   return data;
-}
-
-function esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.hidden = false;
-  requestAnimationFrame(() => t.classList.add('show'));
-  clearTimeout(showToast._timer);
-  const duration = msg.length > 40 ? 4500 : 2800;
-  showToast._timer = setTimeout(() => {
-    t.classList.remove('show');
-    setTimeout(() => { t.hidden = true; }, 350);
-  }, duration);
 }
