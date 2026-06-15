@@ -27,7 +27,10 @@ const FULL_MATCH_CACHE_URL = '/cache/full-match.json';
 
 const fullMatchBtn = document.getElementById('full-match-btn');
 
+let aiHistorySaveTimer = null;
+
 fullMatchBtn.addEventListener('click', loadFullMatchAndMatch);
+document.getElementById('ai-history-btn').addEventListener('click', openAiMatchHistory);
 document.getElementById('sel-all-co').addEventListener('click', toggleAllCompanies);
 
 document.querySelectorAll('.view-tab').forEach((tab) => {
@@ -117,7 +120,7 @@ function switchView(view) {
 
 async function loadIntegratedData() {
   try {
-    const stored = loadDispatchState();
+    const stored = loadDispatchState('ai');
     const data = await bootstrapIntegratedData({
       onCacheReady: (cached) => {
         allCompanies = cached.companies || [];
@@ -239,7 +242,7 @@ async function loadFullMatchAndMatch() {
       resultPayload = data;
     }
 
-    applyDispatchResult(resultPayload);
+    applyDispatchResult(resultPayload, { historyLabel: '全量匹配', immediate: true, showToast: true });
     renderBoard({ animate: true });
     renderSchedules();
     updateStats();
@@ -450,11 +453,56 @@ function countManualAssignments() {
 }
 
 function persistDispatchState() {
-  saveDispatchState({
+  saveDispatchState('ai', {
     sessionId,
     selectedCompanies: Array.from(selectedCompanies),
     assignmentMap: serializeAssignmentMap(assignmentMap),
   });
+}
+
+function scheduleAiHistorySave(data, options = {}) {
+  clearTimeout(aiHistorySaveTimer);
+  const run = () => {
+    const pairings = (data.pairings || []).filter((p) => p.eligible !== false);
+    const unmatched = data.unmatchedCompanies || [];
+    if (!pairings.length && !unmatched.length) return;
+    const entry = buildMatchHistoryEntry(data, {
+      mode: 'ai',
+      label: options.historyLabel || 'AI 匹配',
+      selectedCompanies: getSelectedIds(),
+    });
+    if (appendMatchHistory('ai', entry) && options.showToast) {
+      showToast('已保存到 AI 匹配历史');
+    }
+  };
+  if (options.immediate) run();
+  else aiHistorySaveTimer = setTimeout(run, 1200);
+}
+
+function restoreAiHistoryEntry(entry) {
+  if (!entry) return;
+  selectedCompanies.clear();
+  (entry.selectedCompanies || []).forEach((id) => selectedCompanies.add(Number(id)));
+  applyDispatchResult({
+    pairings: entry.pairings,
+    unmatchedCompanies: entry.unmatchedCompanies,
+    employeeSchedules: entry.employeeSchedules,
+    message: entry.message,
+    distanceSource: entry.distanceSource,
+    maxCommuteMinutes: entry.maxCommuteMinutes,
+    stats: entry.stats,
+  }, { skipHistory: true });
+  renderCompanies();
+  renderBoard({ animate: true });
+  renderSchedules();
+  updateStats();
+  activeView = 'results';
+  switchView('results');
+  showToast(`已恢复：${entry.label || entry.title}`);
+}
+
+function openAiMatchHistory() {
+  openMatchHistoryModal('ai', { onRestore: restoreAiHistoryEntry });
 }
 
 function updateManualHint() {
@@ -1112,7 +1160,7 @@ function syncPreviewFromAssignment() {
   }
 }
 
-function applyDispatchResult(data) {
+function applyDispatchResult(data, options = {}) {
   previewPairings = (data.pairings || []).filter((p) => p.eligible !== false);
   previewUnmatched = data.unmatchedCompanies || [];
   employeeSchedules = data.employeeSchedules || [];
@@ -1121,6 +1169,13 @@ function applyDispatchResult(data) {
   syncAssignmentFromApi(previewPairings, previewUnmatched);
   syncPreviewFromAssignment();
   persistDispatchState();
+  if (!options.skipHistory) {
+    scheduleAiHistorySave(data, {
+      historyLabel: options.historyLabel,
+      immediate: options.immediate,
+      showToast: options.showToast,
+    });
+  }
 }
 
 function updateStats() {

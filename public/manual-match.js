@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   loadData();
+  document.getElementById('manual-history-btn').addEventListener('click', openManualMatchHistory);
   document.getElementById('manual-match-btn').addEventListener('click', onManualMatch);
   document.getElementById('goto-full-match-btn').addEventListener('click', () => {
     sessionStorage.setItem('dispatch-auto-full-match', '1');
@@ -45,11 +46,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadData() {
   try {
-    const stored = loadDispatchState();
+    const stored = loadDispatchState('manual');
     const data = await bootstrapIntegratedData({
       onCacheReady: (cached) => {
         allCompanies = cached.companies || [];
         allEmployees = cached.employees || [];
+        if (stored?.selectedCompanies?.length) {
+          stored.selectedCompanies.forEach((id) => manualSelectedCompanies.add(Number(id)));
+        }
+        if (stored?.selectedEmployees?.length) {
+          stored.selectedEmployees.forEach((id) => manualSelectedEmployees.add(Number(id)));
+        }
         if (stored?.assignmentMap?.length) {
           const map = deserializeAssignmentMap(stored.assignmentMap);
           for (const [k, v] of map) assignmentMap.set(k, v);
@@ -64,6 +71,12 @@ async function loadData() {
     sessionId = data.sessionId;
     allCompanies = data.companies;
     allEmployees = data.employees;
+    if (stored?.selectedCompanies?.length) {
+      stored.selectedCompanies.forEach((id) => manualSelectedCompanies.add(Number(id)));
+    }
+    if (stored?.selectedEmployees?.length) {
+      stored.selectedEmployees.forEach((id) => manualSelectedEmployees.add(Number(id)));
+    }
     if (stored?.assignmentMap?.length) {
       const map = deserializeAssignmentMap(stored.assignmentMap);
       for (const [k, v] of map) assignmentMap.set(k, v);
@@ -90,11 +103,51 @@ function rebuildLastMatchFromAssignment() {
 }
 
 function persistState() {
-  saveDispatchState({
+  saveDispatchState('manual', {
     sessionId,
     selectedCompanies: Array.from(manualSelectedCompanies),
+    selectedEmployees: Array.from(manualSelectedEmployees),
     assignmentMap: serializeAssignmentMap(assignmentMap),
   });
+}
+
+function saveManualMatchHistory(data, customerIds, employeePoolIds) {
+  const entry = buildMatchHistoryEntry(data, {
+    mode: 'manual',
+    label: employeePoolIds.length
+      ? `手动匹配（${customerIds.length} 家 · 员工池 ${employeePoolIds.length} 人）`
+      : `手动匹配（${customerIds.length} 家）`,
+    selectedCompanies: customerIds,
+    selectedEmployees: employeePoolIds,
+  });
+  appendMatchHistory('manual', entry);
+}
+
+function restoreManualHistoryEntry(entry) {
+  if (!entry) return;
+  manualSelectedCompanies.clear();
+  manualSelectedEmployees.clear();
+  (entry.selectedCompanies || []).forEach((id) => manualSelectedCompanies.add(Number(id)));
+  (entry.selectedEmployees || []).forEach((id) => manualSelectedEmployees.add(Number(id)));
+  applyMatchResult({
+    pairings: entry.pairings,
+    unmatchedCompanies: entry.unmatchedCompanies,
+    employeeSchedules: entry.employeeSchedules,
+    message: entry.message,
+    stats: entry.stats,
+    distanceSource: entry.distanceSource,
+    maxCommuteMinutes: entry.maxCommuteMinutes,
+  });
+  renderManualTables();
+  renderManualResults();
+  updateManualStats();
+  scrollToManualResults();
+  persistState();
+  showToast(`已恢复：${entry.label || entry.title}`);
+}
+
+function openManualMatchHistory() {
+  openMatchHistoryModal('manual', { onRestore: restoreManualHistoryEntry });
 }
 
 function filterManualCompanies() {
@@ -390,11 +443,12 @@ async function onManualMatch() {
 
     applyMatchResult(data);
     completeMatchProgress(data.stats?.matched ?? lastMatchPairings.length, customerIds.length);
+    saveManualMatchHistory(data, customerIds, employeePoolIds);
     renderManualResults();
     updateManualStats();
     persistState();
     scrollToManualResults();
-    showToast(data.message || '匹配完成');
+    showToast((data.message || '匹配完成') + ' · 已保存历史');
   } catch (err) {
     showToast(err.message);
     hideMatchProgress(0);
