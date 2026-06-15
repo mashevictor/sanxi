@@ -398,32 +398,57 @@ function getLockedPairings() {
   return locked;
 }
 
+function countManualAssignments() {
+  let n = 0;
+  for (const [, entry] of assignmentMap) {
+    if (entry.manual && (entry.type === 'ok' || entry.type === 'fail')) n++;
+  }
+  return n;
+}
+
+function updateManualHint() {
+  const hint = document.getElementById('manual-hint');
+  const el = document.getElementById('manual-hint-text');
+  if (!el || !hint) return;
+  if (getSelectedIds().length === 0 || isMatching) {
+    hint.hidden = true;
+    return;
+  }
+  hint.hidden = false;
+  const manual = countManualAssignments();
+  const base = '匹配成功或失败后，均可点击每行<strong>员工下拉框</strong>手动改派；合规指派将<strong>锁定</strong>不再被 AI 覆盖，不合规会提示具体原因。';
+  if (manual > 0) {
+    el.innerHTML = `${base} <span class="manual-count">（已手动调整 ${manual} 条）</span>`;
+  } else {
+    el.innerHTML = base;
+  }
+}
+
 function getMatchOnlyIds() {
   const lockedIds = new Set(getLockedPairings().map((p) => p.customerId));
   return getSelectedIds().filter((id) => !lockedIds.has(id));
 }
 
 function syncAssignmentFromApi(pairings, unmatched) {
-  const lockedIds = new Set(getLockedPairings().map((p) => p.customerId));
-
   for (const id of [...assignmentMap.keys()]) {
     if (!selectedCompanies.has(Number(id))) assignmentMap.delete(id);
   }
 
   for (const p of pairings) {
     const existing = assignmentMap.get(p.customerId);
-    if (lockedIds.has(p.customerId) && existing?.type === 'ok' && existing.manual) {
+    if (existing?.type === 'ok' && existing.manual) {
       continue;
     }
     assignmentMap.set(p.customerId, {
       type: 'ok',
       data: p,
-      manual: existing?.manual && lockedIds.has(p.customerId) ? true : false,
+      manual: false,
     });
   }
 
   for (const u of unmatched) {
-    if (lockedIds.has(u.customerId) && assignmentMap.get(u.customerId)?.type === 'ok') continue;
+    const existing = assignmentMap.get(u.customerId);
+    if (existing?.type === 'ok' && existing.manual) continue;
     assignmentMap.set(u.customerId, { type: 'fail', data: u, manual: false });
   }
 }
@@ -463,6 +488,13 @@ function renderEmployeePicker(customerId, currentEmployeeId, disabled) {
     return hay.includes(q);
   });
 
+  const clearOption = currentEmployeeId
+    ? `<div class="emp-option clear-option" data-cid="${customerId}" data-eid="0" data-clear="1">
+         <div class="emp-option-top"><span class="emp-option-name">✕ 清除指派</span></div>
+         <div class="emp-option-dep">清除后可重新选择员工或让 AI 再次匹配</div>
+       </div>`
+    : '';
+
   const items = filtered.map((e) => {
     const taken = used.includes(e.id) && e.id !== currentEmployeeId;
     const tags = e.tags || [...(e.roles || []), ...(e.capacityLabels || [])];
@@ -491,7 +523,7 @@ function renderEmployeePicker(customerId, currentEmployeeId, disabled) {
       </button>
       <div class="emp-picker-panel" ${isOpen ? '' : 'hidden'} data-cid="${customerId}">
         <input type="text" class="emp-search" placeholder="搜索姓名 / 出发地 / 标签" value="${esc(pickerSearch)}" data-cid="${customerId}">
-        <div class="emp-picker-list">${items || '<div style="padding:12px;color:var(--muted);font-size:0.8rem">无匹配员工</div>'}</div>
+        <div class="emp-picker-list">${clearOption}${items || '<div style="padding:12px;color:var(--muted);font-size:0.8rem">无匹配员工</div>'}</div>
       </div>
     </div>
   `;
@@ -575,6 +607,34 @@ function renderDispatchRow(customerId, entry, animIndex = 0, animate = true) {
   const used = getUsedEmployeeIds(customerId);
   const isDup = entry.type === 'ok' && used.filter((id) => id === entry.data.employeeId).length > 0;
 
+  if (entry.type === 'pending') {
+    const p = entry.data;
+    const animStyle = animate ? `style="animation-delay:${animIndex * 0.06}s"` : '';
+    return `
+      <div class="dispatch-row row-pending${animate ? ' row-enter' : ''}" data-cid="${customerId}" ${animStyle}>
+        <div class="row-grid">
+          <div class="status-dot" style="background:#64748b"></div>
+          <div class="cell-company">
+            <div class="name" title="${esc(p.companyName)}">${esc(p.companyName)}</div>
+            <div class="sub">${esc(p.customerType)} · ${esc(p.parkName)} · ${esc(p.timeSlot)}</div>
+          </div>
+          <div class="cell-arrow">→</div>
+          <div class="cell-employee">
+            ${renderEmployeePicker(customerId, null, isMatching)}
+            <span class="manual-tag hint-tag">可手动指派</span>
+          </div>
+          <div class="cell-commute"><span class="commute-none">—</span></div>
+          <div class="cell-action">
+            <button class="btn-ghost btn-detail ${expanded ? 'open' : ''}" data-cid="${customerId}">提示</button>
+          </div>
+        </div>
+        <div class="row-expand" ${expanded ? '' : 'hidden'}>
+          <div style="color:var(--muted);font-size:0.78rem">等待 AI 匹配中，或点击上方<strong>员工下拉框</strong>直接手动指派。</div>
+        </div>
+      </div>
+    `;
+  }
+
   if (entry.type === 'ok') {
     const p = entry.data;
     const rowCls = ['dispatch-row', 'row-ok', animate ? 'row-enter' : '', entry.manual ? 'row-manual' : '', isDup ? 'row-dup' : ''].filter(Boolean).join(' ');
@@ -590,8 +650,8 @@ function renderDispatchRow(customerId, entry, animIndex = 0, animate = true) {
           <div class="cell-arrow">→</div>
           <div class="cell-employee">
             ${renderEmployeePicker(customerId, p.employeeId, isMatching)}
-            ${entry.manual ? '<span class="manual-tag">手动调整</span>' : ''}
-            ${p.locked ? '<span class="manual-tag" style="background:rgba(99,102,241,.2);color:#c4b5fd">已锁定</span>' : ''}
+            ${entry.manual ? '<span class="manual-tag">手动调整</span>' : '<span class="manual-tag hint-tag">点击可改派</span>'}
+            ${entry.manual ? '<span class="manual-tag" style="background:rgba(99,102,241,.2);color:#c4b5fd">已锁定</span>' : ''}
             ${isDup ? '<span class="manual-tag" style="background:rgba(239,68,68,.2);color:#fca5a5">同时段冲突</span>' : ''}
           </div>
           ${renderCommuteCell(p.commuteMinutes, p.route)}
@@ -617,7 +677,9 @@ function renderDispatchRow(customerId, entry, animIndex = 0, animate = true) {
         <div class="cell-arrow">→</div>
         <div class="cell-employee">
           ${renderEmployeePicker(customerId, null, isMatching)}
-          <span class="manual-tag" style="background:rgba(239,68,68,.2);color:#fca5a5">待指派</span>
+          ${entry.manual
+            ? '<span class="manual-tag">手动不合规</span>'
+            : '<span class="manual-tag hint-tag">可手动改派</span>'}
         </div>
         <div class="cell-commute"><span class="commute-none">—</span></div>
         <div class="cell-action">
@@ -654,19 +716,9 @@ function renderBoard(options = {}) {
   selectedIds.forEach((id) => {
     const entry = assignmentMap.get(id);
     if (!entry) {
-      const company = allCompanies.find((c) => c.id === id);
-      failRows.push(`
-        <div class="dispatch-row">
-          <div class="row-grid">
-            <div class="status-dot" style="background:#64748b"></div>
-            <div class="cell-company"><div class="name">${esc(company?.companyName || '')}</div></div>
-            <div class="cell-arrow">→</div>
-            <div class="cell-employee"><span style="color:var(--muted);font-size:0.82rem">等待匹配...</span></div>
-            <div class="cell-commute"><span class="commute-none">—</span></div>
-            <div></div>
-          </div>
-        </div>
-      `);
+      const animIndex = okRows.length + failRows.length;
+      const pending = renderDispatchRow(id, buildPendingEntry(id), animIndex, animate);
+      failRows.push(pending);
       return;
     }
     const animIndex = okRows.length + failRows.length;
@@ -693,7 +745,7 @@ function renderBoard(options = {}) {
     html += `
       <div class="board-section">
         <div class="section-hd fail">
-          <span>✗ 匹配失败 / 待匹配</span>
+          <span>✗ 匹配失败 / 待指派</span>
           <span class="section-count">${failRows.length} 家</span>
         </div>
         <div class="section-body">${failRows.join('')}</div>
@@ -703,6 +755,7 @@ function renderBoard(options = {}) {
 
   board.innerHTML = html || '<div class="empty">暂无结果</div>';
   bindBoardEvents();
+  updateManualHint();
 }
 
 function renderSchedules() {
@@ -791,26 +844,32 @@ function bindBoardEvents() {
     opt.addEventListener('click', async (e) => {
       e.stopPropagation();
       const customerId = parseInt(opt.dataset.cid, 10);
-      const employeeId = parseInt(opt.dataset.eid, 10);
       openPickerId = null;
       pickerSearch = '';
+      if (opt.dataset.clear === '1') {
+        await clearEmployeeAssignment(customerId);
+        return;
+      }
+      const employeeId = parseInt(opt.dataset.eid, 10);
       await applyEmployeeChange(customerId, employeeId);
     });
   });
 }
 
-async function applyEmployeeChange(customerId, employeeId) {
-  if (!employeeId) {
-    const entry = assignmentMap.get(customerId);
-    if (entry?.type === 'ok' && entry.manual) {
-      assignmentMap.set(customerId, { type: 'fail', data: buildFailFromCompany(customerId, '已取消指派'), manual: true });
-    }
-    syncPreviewFromAssignment();
-    renderBoard();
-    updateStats();
-    return;
-  }
+async function clearEmployeeAssignment(customerId) {
+  assignmentMap.set(customerId, {
+    type: 'fail',
+    data: buildFailFromCompany(customerId, '已清除指派，可手动选择员工或点击「重新 AI 匹配」'),
+    manual: false,
+  });
+  syncPreviewFromAssignment();
+  renderBoard({ animate: false });
+  renderSchedules();
+  updateStats();
+  showToast('已清除指派，可重新选择员工');
+}
 
+async function applyEmployeeChange(customerId, employeeId) {
   if (getUsedEmployeeIds(customerId).includes(employeeId)) {
     showToast('该员工在此时段已被其他公司占用');
     renderBoard();
@@ -852,8 +911,10 @@ async function applyEmployeeChange(customerId, employeeId) {
         },
         manual: true,
       });
-      const commuteNote = data.commuteMinutes > maxCommuteMinutes ? `（通勤${data.commuteMinutes}分，超过${maxCommuteMinutes}分但仍可派单）` : `通勤 ${data.commuteMinutes} 分钟`;
-      showToast(`${data.companyName} → ${data.employeeName} · ${commuteNote}`);
+      const commuteNote = data.commuteMinutes > maxCommuteMinutes
+        ? `（通勤${data.commuteMinutes}分，超过${maxCommuteMinutes}分但仍可派单）`
+        : `通勤 ${data.commuteMinutes} 分钟`;
+      showToast(`✓ 手动改派成功：${data.companyName} → ${data.employeeName} · ${commuteNote} · 已锁定`);
     } else {
       assignmentMap.set(customerId, {
         type: 'fail',
@@ -873,7 +934,8 @@ async function applyEmployeeChange(customerId, employeeId) {
         },
         manual: true,
       });
-      showToast(`不合规：${data.failedRules.map((r) => r.rule).join('、')}`);
+      const detail = data.failedRules.map((r) => `${r.rule}: ${r.message}`).join('；');
+      showToast(`✗ 不合规，请换其他员工：${data.failedRules.map((r) => r.rule).join('、')}（${detail}）`);
     }
 
     syncPreviewFromAssignment();
@@ -895,6 +957,21 @@ function buildFailFromCompany(customerId, reason) {
     address: c?.address || '',
     customerType: c?.customerType || '',
     reason,
+  };
+}
+
+function buildPendingEntry(customerId) {
+  const c = allCompanies.find((x) => x.id === customerId);
+  return {
+    type: 'pending',
+    data: {
+      customerId,
+      companyName: c?.companyName || '',
+      parkName: c?.parkName || '',
+      customerType: c?.customerType || '',
+      timeSlot: c?.timeSlot || '',
+    },
+    manual: false,
   };
 }
 
@@ -1061,8 +1138,9 @@ function showToast(msg) {
   t.hidden = false;
   requestAnimationFrame(() => t.classList.add('show'));
   clearTimeout(showToast._timer);
+  const duration = msg.length > 40 ? 4500 : 2800;
   showToast._timer = setTimeout(() => {
     t.classList.remove('show');
     setTimeout(() => { t.hidden = true; }, 350);
-  }, 2800);
+  }, duration);
 }

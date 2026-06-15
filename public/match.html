@@ -253,6 +253,31 @@
       display: inline-block; font-size: 0.65rem; padding: 2px 7px; border-radius: 4px;
       background: rgba(245,158,11,.2); color: #fbbf24; margin-top: 4px;
     }
+    .manual-tag.hint-tag {
+      background: rgba(99,102,241,.15); color: #a5b4fc;
+    }
+    .manual-tag.clear-tag {
+      background: rgba(100,116,139,.2); color: #94a3b8;
+    }
+
+    .manual-hint {
+      display: flex; align-items: flex-start; gap: 8px;
+      margin: 0 0 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(99,102,241,.1); border: 1px solid rgba(99,102,241,.25);
+      font-size: 0.78rem; color: #c4b5fd; line-height: 1.5;
+    }
+    .manual-hint-icon { flex-shrink: 0; font-size: 1rem; }
+    .manual-hint strong { color: #e9d5ff; font-weight: 600; }
+    .manual-hint .manual-count { color: #fbbf24; font-weight: 600; }
+
+    .emp-option.clear-option {
+      border-bottom: 1px dashed var(--border);
+      margin-bottom: 4px;
+      color: #94a3b8;
+    }
+    .emp-option.clear-option:hover { background: rgba(239,68,68,.1); color: #fca5a5; }
+
+    .dispatch-row.row-pending { opacity: .92; }
 
     .cell-commute { text-align: center; }
     .commute-big { font-size: 1.6rem; font-weight: 800; color: #a5b4fc; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -449,6 +474,10 @@
             <button class="view-tab" id="tab-schedules" data-view="schedules">员工行程</button>
           </div>
           <span id="distance-tag">通勤上限 60 分钟</span>
+        </div>
+        <div class="manual-hint" id="manual-hint">
+          <span class="manual-hint-icon">✎</span>
+          <span id="manual-hint-text">匹配成功或失败后，均可点击每行<strong>员工下拉框</strong>手动改派；合规指派将<strong>锁定</strong>不再被 AI 覆盖，不合规会提示具体原因。</span>
         </div>
         <div class="scroll" id="dispatch-board">
           <div class="empty">勾选左侧公司，AI 将自动匹配并在此展示结果</div>
