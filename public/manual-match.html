@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>手动派单</title>
+  <link rel="preload" href="/cache/sample-data.json" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="/api/bootstrap" as="fetch" crossorigin="anonymous">
+  <script src="/match-shared.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -596,12 +599,39 @@
       font-size: 0.82rem; font-weight: 700; color: #c4b5fd;
     }
     .manual-result-summary { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+    .match-status-strip {
+      margin-bottom: 16px; min-height: 52px;
+      position: sticky; top: 8px; z-index: 12;
+    }
+    .match-status-idle {
+      padding: 12px 16px; border-radius: 12px; font-size: 0.8rem; color: #94a3b8;
+      background: rgba(15,23,42,.45); border: 1px dashed rgba(99,102,241,.22);
+    }
+    .match-success-banner {
+      padding: 14px 18px; border-radius: 12px; font-size: 0.88rem; font-weight: 700;
+      background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.35);
+      color: #6ee7b7; animation: fadeUp .4s ease;
+      box-shadow: 0 8px 24px rgba(52,211,153,.08);
+    }
+    .match-success-banner.partial {
+      background: rgba(251,191,36,.1); border-color: rgba(251,191,36,.35); color: #fcd34d;
+      box-shadow: 0 8px 24px rgba(251,191,36,.08);
+    }
+    .match-success-banner.fail {
+      background: rgba(248,113,113,.1); border-color: rgba(248,113,113,.35); color: #fca5a5;
+      box-shadow: 0 8px 24px rgba(248,113,113,.08);
+    }
+    .match-status-strip .match-progress { margin: 0; }
+    .page-loader .loader-sub {
+      font-size: 0.78rem; color: var(--muted); margin-top: -8px;
+    }
   </style>
 </head>
 <body class="manual-page">
   <div class="page-loader" id="page-loader">
     <div class="loader-ring"></div>
-    <div class="loader-text">加载派单数据...</div>
+    <div class="loader-text">加载公司与员工列表…</div>
+    <div class="loader-sub">正在读取缓存数据</div>
   </div>
 
   <div class="wrap">
@@ -627,6 +657,18 @@
       <div class="stat-card info"><div class="num" id="stat-emp-picked">0</div><div class="lbl">已选员工</div></div>
       <div class="stat-card ok"><div class="num" id="stat-manual-ok">0</div><div class="lbl">匹配成功</div></div>
       <div class="stat-card fail"><div class="num" id="stat-manual-fail">0</div><div class="lbl">匹配失败</div></div>
+    </div>
+
+    <div class="match-status-strip" id="match-status-strip">
+      <div class="match-status-idle" id="match-status-idle">勾选公司后点击「确认匹配」，进度与结果将显示在此处</div>
+      <div class="match-progress" id="manual-progress" hidden>
+        <div class="match-progress-bar"><div class="match-progress-fill" id="manual-progress-fill"></div></div>
+        <div class="match-progress-text">
+          <div class="ai-orbit"></div>
+          <span id="manual-progress-text">正在智能匹配…</span>
+        </div>
+      </div>
+      <div class="match-success-banner" id="manual-success-banner" hidden></div>
     </div>
 
     <div class="panel">
@@ -688,13 +730,6 @@
       <div class="ai-hint">
         勾选公司后点「确认匹配」执行 AI 智能匹配；可选勾选员工作为<strong>候选池</strong>（不选则从全部员工中匹配）。不合规将显示具体原因（如<strong>时段不匹配</strong>）。
       </div>
-      <div class="match-progress" id="manual-progress" hidden>
-        <div class="match-progress-bar"><div class="match-progress-fill" id="manual-progress-fill"></div></div>
-        <div class="match-progress-text">
-          <div class="ai-orbit"></div>
-          <span id="manual-progress-text">正在智能匹配…</span>
-        </div>
-      </div>
       <div id="manual-result-section">
         <div class="manual-result-hd">
           <span>匹配结果</span>
@@ -715,7 +750,6 @@
       <button type="button" class="close-btn" id="emp-modal-close">关闭</button>
     </div>
   </div>
-  <script src="/match-shared.js"></script>
   <script src="/manual-match.js"></script>
 </body>
 </html>

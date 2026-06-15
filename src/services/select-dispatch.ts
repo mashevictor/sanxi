@@ -19,6 +19,7 @@ import {
   LockedPairing,
   PairingOptions,
 } from './pairing-optimizer';
+import { CommuteMode } from './distance-service';
 
 export interface EmployeeSchedule {
   employeeId: number;
@@ -97,6 +98,7 @@ export interface DispatchOptions {
   lockedPairings?: LockedPairing[];
   matchOnlyCustomerIds?: number[];
   employeePoolIds?: number[];
+  commuteMode?: CommuteMode;
 }
 
 export async function dispatchSelectedCompanies(
@@ -115,6 +117,7 @@ export async function dispatchSelectedCompanies(
   const pairingOptions: PairingOptions = {
     lockedPairings: options.lockedPairings,
     matchOnlyCustomerIds: options.matchOnlyCustomerIds,
+    commuteMode: options.commuteMode ?? 'local',
   };
 
   let result;

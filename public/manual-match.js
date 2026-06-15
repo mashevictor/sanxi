@@ -11,6 +11,7 @@ let isMatching = false;
 let progressTimer = null;
 let lastMatchPairings = [];
 let lastMatchUnmatched = [];
+let renderTablesPending = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   showPageLoader('加载公司与员工列表…');
@@ -18,8 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cached?.companies?.length) {
       allCompanies = cached.companies;
       allEmployees = cached.employees || [];
-      renderManualTables();
-      hidePageLoader();
+      scheduleRender(() => {
+        renderManualTables();
+        hidePageLoader();
+      });
     }
   });
   loadData();
@@ -62,10 +65,12 @@ async function loadData() {
           for (const [k, v] of map) assignmentMap.set(k, v);
           rebuildLastMatchFromAssignment();
         }
-        renderManualTables();
-        renderManualResults();
-        updateManualStats();
-        hidePageLoader();
+        scheduleRender(() => {
+          renderManualTables();
+          renderManualResults();
+          updateManualStats();
+          hidePageLoader();
+        });
       },
     });
     sessionId = data.sessionId;
@@ -141,6 +146,10 @@ function restoreManualHistoryEntry(entry) {
   renderManualTables();
   renderManualResults();
   updateManualStats();
+  showMatchSuccessBanner({
+    message: entry.message,
+    stats: entry.stats,
+  }, entry.selectedCompanies || []);
   scrollToManualResults();
   persistState();
   showToast(`已恢复：${entry.label || entry.title}`);
@@ -170,6 +179,15 @@ function filterManualEmployees() {
 }
 
 function renderManualTables() {
+  if (renderTablesPending) return;
+  renderTablesPending = true;
+  scheduleRender(() => {
+    renderTablesPending = false;
+    renderManualTablesNow();
+  });
+}
+
+function renderManualTablesNow() {
   const coBody = document.getElementById('manual-co-tbody');
   const empBody = document.getElementById('manual-emp-tbody');
   if (!coBody || !empBody) return;
@@ -302,24 +320,38 @@ function bindManualTableEvents() {
 function clearManualSelection() {
   manualSelectedCompanies.clear();
   manualSelectedEmployees.clear();
+  resetMatchStatusIdle();
   renderManualTables();
   showToast('已清空表格选择');
+}
+
+function resetMatchStatusIdle() {
+  const idle = document.getElementById('match-status-idle');
+  const banner = document.getElementById('manual-success-banner');
+  const progress = document.getElementById('manual-progress');
+  if (banner) banner.hidden = true;
+  if (progress) progress.hidden = true;
+  if (idle) idle.hidden = false;
 }
 
 function showMatchProgress(total) {
   const box = document.getElementById('manual-progress');
   const fill = document.getElementById('manual-progress-fill');
   const text = document.getElementById('manual-progress-text');
+  const idle = document.getElementById('match-status-idle');
+  const banner = document.getElementById('manual-success-banner');
   if (!box || !fill || !text) return;
+  if (idle) idle.hidden = true;
+  if (banner) banner.hidden = true;
   clearInterval(progressTimer);
   box.hidden = false;
-  fill.style.width = '4%';
+  fill.style.width = '8%';
   text.textContent = `正在智能匹配 ${total} 家公司…`;
-  let pct = 4;
+  let pct = 8;
   progressTimer = setInterval(() => {
-    pct = Math.min(pct + Math.random() * 6 + 2, 92);
+    pct = Math.min(pct + Math.random() * 8 + 3, 90);
     fill.style.width = `${pct}%`;
-  }, 220);
+  }, 180);
 }
 
 function completeMatchProgress(matched, total) {
@@ -331,13 +363,39 @@ function completeMatchProgress(matched, total) {
   if (text) text.textContent = `匹配完成：${matched}/${total}`;
 }
 
-function hideMatchProgress(delay = 600) {
+function hideMatchProgress(delay = 400) {
   setTimeout(() => {
     const box = document.getElementById('manual-progress');
     if (box) box.hidden = true;
     const fill = document.getElementById('manual-progress-fill');
     if (fill) fill.style.width = '0';
   }, delay);
+}
+
+function showMatchSuccessBanner(data, customerIds = []) {
+  const banner = document.getElementById('manual-success-banner');
+  const idle = document.getElementById('match-status-idle');
+  const progress = document.getElementById('manual-progress');
+  if (!banner) return;
+
+  const ok = data.stats?.matched ?? lastMatchPairings.length;
+  const fail = data.stats?.unmatched ?? data.stats?.failed ?? lastMatchUnmatched.length;
+  const total = customerIds.length || data.stats?.selected || ok + fail;
+  const avg = data.stats?.avgCommute;
+
+  let cls = 'match-success-banner';
+  if (fail > 0 && ok > 0) cls += ' partial';
+  else if (ok === 0) cls += ' fail';
+
+  const parts = [data.message || `匹配完成：${ok}/${total} 家成功`];
+  if (fail > 0) parts.push(`${fail} 家失败`);
+  if (avg) parts.push(`平均通勤 ${avg} 分钟`);
+
+  banner.className = cls;
+  banner.textContent = `✓ ${parts.join(' · ')}`;
+  banner.hidden = false;
+  if (idle) idle.hidden = true;
+  if (progress) progress.hidden = true;
 }
 
 function applyMatchResult(data) {
@@ -406,7 +464,7 @@ function scrollToManualResults() {
   const section = document.getElementById('manual-result-section');
   if (!section) return;
   requestAnimationFrame(() => {
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 }
 
@@ -429,7 +487,7 @@ async function onManualMatch() {
   btn.textContent = '匹配中...';
   showMatchProgress(customerIds.length);
 
-  const body = { sessionId, customerIds };
+  const body = { sessionId, customerIds, commuteMode: 'local' };
   if (employeePoolIds.length) body.employeePoolIds = employeePoolIds;
 
   try {
@@ -443,15 +501,18 @@ async function onManualMatch() {
 
     applyMatchResult(data);
     completeMatchProgress(data.stats?.matched ?? lastMatchPairings.length, customerIds.length);
+    showMatchSuccessBanner(data, customerIds);
     saveManualMatchHistory(data, customerIds, employeePoolIds);
     renderManualResults();
     updateManualStats();
     persistState();
     scrollToManualResults();
-    showToast((data.message || '匹配完成') + ' · 已保存历史');
+    const toastMsg = data.message || `匹配完成：${data.stats?.matched ?? lastMatchPairings.length} 成功`;
+    showToast(`${toastMsg} · 已保存历史`);
   } catch (err) {
     showToast(err.message);
     hideMatchProgress(0);
+    resetMatchStatusIdle();
   } finally {
     isMatching = false;
     btn.classList.remove('loading');

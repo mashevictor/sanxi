@@ -5,7 +5,7 @@
 import { Customer, Employee, MatchDetail, TimeSlot } from '../types';
 import { matchCustomerToEmployee, MatchResult, sortCustomersForDispatch } from './match-rules';
 import { estimateCommuteMinutes } from '../utils/commute';
-import { buildCommuteMatrix, CommuteMatrix, RouteEstimate } from './distance-service';
+import { buildCommuteMatrix, CommuteMatrix, CommuteMode, RouteEstimate } from './distance-service';
 
 export interface LockedPairing {
   customerId: number;
@@ -15,6 +15,7 @@ export interface LockedPairing {
 export interface PairingOptions {
   lockedPairings?: LockedPairing[];
   matchOnlyCustomerIds?: number[];
+  commuteMode?: CommuteMode;
 }
 
 export interface CompanyEmployeePairing {
@@ -310,7 +311,8 @@ async function runCompliantPairingAsync(
   const commuteMatrix = await buildCommuteMatrix(
     customers.map((c) => ({ address: c.address, parkName: c.parkName, companyName: c.companyName })),
     employees,
-    eligibleMask
+    eligibleMask,
+    options.commuteMode ?? 'local'
   );
 
   const { pairings, unmatched } = findCapacitatedMatching(customers, employees, commuteMatrix, options);

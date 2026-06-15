@@ -138,13 +138,41 @@ export async function estimateRoute(
 }
 
 export type CommuteMatrix = RouteEstimate[][];
+export type CommuteMode = 'local' | 'deepseek';
 
-/** 仅为合规候选对批量估算通勤（限制并发） */
-export async function buildCommuteMatrix(
+/** 本地矩阵估算（同步，毫秒级） */
+export function buildLocalCommuteMatrix(
   customers: { address: string; parkName: string; companyName: string }[],
   employees: { departureAddress: string }[],
   eligibleMask: boolean[][]
+): CommuteMatrix {
+  const matrix: CommuteMatrix = customers.map(() =>
+    employees.map(() => ({ minutes: 0, pathSummary: '', source: 'local' as const }))
+  );
+
+  for (let i = 0; i < customers.length; i++) {
+    for (let j = 0; j < employees.length; j++) {
+      if (!eligibleMask[i]?.[j]) continue;
+      const c = customers[i];
+      const e = employees[j];
+      matrix[i][j] = localFallback(e.departureAddress, c.address, c.parkName);
+    }
+  }
+
+  return matrix;
+}
+
+/** 仅为合规候选对批量估算通勤（local 同步 / deepseek 限制并发） */
+export async function buildCommuteMatrix(
+  customers: { address: string; parkName: string; companyName: string }[],
+  employees: { departureAddress: string }[],
+  eligibleMask: boolean[][],
+  mode: CommuteMode = 'local'
 ): Promise<CommuteMatrix> {
+  if (mode === 'local') {
+    return buildLocalCommuteMatrix(customers, employees, eligibleMask);
+  }
+
   const tasks: { i: number; j: number }[] = [];
   for (let i = 0; i < customers.length; i++) {
     for (let j = 0; j < employees.length; j++) {

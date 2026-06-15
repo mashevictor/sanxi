@@ -46,10 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
       showcaseCustomerIds = cached.showcaseCustomerIds || [];
       fullMatchCustomerIds = cached.fullMatchCustomerIds || [];
       maxCommuteMinutes = cached.maxCommuteMinutes || 60;
-      renderCompanies();
-      renderBoard();
-      updateStats();
-      hidePageLoader();
+      scheduleRender(() => {
+        renderCompanies();
+        renderBoard();
+        updateStats();
+        hidePageLoader();
+      });
     }
   });
   loadIntegratedData().then(() => {
@@ -1268,6 +1270,7 @@ async function callSelectApi(opts = {}) {
   const body = {
     sessionId,
     customerIds: selectedIds,
+    commuteMode: 'local',
     lockedPairings: lockedPairings.length ? lockedPairings : undefined,
     matchOnlyCustomerIds: matchOnlyCustomerIds?.length ? matchOnlyCustomerIds : undefined,
   };

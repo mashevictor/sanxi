@@ -36,6 +36,8 @@ function showPageLoader(message) {
   loader.classList.remove('hide');
   const text = loader.querySelector('.loader-text');
   if (text && message) text.textContent = message;
+  const sub = loader.querySelector('.loader-sub');
+  if (sub) sub.textContent = '正在读取缓存数据';
 }
 
 function hidePageLoader() {
@@ -370,12 +372,15 @@ function showEmployeeModal(employeeId, allEmployees) {
  * @param {{ onCacheReady?: (data: object) => void }} [options]
  */
 async function bootstrapIntegratedData(options = {}) {
-  const [cached, boot] = await Promise.all([prefetchSampleData(), prefetchBootstrap()]);
+  const cachedPromise = prefetchSampleData();
+  const bootPromise = prefetchBootstrap();
 
+  const cached = await cachedPromise;
   if (cached && typeof options.onCacheReady === 'function') {
     options.onCacheReady(cached);
   }
 
+  const boot = await bootPromise;
   if (cached && boot?.sessionId) {
     return { ...cached, sessionId: boot.sessionId };
   }
@@ -384,4 +389,13 @@ async function bootstrapIntegratedData(options = {}) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || '加载失败');
   return data;
+}
+
+function scheduleRender(fn) {
+  if (typeof fn !== 'function') return;
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(fn);
+  } else {
+    setTimeout(fn, 0);
+  }
 }
