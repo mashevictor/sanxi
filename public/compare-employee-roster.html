@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>55条匹配 vs 派单员工表 对比</title>
+  <style>
+    :root {
+      --bg:#0f1419; --panel:#1a2332; --border:#2d3a4f; --text:#e7ecf3; --muted:#8b9cb3;
+      --ok:#3dd68c; --warn:#f5a623; --diff:#ff6b6b; --info:#5b9cf5; --purple:#a78bfa;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);padding:24px;line-height:1.5}
+    h1{font-size:1.45rem;margin:0 0 6px}
+    .sub{color:var(--muted);font-size:.9rem;margin-bottom:20px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+    .card .n{font-size:1.6rem;font-weight:700}
+    .card .l{font-size:.72rem;color:var(--muted);margin-top:4px}
+    .card.ok .n{color:var(--ok)} .card.warn .n{color:var(--warn)} .card.diff .n{color:var(--diff)}
+    .card.info .n{color:var(--info)} .card.purple .n{color:var(--purple)}
+    section{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:18px}
+    section h2{font-size:1.05rem;margin:0 0 10px}
+    .note{color:var(--muted);font-size:.88rem;margin:0 0 10px}
+    ul.reasons{margin:0;padding-left:1.2rem;color:var(--muted);font-size:.88rem}
+    ul.reasons li{margin-bottom:6px}
+    ul.reasons strong{color:var(--text)}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:.82rem}
+    th,td{border-bottom:1px solid var(--border);padding:9px 10px;text-align:left;vertical-align:top}
+    th{color:var(--muted);font-weight:600}
+    tr.addr_diff{background:rgba(245,166,35,.07)}
+    tr.gap_fill{background:rgba(167,139,250,.08)}
+    tr.demo_emp{background:rgba(91,156,245,.08)}
+    tr.full_match td:nth-child(3){color:var(--ok)}
+    tr.idle{opacity:.65}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:600}
+    .badge.full_match{background:rgba(61,214,140,.2);color:var(--ok)}
+    .badge.addr_diff{background:rgba(245,166,35,.2);color:var(--warn)}
+    .badge.gap_fill{background:rgba(167,139,250,.2);color:var(--purple)}
+    .badge.demo_emp{background:rgba(91,156,245,.2);color:var(--info)}
+    .reason{max-width:300px;color:var(--muted);font-size:.78rem}
+    a{color:var(--info)}
+    code{background:#0d1117;padding:2px 5px;border-radius:4px;font-size:.85em}
+  </style>
+</head>
+<body>
+  <h1>55 条全量匹配 vs 派单员工表 (1).xls</h1>
+  <p class="sub">
+    说明：<code>派单员工表 (1).xls</code> 是<strong>员工主数据</strong>（27 人），不含公司派单明细。
+    本报告对比「每条派单指派的员工」是否在员工表中、出发地址是否一致。
+  </p>
+
+  <div class="cards">
+    <div class="card ok"><div class="n">25</div><div class="l">完全一致</div></div>
+    <div class="card warn"><div class="n">14</div><div class="l">员工同·地址不同</div></div>
+    <div class="card purple"><div class="n">12</div><div class="l">补位员工</div></div>
+    <div class="card info"><div class="n">4</div><div class="l">演示员工</div></div>
+    <div class="card"><div class="n">39</div><div class="l">使用表内员工</div></div>
+    <div class="card"><div class="n">55</div><div class="l">派单总数</div></div>
+  </div>
+
+  <section>
+    <h2>对比结论</h2>
+    <ul class="reasons">
+      <li><strong>一致（25 条）</strong>：指派员工在 27 人表中，且出发地址与 Excel 完全相同。</li>
+      <li><strong>员工同·地址不同（14 条）</strong>：员工姓名在表中，但系统为全匹配调整了出发地（如李路路、温作良、刘帅、柴强、王睿等 patch）。</li>
+      <li><strong>补位员工（12 条）</strong>：系统新增的「补位-*」人员，不在员工表，专门承接下午2 等容量缺口。</li>
+      <li><strong>演示员工（4 条）</strong>：为 10 家演示公司配置的 5 名演示员工（ID 90001–90005），不在原始 27 人表。</li>
+      <li><strong>员工表利用率</strong>：27 人中 27 人参与了派单，0 人未被分配到任何一单（如表中无人承接的时段/园区）。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>逐条派单对比（55 条）</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>企业</th><th>时段</th><th>指派员工</th><th>系统出发地</th><th>员工表出发地</th><th>状态</th><th>说明</th>
+        </tr></thead>
+        <tbody><tr class="addr_diff">
+        <td>宝山高新-点意空间（上海）展览设计工程有限公司</td>
+        <td>下午2</td>
+        <td>柴强</td>
+        <td>上海市宝山区淞发路</td>
+        <td>上海市闵行区古美西路晶杰苑</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市闵行区古美西路晶杰苑」→ 系统「上海市宝山区淞发路」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>宝山高新-上海房屋工程建设技术发展有限公司</td>
+        <td>下午1</td>
+        <td>柴强</td>
+        <td>上海市宝山区淞发路</td>
+        <td>上海市闵行区古美西路晶杰苑</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市闵行区古美西路晶杰苑」→ 系统「上海市宝山区淞发路」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>宝山高新-上海信和商务国际旅行社有限公司</td>
+        <td>上午</td>
+        <td>柴强</td>
+        <td>上海市宝山区淞发路</td>
+        <td>上海市闵行区古美西路晶杰苑</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市闵行区古美西路晶杰苑」→ 系统「上海市宝山区淞发路」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>济南华创科技有限公司</td>
+        <td>下午1</td>
+        <td>殷汝飞</td>
+        <td>山东省济南市历下区经十路</td>
+        <td>上海市浦东新区浦东大道</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市浦东新区浦东大道」→ 系统「山东省济南市历下区经十路」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>济南瑞丰化工有限公司</td>
+        <td>上午</td>
+        <td>刘帅</td>
+        <td>江苏省镇江市京口区中山东路</td>
+        <td>上海市普陀区甘泉路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市普陀区甘泉路」→ 系统「江苏省镇江市京口区中山东路」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>江苏镇江-上海日洁环境科技有限公司</td>
+        <td>下午2</td>
+        <td>刘帅</td>
+        <td>江苏省镇江市京口区中山东路</td>
+        <td>上海市普陀区甘泉路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市普陀区甘泉路」→ 系统「江苏省镇江市京口区中山东路」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>上海地通汽车部件有限公司</td>
+        <td>上午</td>
+        <td>李路路</td>
+        <td>上海市金山区亭林镇</td>
+        <td>上海市宝山区华秋路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市宝山区华秋路」→ 系统「上海市金山区亭林镇」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>上海惠铎环境能源科技股份有限公司</td>
+        <td>下午1</td>
+        <td>姚洁</td>
+        <td>上海市金山区亭林镇</td>
+        <td>上海市静安区广延路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市静安区广延路」→ 系统「上海市金山区亭林镇」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>上海全一物资有限公司</td>
+        <td>下午2</td>
+        <td>温作良</td>
+        <td>上海市金山区朱泾镇</td>
+        <td>上海市闵行区七宝镇吴宝路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市闵行区七宝镇吴宝路」→ 系统「上海市金山区朱泾镇」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>上海天元新能源材料有限公司</td>
+        <td>上午</td>
+        <td>刘勇</td>
+        <td>上海市金山区亭林镇</td>
+        <td>上海市浦东新区北蔡高青路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市浦东新区北蔡高青路」→ 系统「上海市金山区亭林镇」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>上海无忧供应链管理有限公司</td>
+        <td>下午1</td>
+        <td>温作良</td>
+        <td>上海市金山区朱泾镇</td>
+        <td>上海市闵行区七宝镇吴宝路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市闵行区七宝镇吴宝路」→ 系统「上海市金山区朱泾镇」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>上海协尔泰控制技术有限公司</td>
+        <td>上午</td>
+        <td>姚焕</td>
+        <td>上海市金山区亭林镇</td>
+        <td>上海市闵行区东川路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市闵行区东川路」→ 系统「上海市金山区亭林镇」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>徐州工程机械配件公司</td>
+        <td>上午</td>
+        <td>王睿</td>
+        <td>江苏省徐州市云龙区淮海路</td>
+        <td>上海市宝山区聚丰园路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市宝山区聚丰园路」→ 系统「江苏省徐州市云龙区淮海路」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="addr_diff">
+        <td>徐州智联物流有限公司</td>
+        <td>下午1</td>
+        <td>黄健</td>
+        <td>江苏省徐州市云龙区淮海路</td>
+        <td>上海市宝山区四元路</td>
+        <td><span class="badge addr_diff">员工同·地址不同</span></td>
+        <td class="reason">员工在表中，但出发地址已调整：表内「上海市宝山区四元路」→ 系统「江苏省徐州市云龙区淮海路」（全匹配 patch，满足园区/指定人/下午2）。</td>
+      </tr><tr class="gap_fill">
+        <td>宝山高新-上海炳唐国际贸易有限公司</td>
+        <td>下午2</td>
+        <td>补位-韩金山</td>
+        <td>上海市金山区亭林镇</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>宝山高新-上海酒韵贸易有限公司</td>
+        <td>下午2</td>
+        <td>补位-冯金山</td>
+        <td>上海市金山区亭林镇</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>古疁（上海）文化发展有限公司</td>
+        <td>下午2</td>
+        <td>补位-宝山全</td>
+        <td>上海市宝山区淞发路</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>山东济南-上海浪拓智能科技股份有限公司</td>
+        <td>下午2</td>
+        <td>补位-济南项目</td>
+        <td>山东省济南市历下区经十路</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>上海宝屋房地产经纪有限公司</td>
+        <td>下午2</td>
+        <td>补位-蒋宝山</td>
+        <td>上海市宝山区淞发路</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>上海华烁投资管理有限公司</td>
+        <td>下午2</td>
+        <td>补位-孙金山</td>
+        <td>上海市金山区亭林镇</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>上海柯寅建材有限公司</td>
+        <td>下午2</td>
+        <td>补位-吴金山</td>
+        <td>上海市金山区亭林镇</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>上海鸣旭电子科技有限公司</td>
+        <td>下午2</td>
+        <td>补位-沈宝山</td>
+        <td>上海市宝山区淞发路</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>上海喜福来朝阳食品贸易行</td>
+        <td>下午2</td>
+        <td>补位-卫金山前</td>
+        <td>上海市金山区亭林镇</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>上海甄会贸易有限公司</td>
+        <td>下午2</td>
+        <td>补位-郑金山</td>
+        <td>上海市金山区亭林镇</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>数数信息科技（上海）有限公司</td>
+        <td>下午2</td>
+        <td>补位-周金山</td>
+        <td>上海市金山区亭林镇</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="gap_fill">
+        <td>镇江港口物流发展公司</td>
+        <td>下午1</td>
+        <td>补位-镇江全</td>
+        <td>江苏省镇江市京口区中山东路</td>
+        <td>—</td>
+        <td><span class="badge gap_fill">补位员工</span></td>
+        <td class="reason">补位员工为系统新增（ID≥90201），不在员工表 27 人中，用于下午2/外埠园区全匹配。</td>
+      </tr><tr class="demo_emp">
+        <td>江苏徐州-纽珑实业（上海）有限公司</td>
+        <td>上午</td>
+        <td>王睿</td>
+        <td>江苏省徐州市云龙区淮海路</td>
+        <td>上海市宝山区聚丰园路</td>
+        <td><span class="badge demo_emp">演示员工</span></td>
+        <td class="reason">演示员工（ID 90001–90005），为 10 家演示公司专门配置，不在原始员工表。</td>
+      </tr><tr class="demo_emp">
+        <td>山东济南-上海涌艺影视投资有限公司</td>
+        <td>上午</td>
+        <td>殷汝飞</td>
+        <td>山东省济南市历下区经十路</td>
+        <td>上海市浦东新区浦东大道</td>
+        <td><span class="badge demo_emp">演示员工</span></td>
+        <td class="reason">演示员工（ID 90001–90005），为 10 家演示公司专门配置，不在原始员工表。</td>
+      </tr><tr class="demo_emp">
+        <td>上海喜福来朝阳食品贸易行</td>
+        <td>上午</td>
+        <td>崔宏芝</td>
+        <td>上海市宝山区淞发路</td>
+        <td>上海市松江区泽悦路</td>
+        <td><span class="badge demo_emp">演示员工</span></td>
+        <td class="reason">演示员工（ID 90001–90005），为 10 家演示公司专门配置，不在原始员工表。</td>
+      </tr><tr class="demo_emp">
+        <td>镇江新材料科技股份公司</td>
+        <td>上午</td>
+        <td>刘帅</td>
+        <td>江苏省镇江市京口区中山东路</td>
+        <td>上海市普陀区甘泉路</td>
+        <td><span class="badge demo_emp">演示员工</span></td>
+        <td class="reason">演示员工（ID 90001–90005），为 10 家演示公司专门配置，不在原始员工表。</td>
+      </tr><tr class="full_match">
+        <td>爱豆科技（上海）有限公司</td>
+        <td>上午</td>
+        <td>张小平</td>
+        <td>上海市宝山区高境镇逸仙路</td>
+        <td>上海市宝山区高境镇逸仙路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>宝山高新-上海博泰悦臻网络技术服务有限公司</td>
+        <td>上午</td>
+        <td>侯婷婷</td>
+        <td>上海市宝山区沪太路</td>
+        <td>上海市宝山区沪太路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>宝山高新-上海桔子摄影有限公司</td>
+        <td>上午</td>
+        <td>傅丽</td>
+        <td>上海市徐汇区龙兰路</td>
+        <td>上海市徐汇区龙兰路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海安睿特生物医药科技有限公司</td>
+        <td>下午1</td>
+        <td>宋亚军</td>
+        <td>上海市浦东新区金京路</td>
+        <td>上海市浦东新区金京路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海宝冶工程技术有限公司</td>
+        <td>下午1</td>
+        <td>许珊珊</td>
+        <td>上海市嘉定区康丰路</td>
+        <td>上海市嘉定区康丰路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海波汇科技有限公司</td>
+        <td>上午</td>
+        <td>宋亚军</td>
+        <td>上海市浦东新区金京路</td>
+        <td>上海市浦东新区金京路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海得韬会展服务有限公司</td>
+        <td>下午1</td>
+        <td>盛雅琴</td>
+        <td>上海市杨浦区双阳支路</td>
+        <td>上海市杨浦区双阳支路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海德红化工科技有限公司</td>
+        <td>上午</td>
+        <td>吴佳键</td>
+        <td>上海市宝山区大场镇南大路</td>
+        <td>上海市宝山区大场镇南大路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海多隆信息科技有限公司</td>
+        <td>上午</td>
+        <td>丁苏姗</td>
+        <td>上海市松江区洞泾镇城隆路</td>
+        <td>上海市松江区洞泾镇城隆路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海昊上电子科技有限公司</td>
+        <td>上午</td>
+        <td>盛雅琴</td>
+        <td>上海市杨浦区双阳支路</td>
+        <td>上海市杨浦区双阳支路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海禾深通信技术有限公司</td>
+        <td>上午</td>
+        <td>许珊珊</td>
+        <td>上海市嘉定区康丰路</td>
+        <td>上海市嘉定区康丰路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海季龄网络科技有限公司</td>
+        <td>上午</td>
+        <td>宋樑</td>
+        <td>上海市杨浦区佳木斯路</td>
+        <td>上海市杨浦区佳木斯路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海界龙现代印刷纸品有限公司</td>
+        <td>下午1</td>
+        <td>吴佳键</td>
+        <td>上海市宝山区大场镇南大路</td>
+        <td>上海市宝山区大场镇南大路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海京泉投资管理有限公司</td>
+        <td>上午</td>
+        <td>贾文霆</td>
+        <td>上海市静安区万荣路</td>
+        <td>上海市静安区万荣路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海君正船务有限公司</td>
+        <td>下午1</td>
+        <td>宋樑</td>
+        <td>上海市杨浦区佳木斯路</td>
+        <td>上海市杨浦区佳木斯路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海万沃建筑工程咨询有限公司</td>
+        <td>上午</td>
+        <td>崔宏芝</td>
+        <td>上海市松江区泽悦路</td>
+        <td>上海市松江区泽悦路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海无忧供应链管理有限公司</td>
+        <td>下午1</td>
+        <td>梁素梅</td>
+        <td>上海市普陀区中山北路</td>
+        <td>上海市普陀区中山北路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海响山文化传播有限公司</td>
+        <td>上午</td>
+        <td>杨芳</td>
+        <td>上海市普陀区白兰路白玉新村</td>
+        <td>上海市普陀区白兰路白玉新村</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海筱胜企业管理咨询有限公司</td>
+        <td>下午1</td>
+        <td>贾文霆</td>
+        <td>上海市静安区万荣路</td>
+        <td>上海市静安区万荣路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海协尔泰控制技术有限公司</td>
+        <td>上午</td>
+        <td>梁素梅</td>
+        <td>上海市普陀区中山北路</td>
+        <td>上海市普陀区中山北路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海鑫邦旅游发展有限公司</td>
+        <td>上午</td>
+        <td>孟祥龙</td>
+        <td>上海市闵行区莘庄工业区春东路</td>
+        <td>上海市闵行区莘庄工业区春东路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海益充电子商务有限公司</td>
+        <td>上午</td>
+        <td>韩哲川</td>
+        <td>上海市浦东新区金桥路</td>
+        <td>上海市浦东新区金桥路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海由绮置业有限公司</td>
+        <td>下午1</td>
+        <td>傅丽</td>
+        <td>上海市徐汇区龙兰路</td>
+        <td>上海市徐汇区龙兰路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海智彩电子科技有限公司</td>
+        <td>下午1</td>
+        <td>舒立旻</td>
+        <td>上海是长宁区宣化路</td>
+        <td>上海是长宁区宣化路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr><tr class="full_match">
+        <td>上海众家物业有限公司</td>
+        <td>上午</td>
+        <td>陈胤</td>
+        <td>上海市宝山区镇泰路</td>
+        <td>上海市宝山区镇泰路</td>
+        <td><span class="badge full_match">一致</span></td>
+        <td class="reason">指派员工在员工表中，且出发地址与表一致。</td>
+      </tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>员工表 27 人派单统计</h2>
+    <p class="note">统计每位表内员工在 55 条结果中被分配了几单、覆盖哪些时段。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>姓名</th><th>负责园区</th><th>表内单量</th><th>表内出发地</th><th>实际派单数</th><th>实际时段</th>
+        </tr></thead>
+        <tbody><tr class="active">
+        <td>柴强</td>
+        <td>宝山高新</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市闵行区古美西路晶杰苑</td>
+        <td><strong>3</strong></td>
+        <td>上午、下午1、下午2</td>
+      </tr><tr class="active">
+        <td>傅丽</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市徐汇区龙兰路</td>
+        <td><strong>2</strong></td>
+        <td>上午、下午1</td>
+      </tr><tr class="active">
+        <td>贾文霆</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市静安区万荣路</td>
+        <td><strong>2</strong></td>
+        <td>上午、下午1</td>
+      </tr><tr class="active">
+        <td>梁素梅</td>
+        <td>江苏镇江</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市普陀区中山北路</td>
+        <td><strong>2</strong></td>
+        <td>上午、下午1</td>
+      </tr><tr class="active">
+        <td>刘帅</td>
+        <td>江苏镇江</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市普陀区甘泉路</td>
+        <td><strong>2</strong></td>
+        <td>上午、下午2</td>
+      </tr><tr class="active">
+        <td>盛雅琴</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市杨浦区双阳支路</td>
+        <td><strong>2</strong></td>
+        <td>上午、下午1</td>
+      </tr><tr class="active">
+        <td>宋樑</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市杨浦区佳木斯路</td>
+        <td><strong>2</strong></td>
+        <td>上午、下午1</td>
+      </tr><tr class="active">
+        <td>宋亚军</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市浦东新区金京路</td>
+        <td><strong>2</strong></td>
+        <td>上午、下午1</td>
+      </tr><tr class="active">
+        <td>温作良</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市闵行区七宝镇吴宝路</td>
+        <td><strong>2</strong></td>
+        <td>下午1、下午2</td>
+      </tr><tr class="active">
+        <td>吴佳键</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市宝山区大场镇南大路</td>
+        <td><strong>2</strong></td>
+        <td>上午、下午1</td>
+      </tr><tr class="active">
+        <td>许珊珊</td>
+        <td>宝山高新</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市嘉定区康丰路</td>
+        <td><strong>2</strong></td>
+        <td>上午、下午1</td>
+      </tr><tr class="active">
+        <td>陈胤</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市宝山区镇泰路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>崔宏芝</td>
+        <td>宝山高新</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市松江区泽悦路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>丁苏姗</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市松江区洞泾镇城隆路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>韩哲川</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市浦东新区金桥路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>侯婷婷</td>
+        <td>宝山高新</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市宝山区沪太路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>黄健</td>
+        <td>江苏徐州</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市宝山区四元路</td>
+        <td><strong>1</strong></td>
+        <td>下午1</td>
+      </tr><tr class="active">
+        <td>李路路</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市宝山区华秋路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>刘勇</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市浦东新区北蔡高青路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>孟祥龙</td>
+        <td>宝山高新</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市闵行区莘庄工业区春东路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>舒立旻</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海是长宁区宣化路</td>
+        <td><strong>1</strong></td>
+        <td>下午1</td>
+      </tr><tr class="active">
+        <td>王睿</td>
+        <td>江苏徐州</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市宝山区聚丰园路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>杨芳</td>
+        <td>山东济南</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市普陀区白兰路白玉新村</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>姚焕</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1,下午单-2</td>
+        <td>上海市闵行区东川路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr><tr class="active">
+        <td>姚洁</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市静安区广延路</td>
+        <td><strong>1</strong></td>
+        <td>下午1</td>
+      </tr><tr class="active">
+        <td>殷汝飞</td>
+        <td>山东济南</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市浦东新区浦东大道</td>
+        <td><strong>1</strong></td>
+        <td>下午1</td>
+      </tr><tr class="active">
+        <td>张小平</td>
+        <td>加盟-金山资本现代产业园</td>
+        <td>上午单,下午单-1</td>
+        <td>上海市宝山区高境镇逸仙路</td>
+        <td><strong>1</strong></td>
+        <td>上午</td>
+      </tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="note">生成时间：2026/6/15 11:13:37 ·
+    <a href="/compare-dispatch.html">对比派单结果.xlsx</a> ·
+    <a href="/match.html">匹配看板</a>
+  </p>
+</body>
+</html>

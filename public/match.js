@@ -19,9 +19,12 @@ let pickerSearch = '';
 let activeView = 'results';
 
 let showcaseCustomerIds = [];
+let fullMatchCustomerIds = [];
 let showcaseMatchCache = null;
+let fullMatchCache = null;
 
 const SHOWCASE_CACHE_URL = '/cache/showcase-match.json';
+const FULL_MATCH_CACHE_URL = '/cache/full-match.json';
 
 const dispatchBtn = document.getElementById('dispatch-btn');
 const pageLoader = document.getElementById('page-loader');
@@ -29,6 +32,7 @@ const pageLoader = document.getElementById('page-loader');
 dispatchBtn.addEventListener('click', runDispatch);
 document.getElementById('sel-all-co').addEventListener('click', toggleAllCompanies);
 document.getElementById('showcase-btn').addEventListener('click', loadShowcaseAndMatch);
+document.getElementById('full-match-btn').addEventListener('click', loadFullMatchAndMatch);
 
 document.querySelectorAll('.view-tab').forEach((tab) => {
   tab.addEventListener('click', () => switchView(tab.dataset.view));
@@ -37,6 +41,7 @@ document.querySelectorAll('.view-tab').forEach((tab) => {
 document.addEventListener('DOMContentLoaded', () => {
   loadIntegratedData();
   preloadShowcaseCache();
+  preloadFullMatchCache();
   document.getElementById('dispatch-board').addEventListener('click', handleBoardClick);
   document.addEventListener('click', (e) => {
     if (openPickerId !== null && !e.target.closest('.emp-picker')) {
@@ -113,6 +118,75 @@ async function fetchShowcaseCache() {
   return showcaseMatchCache;
 }
 
+async function preloadFullMatchCache() {
+  try {
+    await fetchFullMatchCache();
+  } catch {
+    /* 缓存可选 */
+  }
+}
+
+async function fetchFullMatchCache() {
+  if (fullMatchCache) return fullMatchCache;
+  const res = await fetch(FULL_MATCH_CACHE_URL);
+  if (!res.ok) throw new Error('全量匹配缓存未找到，请运行 npm run cache:showcase');
+  fullMatchCache = await res.json();
+  return fullMatchCache;
+}
+
+async function loadFullMatchAndMatch() {
+  if (!sessionId) {
+    await loadIntegratedData();
+  }
+
+  try {
+    const cache = await fetchFullMatchCache();
+    const remapped = remapCacheResult(cache, { preferDemo: false });
+    const ids = resolveFullMatchSelectIds(remapped);
+
+    if (!ids.length) {
+      showToast('未找到公司数据');
+      return;
+    }
+
+    selectedCompanies.clear();
+    ids.forEach((id) => selectedCompanies.add(id));
+
+    if (!document.querySelector('#company-list input')) {
+      renderCompanies();
+    } else {
+      syncCompanySelectionUI();
+    }
+    scrollToFirstSelectedCompany();
+    updateStats();
+
+    activeView = 'results';
+    switchView('results');
+
+    applyDispatchResult({
+      pairings: remapped.pairings || [],
+      unmatchedCompanies: remapped.unmatchedCompanies || [],
+      employeeSchedules: remapped.employeeSchedules || [],
+      message: (remapped.message || '全量匹配完成') + '（缓存）',
+      distanceSource: remapped.distanceSource || 'local',
+      maxCommuteMinutes: remapped.maxCommuteMinutes || 60,
+    });
+    renderBoard({ animate: true });
+    renderSchedules();
+    updateStats();
+    showToast((remapped.message || '全量匹配完成') + '（缓存）');
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+function resolveFullMatchSelectIds(cache) {
+  if (fullMatchCustomerIds.length) return fullMatchCustomerIds;
+  if (cache?.fullMatchCustomerIds?.length) return cache.fullMatchCustomerIds;
+  if (allCompanies.length) return allCompanies.map((c) => c.id);
+  return [];
+}
+
 async function loadShowcaseAndMatch() {
   if (!sessionId) {
     await loadIntegratedData();
@@ -120,7 +194,7 @@ async function loadShowcaseAndMatch() {
 
   try {
     const cache = await fetchShowcaseCache();
-    const remapped = remapCacheResult(cache);
+    const remapped = remapCacheResult(cache, { preferDemo: true });
     const ids = resolveShowcaseSelectIds(remapped);
 
     if (!ids.length) {
@@ -177,11 +251,12 @@ function findEmployeeInSession(name, departureAddress, preferDemo = false) {
   );
 }
 
-function remapCacheResult(cache) {
+function remapCacheResult(cache, options = {}) {
+  const preferDemo = options.preferDemo ?? false;
   const companyByName = new Map(allCompanies.map((c) => [c.companyName, c]));
   const pairings = (cache.pairings || []).map((p) => {
     const company = companyByName.get(p.companyName);
-    const emp = findEmployeeInSession(p.employeeName, p.departureAddress, true);
+    const emp = findEmployeeInSession(p.employeeName, p.departureAddress, preferDemo);
     return {
       ...p,
       customerId: company?.id ?? p.customerId,
@@ -192,7 +267,7 @@ function remapCacheResult(cache) {
     };
   });
   const employeeSchedules = (cache.employeeSchedules || []).map((s) => {
-    const emp = findEmployeeInSession(s.employeeName, s.departureAddress, true);
+    const emp = findEmployeeInSession(s.employeeName, s.departureAddress, preferDemo);
     return {
       ...s,
       employeeId: emp?.id ?? s.employeeId,
@@ -259,6 +334,7 @@ function applySessionData(data) {
   allCompanies = data.companies;
   allEmployees = data.employees;
   showcaseCustomerIds = data.showcaseCustomerIds || [];
+  fullMatchCustomerIds = data.fullMatchCustomerIds || [];
   maxCommuteMinutes = data.maxCommuteMinutes || 60;
   selectedCompanies.clear();
   assignmentMap.clear();

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>派单结果对比 — Excel vs 系统全量匹配</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --ok: #3dd68c;
+      --warn: #f5a623;
+      --diff: #ff6b6b;
+      --info: #5b9cf5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px;
+    }
+    h1 { font-size: 1.5rem; margin: 0 0 8px; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .card .n { font-size: 1.8rem; font-weight: 700; }
+    .card .l { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+    .card.ok .n { color: var(--ok); }
+    .card.warn .n { color: var(--warn); }
+    .card.diff .n { color: var(--diff); }
+    .card.info .n { color: var(--info); }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    section h2 { font-size: 1.1rem; margin: 0 0 12px; }
+    .reasons { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: 0.9rem; }
+    .reasons li { margin-bottom: 8px; }
+    .reasons strong { color: var(--text); }
+    code { background: #0d1117; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { border-bottom: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+    tr.employee_diff { background: rgba(255,107,107,0.08); }
+    tr.only_system { background: rgba(91,156,245,0.08); }
+    tr.only_excel { background: rgba(245,166,35,0.08); }
+    tr.same td:nth-child(4), tr.same td:nth-child(5) { color: var(--ok); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge.same { background: rgba(61,214,140,0.2); color: var(--ok); }
+    .badge.employee_diff { background: rgba(255,107,107,0.2); color: var(--diff); }
+    .badge.only_system { background: rgba(91,156,245,0.2); color: var(--info); }
+    .badge.only_excel { background: rgba(245,166,35,0.2); color: var(--warn); }
+    .reason-cell { max-width: 320px; color: var(--muted); font-size: 0.8rem; }
+    .addr-cell { max-width: 200px; color: var(--muted); font-size: 0.78rem; }
+    .meta { font-size: 0.85rem; color: var(--muted); }
+    a { color: var(--info); }
+  </style>
+</head>
+<body>
+  <h1>派单结果对比报告</h1>
+  <p class="sub">
+    Excel：<code>派单结果.xlsx</code>（35 条） ·
+    系统：public/cache/full-match.json（全量55家缓存）（55 条）
+     · 匹配 55/55
+  </p>
+
+  <div class="cards">
+    <div class="card ok"><div class="n">12</div><div class="l">完全一致</div></div>
+    <div class="card diff"><div class="n">23</div><div class="l">员工不同</div></div>
+    <div class="card warn"><div class="n">0</div><div class="l">仅 Excel 有</div></div>
+    <div class="card info"><div class="n">20</div><div class="l">仅系统有</div></div>
+    <div class="card"><div class="n">55</div><div class="l">对比键总数</div></div>
+  </div>
+
+  <section>
+    <h2>差异原因概览</h2>
+    
+    <ul class="reasons">
+      <li><strong>Excel 来源</strong>：<code>派单结果.xlsx</code> 由旧版 <code>DispatchEngine</code>（<code>npm start</code>）生成，英文列名（MORNING/PROJECT），共 <strong>35 条</strong> 成功派单；原始数据 45 家中约有 <strong>10 家</strong> 未被旧引擎派出（容量/规则不满足）。</li>
+      <li><strong>系统来源</strong>：全量55家缓存 <code>full-match.json</code>，<strong>55 条</strong>，<code>pairing-optimizer</code> + 补位员工，<strong>55/55 全匹配</strong>。</li>
+      <li><strong>重叠对比</strong>：与 Excel 同「公司+时段」可对应的原始单共 <strong>35</strong> 条 — 其中 <strong>12</strong> 条员工完全一致，<strong>23</strong> 条员工不同。</li>
+      <li><strong>仅系统有（20 条）</strong>：含 <strong>10 家演示公司</strong> + 旧引擎未派出的原始单 + 下午2 改由「补位-*」员工承接的条目。</li>
+      <li><strong>同名公司</strong>：如「上海协尔泰…」「上海无忧…」在原始与演示各有一条，对比时已按 ID&lt;90100 优先匹配 Excel 侧原始单。</li>
+      <li><strong>下午2</strong>：原员工表该时段容量极少，是 Excel 与系统差异最大的时段；系统通过 20 名补位员工解决。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>逐条对比明细</h2>
+    <p class="meta">对比键 = 企业名称 + 时段。按差异类型排序（员工不同 → 仅系统 → 仅Excel → 一致）。</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>企业名称</th>
+            <th>时段</th>
+            <th>客户类型</th>
+            <th>Excel 员工</th>
+            <th>系统员工</th>
+            <th>地址（系统）</th>
+            <th>状态</th>
+            <th>差异说明</th>
+          </tr>
+        </thead>
+        <tbody><tr class="employee_diff">
+        <td>爱豆科技（上海）有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>宋亚军</td>
+        <td>张小平</td>
+        <td class="addr-cell">上海市浦东新区滨江大道399弄5-5号</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→宋亚军，系统→张小平。 通勤：Excel 0 分 vs 系统 30 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>宝山高新-上海博泰悦臻网络技术服务有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>柴强</td>
+        <td>侯婷婷</td>
+        <td class="addr-cell">上海市浦东新区友诚路149号上海SK大厦32层</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→柴强，系统→侯婷婷。 通勤：Excel 25 分 vs 系统 30 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>宝山高新-上海房屋工程建设技术发展有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>侯婷婷</td>
+        <td>柴强</td>
+        <td class="addr-cell">上海市普陀区丹巴路28弄21号5楼</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→侯婷婷，系统→柴强。</td>
+      </tr><tr class="employee_diff">
+        <td>宝山高新-上海桔子摄影有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>孟祥龙</td>
+        <td>傅丽</td>
+        <td class="addr-cell">上海市闵行区金都路588号</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→孟祥龙，系统→傅丽。</td>
+      </tr><tr class="employee_diff">
+        <td>古疁（上海）文化发展有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>姚焕</td>
+        <td>补位-宝山全</td>
+        <td class="addr-cell">上海市嘉定区平城路855号704</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">下午2/园区容量不足：系统用补位员工「补位-宝山全」；Excel 派给「姚焕」（旧引擎未校验全量容量或允许超载）。 下午2 原员工池极紧（约 1 人），两版分配策略不同。 通勤：Excel 40 分 vs 系统 25 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>山东济南-上海涌艺影视投资有限公司</td>
+        <td>上午</td>
+        <td>项目</td>
+        <td>杨芳</td>
+        <td>殷汝飞</td>
+        <td class="addr-cell">上海市松江区申港路2599号</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→杨芳，系统→殷汝飞。 项目/前道单受园区匹配、指定人、放弃人规则影响，pairing-optimizer 与旧贪心得分不同。 通勤：Excel 40 分 vs 系统 45 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海安睿特生物医药科技有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>姚焕</td>
+        <td>宋亚军</td>
+        <td class="addr-cell">上海市闵行区都市路2350号</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→姚焕，系统→宋亚军。 通勤：Excel 25 分 vs 系统 35 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海宝屋房地产经纪有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>姚焕</td>
+        <td>补位-蒋宝山</td>
+        <td class="addr-cell">上海市浦东新区东方路3601号丰华园3号楼6楼</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">下午2/园区容量不足：系统用补位员工「补位-蒋宝山」；Excel 派给「姚焕」（旧引擎未校验全量容量或允许超载）。 下午2 原员工池极紧（约 1 人），两版分配策略不同。 通勤：Excel 35 分 vs 系统 30 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海波汇科技有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>韩哲川</td>
+        <td>宋亚军</td>
+        <td class="addr-cell">上海市浦东新区大川公路2565号-5</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→韩哲川，系统→宋亚军。 通勤：Excel 25 分 vs 系统 39 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海多隆信息科技有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>温作良</td>
+        <td>丁苏姗</td>
+        <td class="addr-cell">上海市闵行区红星国际广场1818弄红星国际广场11号楼1楼</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→温作良，系统→丁苏姗。 通勤：Excel 25 分 vs 系统 35 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海昊上电子科技有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>韩哲川</td>
+        <td>盛雅琴</td>
+        <td class="addr-cell">上海市浦东新区龙东大道4288弄白金瀚宫88号别墅</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→韩哲川，系统→盛雅琴。 通勤：Excel 25 分 vs 系统 40 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海禾深通信技术有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>陈胤</td>
+        <td>许珊珊</td>
+        <td class="addr-cell">上海市宝山区蕰川路516号泰德科技园B座11-2</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→陈胤，系统→许珊珊。</td>
+      </tr><tr class="employee_diff">
+        <td>上海华烁投资管理有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>姚焕</td>
+        <td>补位-孙金山</td>
+        <td class="addr-cell">上海市闵行区浦星公路699号（万国数据浦江数据中心）</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">下午2/园区容量不足：系统用补位员工「补位-孙金山」；Excel 派给「姚焕」（旧引擎未校验全量容量或允许超载）。 下午2 原员工池极紧（约 1 人），两版分配策略不同。 通勤：Excel 40 分 vs 系统 50 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海季龄网络科技有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>姚洁</td>
+        <td>宋樑</td>
+        <td class="addr-cell">上海市长宁区仙霞路8号1701-1702室</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→姚洁，系统→宋樑。 通勤：Excel 20 分 vs 系统 30 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海界龙现代印刷纸品有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>傅丽</td>
+        <td>吴佳键</td>
+        <td class="addr-cell">上海市长宁区延安西路1566号龙峰大厦22楼</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→傅丽，系统→吴佳键。 通勤：Excel 20 分 vs 系统 40 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海京泉投资管理有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>宋樑</td>
+        <td>贾文霆</td>
+        <td class="addr-cell">上海市虹口区东长治路866号友邦金融中心37楼</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→宋樑，系统→贾文霆。 通勤：Excel 15 分 vs 系统 20 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海柯寅建材有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>宋亚军</td>
+        <td>补位-吴金山</td>
+        <td class="addr-cell">上海市奉贤区远东路1899弄6号楼1803室</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">下午2/园区容量不足：系统用补位员工「补位-吴金山」；Excel 派给「宋亚军」（旧引擎未校验全量容量或允许超载）。 下午2 原员工池极紧（约 1 人），两版分配策略不同。 通勤：Excel 0 分 vs 系统 35 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海鸣旭电子科技有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>姚焕</td>
+        <td>补位-沈宝山</td>
+        <td class="addr-cell">上海市闵行区紫海路170号</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">下午2/园区容量不足：系统用补位员工「补位-沈宝山」；Excel 派给「姚焕」（旧引擎未校验全量容量或允许超载）。 下午2 原员工池极紧（约 1 人），两版分配策略不同。</td>
+      </tr><tr class="employee_diff">
+        <td>上海万沃建筑工程咨询有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>韩哲川</td>
+        <td>崔宏芝</td>
+        <td class="addr-cell">上海市浦东新区周泰路67弄7号楼303室</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→韩哲川，系统→崔宏芝。 通勤：Excel 25 分 vs 系统 55 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海鑫邦旅游发展有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>韩哲川</td>
+        <td>孟祥龙</td>
+        <td class="addr-cell">上海市浦东新区东方路1217号陆家嘴金融服务广场21楼</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→韩哲川，系统→孟祥龙。 通勤：Excel 25 分 vs 系统 35 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海甄会贸易有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>姚焕</td>
+        <td>补位-郑金山</td>
+        <td class="addr-cell">上海市普陀区长寿路1188号102</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">下午2/园区容量不足：系统用补位员工「补位-郑金山」；Excel 派给「姚焕」（旧引擎未校验全量容量或允许超载）。 下午2 原员工池极紧（约 1 人），两版分配策略不同。 通勤：Excel 30 分 vs 系统 55 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>上海众家物业有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>刘勇</td>
+        <td>陈胤</td>
+        <td class="addr-cell">上海市浦东新区川周公路界龙大道358号</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">员工不同：Excel→刘勇，系统→陈胤。 通勤：Excel 25 分 vs 系统 30 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="employee_diff">
+        <td>数数信息科技（上海）有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>姚焕</td>
+        <td>补位-周金山</td>
+        <td class="addr-cell">上海市徐汇区宜山路889号齐来大厦1601-2室</td>
+        <td><span class="badge employee_diff">员工不同</span></td>
+        <td class="reason-cell">下午2/园区容量不足：系统用补位员工「补位-周金山」；Excel 派给「姚焕」（旧引擎未校验全量容量或允许超载）。 下午2 原员工池极紧（约 1 人），两版分配策略不同。 通勤：Excel 25 分 vs 系统 60 分（出发地 patch 或估算方式不同）。</td>
+      </tr><tr class="only_system">
+        <td>宝山高新-点意空间（上海）展览设计工程有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>—</td>
+        <td>柴强</td>
+        <td class="addr-cell">上海市普陀区金沙江路1628弄5号楼618室</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统整合数据共 55 家（45 原始 + 10 演示），Excel 仅 35 条派单记录（旧引擎未全部分配）。此单为全量匹配新增或旧引擎未覆盖项。</td>
+      </tr><tr class="only_system">
+        <td>宝山高新-上海炳唐国际贸易有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>—</td>
+        <td>补位-韩金山</td>
+        <td class="addr-cell">上海市闵行区申长路588号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统新增补位员工「补位-韩金山」承接下午2/外埠园区容量缺口；Excel 仅 35 条且不含补位员工，无法实现 55 家全匹配。</td>
+      </tr><tr class="only_system">
+        <td>宝山高新-上海酒韵贸易有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>—</td>
+        <td>补位-冯金山</td>
+        <td class="addr-cell">上海市普陀区武宁路19号丽晶阳光大厦18楼</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统新增补位员工「补位-冯金山」承接下午2/外埠园区容量缺口；Excel 仅 35 条且不含补位员工，无法实现 55 家全匹配。</td>
+      </tr><tr class="only_system">
+        <td>济南华创科技有限公司</td>
+        <td>下午1</td>
+        <td>首访（前道）</td>
+        <td>—</td>
+        <td>殷汝飞</td>
+        <td class="addr-cell">山东省济南市高新区舜华路2000号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：山东省济南市高新区舜华路2000号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="only_system">
+        <td>济南瑞丰化工有限公司</td>
+        <td>上午</td>
+        <td>项目</td>
+        <td>—</td>
+        <td>刘帅</td>
+        <td class="addr-cell">山东省济南市历下区工业南路66号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：山东省济南市历下区工业南路66号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="only_system">
+        <td>江苏镇江-上海日洁环境科技有限公司</td>
+        <td>下午2</td>
+        <td>项目</td>
+        <td>—</td>
+        <td>刘帅</td>
+        <td class="addr-cell">上海市松江区江田东路180号1楼</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统整合数据共 55 家（45 原始 + 10 演示），Excel 仅 35 条派单记录（旧引擎未全部分配）。此单为全量匹配新增或旧引擎未覆盖项。</td>
+      </tr><tr class="only_system">
+        <td>山东济南-上海浪拓智能科技股份有限公司</td>
+        <td>下午2</td>
+        <td>项目</td>
+        <td>—</td>
+        <td>补位-济南项目</td>
+        <td class="addr-cell">上海市松江区车墩镇香闵路601号20幢6楼</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统新增补位员工「补位-济南项目」承接下午2/外埠园区容量缺口；Excel 仅 35 条且不含补位员工，无法实现 55 家全匹配。</td>
+      </tr><tr class="only_system">
+        <td>上海宝冶工程技术有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>—</td>
+        <td>许珊珊</td>
+        <td class="addr-cell">上海市宝山区友谊路1818号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：上海市宝山区友谊路1818号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="only_system">
+        <td>上海全一物资有限公司</td>
+        <td>下午2</td>
+        <td>回访（后道）</td>
+        <td>—</td>
+        <td>温作良</td>
+        <td class="addr-cell">上海市浦东新区周浦镇沪南公路2218号BHC中环中心东楼5楼511室</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统整合数据共 55 家（45 原始 + 10 演示），Excel 仅 35 条派单记录（旧引擎未全部分配）。此单为全量匹配新增或旧引擎未覆盖项。</td>
+      </tr><tr class="only_system">
+        <td>上海无忧供应链管理有限公司</td>
+        <td>下午1</td>
+        <td>首访（前道）</td>
+        <td>—</td>
+        <td>梁素梅</td>
+        <td class="addr-cell">上海市浦东新区五星路707弄御河企业公馆31号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统整合数据共 55 家（45 原始 + 10 演示），Excel 仅 35 条派单记录（旧引擎未全部分配）。此单为全量匹配新增或旧引擎未覆盖项。</td>
+      </tr><tr class="only_system">
+        <td>上海无忧供应链管理有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>—</td>
+        <td>温作良</td>
+        <td class="addr-cell">上海市金山区朱泾镇金龙新街1688号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：上海市金山区朱泾镇金龙新街1688号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="only_system">
+        <td>上海喜福来朝阳食品贸易行</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>—</td>
+        <td>崔宏芝</td>
+        <td class="addr-cell">上海市宝山区淞发路128号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：上海市宝山区淞发路128号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="only_system">
+        <td>上海喜福来朝阳食品贸易行</td>
+        <td>下午2</td>
+        <td>首访（前道）</td>
+        <td>—</td>
+        <td>补位-卫金山前</td>
+        <td class="addr-cell">上海市普陀区曹杨路2009弄天汇广场68号楼1203室</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统新增补位员工「补位-卫金山前」承接下午2/外埠园区容量缺口；Excel 仅 35 条且不含补位员工，无法实现 55 家全匹配。</td>
+      </tr><tr class="only_system">
+        <td>上海响山文化传播有限公司</td>
+        <td>上午</td>
+        <td>首访（前道）</td>
+        <td>—</td>
+        <td>杨芳</td>
+        <td class="addr-cell">上海市普陀区交通路2447号甘泉德必易园3楼302室</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统整合数据共 55 家（45 原始 + 10 演示），Excel 仅 35 条派单记录（旧引擎未全部分配）。此单为全量匹配新增或旧引擎未覆盖项。</td>
+      </tr><tr class="only_system">
+        <td>上海协尔泰控制技术有限公司</td>
+        <td>上午</td>
+        <td>首访（前道）</td>
+        <td>—</td>
+        <td>梁素梅</td>
+        <td class="addr-cell">上海市长宁区遵义南路88号协泰中心10楼</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">系统整合数据共 55 家（45 原始 + 10 演示），Excel 仅 35 条派单记录（旧引擎未全部分配）。此单为全量匹配新增或旧引擎未覆盖项。</td>
+      </tr><tr class="only_system">
+        <td>上海协尔泰控制技术有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>—</td>
+        <td>姚焕</td>
+        <td class="addr-cell">上海市金山区亭林镇南亭公路888号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：上海市金山区亭林镇南亭公路888号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="only_system">
+        <td>徐州工程机械配件公司</td>
+        <td>上午</td>
+        <td>项目</td>
+        <td>—</td>
+        <td>王睿</td>
+        <td class="addr-cell">江苏省徐州市云龙区淮海东路88号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：江苏省徐州市云龙区淮海东路88号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="only_system">
+        <td>徐州智联物流有限公司</td>
+        <td>下午1</td>
+        <td>项目</td>
+        <td>—</td>
+        <td>黄健</td>
+        <td class="addr-cell">江苏省徐州市泉山区三环南路168号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：江苏省徐州市泉山区三环南路168号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="only_system">
+        <td>镇江港口物流发展公司</td>
+        <td>下午1</td>
+        <td>项目</td>
+        <td>—</td>
+        <td>补位-镇江全</td>
+        <td class="addr-cell">江苏省镇江市润州区长江路99号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：江苏省镇江市润州区长江路99号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="only_system">
+        <td>镇江新材料科技股份公司</td>
+        <td>上午</td>
+        <td>首访（前道）</td>
+        <td>—</td>
+        <td>刘帅</td>
+        <td class="addr-cell">江苏省镇江市京口区学府路300号</td>
+        <td><span class="badge only_system">仅系统</span></td>
+        <td class="reason-cell">演示追加公司（ID≥90100），地址：江苏省镇江市京口区学府路300号。Excel 基于原始 45 家，不含此 10 家演示单。</td>
+      </tr><tr class="same">
+        <td>宝山高新-上海信和商务国际旅行社有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>柴强</td>
+        <td>柴强</td>
+        <td class="addr-cell">上海市浦东新区祝桥镇祝潘公路699号嘉荣商务广场3号楼601室</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>江苏徐州-纽珑实业（上海）有限公司</td>
+        <td>上午</td>
+        <td>项目</td>
+        <td>王睿</td>
+        <td>王睿</td>
+        <td class="addr-cell">上海市青浦区久远路89号</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海得韬会展服务有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>盛雅琴</td>
+        <td>盛雅琴</td>
+        <td class="addr-cell">上海市静安区共和新路3699号A栋316室</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海德红化工科技有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>吴佳键</td>
+        <td>吴佳键</td>
+        <td class="addr-cell">上海市宝山区淞宝路155弄新月国际商务广场1号楼1007室</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海地通汽车部件有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>李路路</td>
+        <td>李路路</td>
+        <td class="addr-cell">上海市静安区陕西北路936号MOHO办公楼2011室</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海惠铎环境能源科技股份有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>姚洁</td>
+        <td>姚洁</td>
+        <td class="addr-cell">上海市浦东新区金新路58号银桥大厦7楼701室</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海君正船务有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>宋樑</td>
+        <td>宋樑</td>
+        <td class="addr-cell">上海市杨浦区国权北路1688弄湾谷科技园78号A4栋901室</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海天元新能源材料有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>刘勇</td>
+        <td>刘勇</td>
+        <td class="addr-cell">上海市闵行区新龙路1333弄66号716室</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海筱胜企业管理咨询有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>贾文霆</td>
+        <td>贾文霆</td>
+        <td class="addr-cell">上海市普陀区中江路388弄国盛中心1号楼1707室</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海益充电子商务有限公司</td>
+        <td>上午</td>
+        <td>回访（后道）</td>
+        <td>韩哲川</td>
+        <td>韩哲川</td>
+        <td class="addr-cell">上海市浦东新区浦东新区盛荣路88号7号7A</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海由绮置业有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>傅丽</td>
+        <td>傅丽</td>
+        <td class="addr-cell">上海市徐汇区枫林路380号枫林国际中心B栋3楼大会议室</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr><tr class="same">
+        <td>上海智彩电子科技有限公司</td>
+        <td>下午1</td>
+        <td>回访（后道）</td>
+        <td>舒立旻</td>
+        <td>舒立旻</td>
+        <td class="addr-cell">上海市徐汇区桂平路391号新漕河泾国际商务中心A座4楼</td>
+        <td><span class="badge same">一致</span></td>
+        <td class="reason-cell">员工一致，匹配结果相同。</td>
+      </tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="meta">生成时间：2026/6/15 11:08:24 ·
+    <a href="/match.html">返回匹配看板</a>
+  </p>
+</body>
+</html>

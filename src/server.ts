@@ -20,6 +20,7 @@ import { dispatchSelectedCompanies } from './services/select-dispatch';
 import { validatePair } from './services/validate-pair';
 import { loadEnvFile } from './services/distance-service';
 import { buildIntegratedData, SHOWCASE_TAG } from './data/integrated-data';
+import { GAP_FILL_TAG } from './data/gap-fill-employees';
 
 loadEnvFile();
 import { FrontProjectMode, EMPLOYEE_ROLE_LABELS, Employee, CUSTOMER_TYPE_LABELS, TIME_SLOT_LABELS } from './types';
@@ -85,10 +86,16 @@ function getFilesFromRequest(files: Record<string, Express.Multer.File[]> | unde
 
 function buildParseMetadata(
   data: ImportResult,
-  options?: { showcaseCustomerIds?: number[]; showcaseEmployeeIds?: number[] }
+  options?: {
+    showcaseCustomerIds?: number[];
+    showcaseEmployeeIds?: number[];
+    gapFillEmployeeIds?: number[];
+    fullMatchCustomerIds?: number[];
+  }
 ) {
   const scSet = new Set(options?.showcaseCustomerIds || []);
   const seSet = new Set(options?.showcaseEmployeeIds || []);
+  const gfSet = new Set(options?.gapFillEmployeeIds || []);
   return {
     companies: data.customers.map((c) => ({
       id: c.id,
@@ -104,13 +111,15 @@ function buildParseMetadata(
     })),
     employees: data.employees.map((emp) => ({
       ...formatEmployee(emp),
-      sourceTag: seSet.has(emp.id) ? SHOWCASE_TAG : undefined,
+      sourceTag: seSet.has(emp.id) ? SHOWCASE_TAG : gfSet.has(emp.id) ? GAP_FILL_TAG : undefined,
     })),
     stats: data.stats,
     totalCompanies: data.customers.length,
     totalEmployees: data.employees.length,
     showcaseCustomerIds: options?.showcaseCustomerIds || [],
     showcaseEmployeeIds: options?.showcaseEmployeeIds || [],
+    gapFillEmployeeIds: options?.gapFillEmployeeIds || [],
+    fullMatchCustomerIds: options?.fullMatchCustomerIds || [],
   };
 }
 
@@ -202,10 +211,12 @@ app.get('/api/sample-data', (_req, res) => {
       ...buildParseMetadata(data, {
         showcaseCustomerIds: data.showcaseCustomerIds,
         showcaseEmployeeIds: data.showcaseEmployeeIds,
+        gapFillEmployeeIds: data.gapFillEmployeeIds,
+        fullMatchCustomerIds: data.fullMatchCustomerIds,
       }),
       isSample: true,
       maxCommuteMinutes: MAX_ACCEPTABLE_COMMUTE_MINUTES,
-      hint: `共 ${data.customers.length} 家公司、${data.employees.length} 名员工（含 ${data.showcaseCustomerIds.length} 家演示公司）`,
+      hint: `共 ${data.customers.length} 家公司、${data.employees.length} 名员工（含 ${data.showcaseCustomerIds.length} 家演示 + ${data.gapFillEmployeeIds.length} 名补位员工，支持全量匹配）`,
     });
   } catch (err) {
     res.status(500).json({ error: '加载示例数据失败' });

@@ -1,5 +1,5 @@
 /**
- * 生成演示匹配缓存（固定 ID，仅演示员工，跨环境一致）
+ * 生成匹配缓存：演示 10 家 + 全量 55 家
  * 运行: npm run cache:showcase
  */
 
@@ -10,40 +10,59 @@ import { dispatchSelectedCompanies } from '../src/services/select-dispatch';
 
 const DATA_DIR = path.join(__dirname, '..');
 
-async function main() {
-  const snapshot = buildShowcaseSnapshot();
-  const dispatch = await dispatchSelectedCompanies(snapshot, snapshot.showcaseCustomerIds);
+async function writeCache(filename: string, payload: object) {
+  const cacheDir = path.join(DATA_DIR, 'public', 'cache');
+  fs.mkdirSync(cacheDir, { recursive: true });
+  fs.writeFileSync(path.join(cacheDir, filename), JSON.stringify(payload), 'utf-8');
+}
 
+async function main() {
   const integrated = buildIntegratedData(DATA_DIR);
 
-  const matchCache = {
+  const showcaseSnapshot = buildShowcaseSnapshot();
+  const showcaseDispatch = await dispatchSelectedCompanies(
+    integrated,
+    showcaseSnapshot.showcaseCustomerIds
+  );
+
+  const showcaseCache = {
     version: 1,
     generatedAt: new Date().toISOString(),
-    showcaseCustomerIds: snapshot.showcaseCustomerIds,
-    showcaseEmployeeIds: snapshot.showcaseEmployeeIds,
+    showcaseCustomerIds: showcaseSnapshot.showcaseCustomerIds,
+    showcaseEmployeeIds: showcaseSnapshot.showcaseEmployeeIds,
     maxCommuteMinutes: 60,
-    distanceSource: dispatch.distanceSource || 'local',
-    stats: dispatch.stats,
-    message: dispatch.message,
-    pairings: dispatch.pairings,
-    unmatchedCompanies: dispatch.unmatchedCompanies,
-    employeeSchedules: dispatch.employeeSchedules,
+    distanceSource: showcaseDispatch.distanceSource || 'local',
+    stats: showcaseDispatch.stats,
+    message: showcaseDispatch.message,
+    pairings: showcaseDispatch.pairings,
+    unmatchedCompanies: showcaseDispatch.unmatchedCompanies,
+    employeeSchedules: showcaseDispatch.employeeSchedules,
   };
 
-  const root = path.join(__dirname, '..');
-  const cacheDir = path.join(root, 'public', 'cache');
-  fs.mkdirSync(cacheDir, { recursive: true });
+  const fullDispatch = await dispatchSelectedCompanies(integrated, integrated.fullMatchCustomerIds);
+  const fullCache = {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    fullMatchCustomerIds: integrated.fullMatchCustomerIds,
+    maxCommuteMinutes: 60,
+    distanceSource: fullDispatch.distanceSource || 'local',
+    stats: fullDispatch.stats,
+    message: fullDispatch.message,
+    pairings: fullDispatch.pairings,
+    unmatchedCompanies: fullDispatch.unmatchedCompanies,
+    employeeSchedules: fullDispatch.employeeSchedules,
+  };
 
-  fs.writeFileSync(path.join(cacheDir, 'showcase-match.json'), JSON.stringify(matchCache), 'utf-8');
-  fs.writeFileSync(path.join(root, '_showcase_match.json'), JSON.stringify(matchCache, null, 2), 'utf-8');
+  await writeCache('showcase-match.json', showcaseCache);
+  await writeCache('full-match.json', fullCache);
 
-  const demoEmps = new Set(snapshot.showcaseEmployeeIds);
-  const allDemo = dispatch.pairings.every((p) => demoEmps.has(p.employeeId));
-
-  console.log(`✓ public/cache/showcase-match.json (${dispatch.stats.matched}/${dispatch.stats.selected} 匹配)`);
-  console.log(`  演示员工匹配: ${allDemo ? '是' : '否'}`);
-  console.log(`  整合数据: ${integrated.customers.length} 公司 / ${integrated.employees.length} 员工`);
-  console.log(dispatch.message);
+  console.log(`✓ showcase-match.json (${showcaseDispatch.stats.matched}/${showcaseDispatch.stats.selected})`);
+  console.log(`✓ full-match.json (${fullDispatch.stats.matched}/${fullDispatch.stats.selected})`);
+  if (fullDispatch.unmatchedCompanies.length) {
+    fullDispatch.unmatchedCompanies.forEach((u) => console.log('  未匹配:', u.companyName, u.reason));
+    process.exit(1);
+  }
+  console.log('全量 55 家匹配 100% 成功');
 }
 
 main().catch((err) => {

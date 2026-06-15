@@ -4,6 +4,12 @@
 
 import { importAllData, ImportResult } from '../services/excel-importer';
 import { buildShowcaseData } from './showcase-data';
+import {
+  applyEmployeePatches,
+  buildGapFillEmployees,
+  getGapFillEmployeeIds,
+  GAP_FILL_TAG,
+} from './gap-fill-employees';
 import { Customer, Employee, CustomerType } from '../types';
 
 export const SHOWCASE_TAG = '演示';
@@ -15,6 +21,8 @@ export const SHOWCASE_CUSTOMER_ID_BASE = 90100;
 export interface IntegratedData extends ImportResult {
   showcaseCustomerIds: number[];
   showcaseEmployeeIds: number[];
+  gapFillEmployeeIds: number[];
+  fullMatchCustomerIds: number[];
 }
 
 export function buildIntegratedData(dataDir: string): IntegratedData {
@@ -65,20 +73,26 @@ export function buildIntegratedData(dataDir: string): IntegratedData {
   const showcaseProject = showcase.customers.filter((c) => c.customerType === CustomerType.PROJECT).length;
   const showcaseFollow = showcase.customers.filter((c) => c.customerType === CustomerType.FOLLOW_UP).length;
 
+  const gapFillEmployees = buildGapFillEmployees(parkIdByName);
+  const gapFillEmployeeIds = getGapFillEmployeeIds();
+  const patchedEmployees = applyEmployeePatches([...mergedEmployees, ...gapFillEmployees]);
+
   return {
     parks: base.parks,
     customers: mergedCustomers,
-    employees: mergedEmployees,
+    employees: patchedEmployees,
     cities: [...new Set([...base.cities, ...showcase.cities])],
     stats: {
       firstVisitCount: base.stats.firstVisitCount + showcaseFirst,
       projectCount: base.stats.projectCount + showcaseProject,
       followUpCount: base.stats.followUpCount + showcaseFollow,
-      employeeCount: mergedEmployees.length,
+      employeeCount: patchedEmployees.length,
       handInHandGroups: base.stats.handInHandGroups,
     },
     showcaseCustomerIds,
     showcaseEmployeeIds,
+    gapFillEmployeeIds,
+    fullMatchCustomerIds: mergedCustomers.map((c) => c.id),
   };
 }
 
@@ -112,5 +126,7 @@ export function buildShowcaseSnapshot(): IntegratedData {
     stats: raw.stats,
     showcaseCustomerIds,
     showcaseEmployeeIds,
+    gapFillEmployeeIds: [],
+    fullMatchCustomerIds: customers.map((c) => c.id),
   };
 }

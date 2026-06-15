@@ -15,6 +15,8 @@
     "dispatch": "tsx src/index.ts",
     "import": "tsx src/scripts/import-data.ts",
     "cache:showcase": "tsx scripts/cache-showcase.ts",
+    "compare:dispatch": "tsx scripts/compare-dispatch-results.ts",
+    "compare:employee": "tsx scripts/compare-employee-roster.ts",
     "deploy": "bash deploy/deploy.sh"
   },
   "keywords": [
