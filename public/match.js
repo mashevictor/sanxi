@@ -110,15 +110,12 @@ async function loadIntegratedData() {
     if (!res.ok) throw new Error(data.error || '加载失败');
     applySessionData(data);
     const stored = loadDispatchState();
-    if (stored?.sessionId) {
-      sessionId = stored.sessionId;
-      if (stored.selectedCompanies?.length) {
-        stored.selectedCompanies.forEach((id) => selectedCompanies.add(id));
-      }
-      if (stored.assignmentMap?.length) {
-        assignmentMap = deserializeAssignmentMap(stored.assignmentMap);
-        syncPreviewFromAssignment();
-      }
+    if (stored?.selectedCompanies?.length) {
+      stored.selectedCompanies.forEach((id) => selectedCompanies.add(id));
+    }
+    if (stored?.assignmentMap?.length) {
+      assignmentMap = deserializeAssignmentMap(stored.assignmentMap);
+      syncPreviewFromAssignment();
     }
     renderCompanies();
     renderBoard();
