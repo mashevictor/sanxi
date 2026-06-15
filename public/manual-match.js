@@ -7,13 +7,16 @@ const assignmentMap = new Map();
 let manualCoSearch = '';
 let manualEmpSearch = '';
 let manualTablesBound = false;
-const manualResults = [];
+let isMatching = false;
+let progressTimer = null;
+let lastMatchPairings = [];
+let lastMatchUnmatched = [];
 
 const pageLoader = document.getElementById('page-loader');
 
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
-  document.getElementById('manual-assign-btn').addEventListener('click', onManualAssign);
+  document.getElementById('manual-match-btn').addEventListener('click', onManualMatch);
   document.getElementById('manual-clear-btn').addEventListener('click', clearManualSelection);
   document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
     const ids = Array.from(manualSelectedEmployees);
@@ -39,6 +42,7 @@ async function loadData() {
         if (stored?.assignmentMap?.length) {
           const map = deserializeAssignmentMap(stored.assignmentMap);
           for (const [k, v] of map) assignmentMap.set(k, v);
+          rebuildLastMatchFromAssignment();
         }
         renderManualTables();
         renderManualResults();
@@ -52,6 +56,7 @@ async function loadData() {
     if (stored?.assignmentMap?.length) {
       const map = deserializeAssignmentMap(stored.assignmentMap);
       for (const [k, v] of map) assignmentMap.set(k, v);
+      rebuildLastMatchFromAssignment();
     }
     renderManualTables();
     renderManualResults();
@@ -61,6 +66,15 @@ async function loadData() {
     showToast(err.message);
   } finally {
     pageLoader.classList.add('hide');
+  }
+}
+
+function rebuildLastMatchFromAssignment() {
+  lastMatchPairings = [];
+  lastMatchUnmatched = [];
+  for (const [cid, entry] of assignmentMap) {
+    if (entry.type === 'ok') lastMatchPairings.push(entry.data);
+    else if (entry.type === 'fail') lastMatchUnmatched.push(entry.data);
   }
 }
 
@@ -132,6 +146,13 @@ function renderManualTables() {
   syncManualTableSelectAll('manual-emp-all', employees, manualSelectedEmployees);
   bindManualTableEvents();
   updateManualStats();
+  updateMatchButton();
+}
+
+function updateMatchButton() {
+  const btn = document.getElementById('manual-match-btn');
+  if (!btn) return;
+  btn.disabled = isMatching || manualSelectedCompanies.size === 0;
 }
 
 function syncManualTableSelectAll(allId, visibleItems, selectedSet) {
@@ -216,134 +237,163 @@ function clearManualSelection() {
   showToast('已清空表格选择');
 }
 
-function buildManualAssignPairs() {
-  const coIds = Array.from(manualSelectedCompanies).sort((a, b) => a - b);
-  const empIds = Array.from(manualSelectedEmployees).sort((a, b) => a - b);
-  if (!coIds.length || !empIds.length) return null;
-  if (empIds.length === 1) return coIds.map((cid) => ({ customerId: cid, employeeId: empIds[0] }));
-  if (coIds.length === empIds.length) return coIds.map((cid, i) => ({ customerId: cid, employeeId: empIds[i] }));
-  return null;
+function showMatchProgress(total) {
+  const box = document.getElementById('manual-progress');
+  const fill = document.getElementById('manual-progress-fill');
+  const text = document.getElementById('manual-progress-text');
+  if (!box || !fill || !text) return;
+  clearInterval(progressTimer);
+  box.hidden = false;
+  fill.style.width = '4%';
+  text.textContent = `正在智能匹配 ${total} 家公司…`;
+  let pct = 4;
+  progressTimer = setInterval(() => {
+    pct = Math.min(pct + Math.random() * 6 + 2, 92);
+    fill.style.width = `${pct}%`;
+  }, 220);
 }
 
-function getExistingPairings(excludeCustomerId) {
-  const pairings = [];
-  for (const [cid, entry] of assignmentMap) {
-    if (entry.type === 'ok' && Number(cid) !== excludeCustomerId) {
-      pairings.push({ customerId: Number(cid), employeeId: entry.data.employeeId });
-    }
-  }
-  return pairings;
+function completeMatchProgress(matched, total) {
+  clearInterval(progressTimer);
+  progressTimer = null;
+  const fill = document.getElementById('manual-progress-fill');
+  const text = document.getElementById('manual-progress-text');
+  if (fill) fill.style.width = '100%';
+  if (text) text.textContent = `匹配完成：${matched}/${total}`;
 }
 
-async function validateAndAssign(customerId, employeeId) {
-  const res = await fetch('/api/dispatch/validate-pair', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sessionId,
-      customerId,
-      employeeId,
-      existingPairings: getExistingPairings(customerId),
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error);
-
-  const company = allCompanies.find((c) => c.id === customerId);
-  const employee = allEmployees.find((e) => e.id === employeeId);
-
-  if (data.eligible) {
-    assignmentMap.set(customerId, {
-      type: 'ok',
-      data: {
-        customerId: data.customerId,
-        companyName: data.companyName,
-        employeeId: data.employeeId,
-        employeeName: data.employeeName,
-        commuteMinutes: data.commuteMinutes,
-        timeSlot: data.timeSlot,
-        customerType: data.customerType,
-      },
-      manual: true,
-    });
-    return {
-      ok: true,
-      text: `${data.companyName} → ${data.employeeName}（${data.commuteMinutes} 分）`,
-    };
-  }
-
-  assignmentMap.set(customerId, {
-    type: 'fail',
-    data: {
-      customerId,
-      companyName: data.companyName || company?.companyName,
-      reason: data.failedRules?.map((r) => `${r.rule}不匹配`).join('、') || '不合规',
-      nearestAttempt: {
-        employeeName: data.employeeName,
-        departureAddress: data.departureAddress,
-        failedRules: data.failedRules,
-      },
-    },
-    manual: true,
-  });
-  return {
-    ok: false,
-    text: `${data.companyName || company?.companyName} → ${employee?.name || data.employeeName}：${extractFailReason(assignmentMap.get(customerId))}`,
-  };
+function hideMatchProgress(delay = 600) {
+  setTimeout(() => {
+    const box = document.getElementById('manual-progress');
+    if (box) box.hidden = true;
+    const fill = document.getElementById('manual-progress-fill');
+    if (fill) fill.style.width = '0';
+  }, delay);
 }
 
-async function onManualAssign() {
-  const pairs = buildManualAssignPairs();
-  if (!manualSelectedCompanies.size) { showToast('请先在表格中勾选公司'); return; }
-  if (!manualSelectedEmployees.size) { showToast('请先在表格中勾选员工'); return; }
-  if (!pairs) { showToast('请选 1 名员工派给多家，或等数量一一配对'); return; }
+function applyMatchResult(data) {
+  lastMatchPairings = data.pairings || [];
+  lastMatchUnmatched = data.unmatchedCompanies || [];
+  assignmentMap.clear();
 
-  manualResults.length = 0;
-  let ok = 0;
-  let fail = 0;
-
-  for (const { customerId, employeeId } of pairs) {
-    try {
-      const r = await validateAndAssign(customerId, employeeId);
-      manualResults.unshift(r);
-      if (r.ok) ok++;
-      else fail++;
-    } catch (err) {
-      manualResults.unshift({ ok: false, text: err.message });
-      fail++;
-    }
+  for (const p of lastMatchPairings) {
+    assignmentMap.set(p.customerId, { type: 'ok', data: p, manual: false });
   }
-
-  renderManualResults();
-  updateManualStats();
-  persistState();
-
-  if (fail === 0) showToast(`✓ ${ok} 条全部指派成功`);
-  else if (ok === 0) showToast(`✗ ${fail} 条不合规`);
-  else showToast(`${ok} 条成功，${fail} 条不合规`);
+  for (const u of lastMatchUnmatched) {
+    assignmentMap.set(u.customerId, { type: 'fail', data: u, manual: false });
+  }
 }
 
 function renderManualResults() {
   const box = document.getElementById('manual-result');
+  const summary = document.getElementById('manual-result-summary');
   if (!box) return;
-  if (!manualResults.length) {
-    box.innerHTML = '<div class="empty" style="padding:24px">指派结果将显示在这里</div>';
+
+  const ok = lastMatchPairings.length;
+  const fail = lastMatchUnmatched.length;
+  if (summary) {
+    summary.textContent = ok + fail > 0 ? `${ok} 成功 · ${fail} 失败` : '';
+  }
+
+  if (!ok && !fail) {
+    box.innerHTML = '<div class="empty" style="padding:24px">匹配结果将显示在这里</div>';
     return;
   }
-  box.innerHTML = manualResults.map((r) =>
-    `<div class="manual-result-item ${r.ok ? 'ok' : 'fail'}">${esc(r.text)}</div>`
-  ).join('');
+
+  const okRows = lastMatchPairings.map((p, i) => `
+    <div class="manual-result-row ok" style="animation-delay:${i * 0.03}s">
+      <div>
+        <div class="co-line">${esc(p.companyName)}</div>
+        <div class="sub-line">${esc(p.customerType)} · ${esc(p.timeSlot)} · ${esc(p.parkName)}</div>
+      </div>
+      <div class="arrow">→</div>
+      <div>
+        <div class="emp-line">${esc(p.employeeName)}</div>
+        <div class="sub-line">${esc(p.departureAddress || '')}</div>
+      </div>
+      <div class="commute">${p.commuteMinutes ? `${p.commuteMinutes} 分` : '—'}</div>
+    </div>
+  `).join('');
+
+  const failRows = lastMatchUnmatched.map((u, i) => {
+    const reason = extractFailReason({ type: 'fail', data: u });
+    return `
+      <div class="manual-result-row fail" style="animation-delay:${(ok + i) * 0.03}s">
+        <div>
+          <div class="co-line">${esc(u.companyName)}</div>
+          <div class="sub-line">${esc(u.customerType || '')} · ${esc(u.parkName || '')}</div>
+        </div>
+        <div class="arrow">✕</div>
+        <div class="fail-tag" style="grid-column:3/5">${esc(reason)}</div>
+      </div>
+    `;
+  }).join('');
+
+  box.innerHTML = (failRows ? `<div style="margin-bottom:10px;font-size:0.72rem;color:#fca5a5;font-weight:600">匹配失败 / 待处理</div>${failRows}` : '')
+    + (okRows ? `<div style="margin:${failRows ? '14px' : '0'} 0 10px;font-size:0.72rem;color:#6ee7b7;font-weight:600">匹配成功</div>${okRows}` : '');
+}
+
+function scrollToManualResults() {
+  const section = document.getElementById('manual-result-section');
+  if (!section) return;
+  requestAnimationFrame(() => {
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+async function onManualMatch() {
+  if (!sessionId) {
+    showToast('数据未加载，请刷新页面');
+    return;
+  }
+  const customerIds = Array.from(manualSelectedCompanies).sort((a, b) => a - b);
+  if (!customerIds.length) {
+    showToast('请先在表格中勾选公司');
+    return;
+  }
+
+  const employeePoolIds = Array.from(manualSelectedEmployees);
+  const btn = document.getElementById('manual-match-btn');
+  isMatching = true;
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.textContent = '匹配中...';
+  showMatchProgress(customerIds.length);
+
+  const body = { sessionId, customerIds };
+  if (employeePoolIds.length) body.employeePoolIds = employeePoolIds;
+
+  try {
+    const res = await fetch('/api/dispatch/select', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '匹配失败');
+
+    applyMatchResult(data);
+    completeMatchProgress(data.stats?.matched ?? lastMatchPairings.length, customerIds.length);
+    renderManualResults();
+    updateManualStats();
+    persistState();
+    scrollToManualResults();
+    showToast(data.message || '匹配完成');
+  } catch (err) {
+    showToast(err.message);
+    hideMatchProgress(0);
+  } finally {
+    isMatching = false;
+    btn.classList.remove('loading');
+    btn.textContent = '确认匹配';
+    updateMatchButton();
+    hideMatchProgress();
+  }
 }
 
 function updateManualStats() {
   document.getElementById('stat-co-picked').textContent = manualSelectedCompanies.size;
   document.getElementById('stat-emp-picked').textContent = manualSelectedEmployees.size;
-  let ok = 0;
-  let fail = 0;
-  for (const [, e] of assignmentMap) {
-    if (e.manual && e.type === 'ok') ok++;
-    if (e.manual && e.type === 'fail') fail++;
-  }
-  document.getElementById('stat-manual-ok').textContent = ok;
-  document.getElementById('stat-manual-fail').textContent = fail;
+  document.getElementById('stat-manual-ok').textContent = lastMatchPairings.length;
+  document.getElementById('stat-manual-fail').textContent = lastMatchUnmatched.length;
 }

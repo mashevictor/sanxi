@@ -21,19 +21,15 @@ let activeView = 'results';
 
 let showcaseCustomerIds = [];
 let fullMatchCustomerIds = [];
-let showcaseMatchCache = null;
 let fullMatchCache = null;
 
-const SHOWCASE_CACHE_URL = '/cache/showcase-match.json';
 const FULL_MATCH_CACHE_URL = '/cache/full-match.json';
 
-const dispatchBtn = document.getElementById('dispatch-btn');
+const fullMatchBtn = document.getElementById('full-match-btn');
 const pageLoader = document.getElementById('page-loader');
 
-dispatchBtn.addEventListener('click', runDispatch);
+fullMatchBtn.addEventListener('click', loadFullMatchAndMatch);
 document.getElementById('sel-all-co').addEventListener('click', toggleAllCompanies);
-document.getElementById('showcase-btn').addEventListener('click', loadShowcaseAndMatch);
-document.getElementById('full-match-btn').addEventListener('click', loadFullMatchAndMatch);
 
 document.querySelectorAll('.view-tab').forEach((tab) => {
   tab.addEventListener('click', () => switchView(tab.dataset.view));
@@ -41,7 +37,6 @@ document.querySelectorAll('.view-tab').forEach((tab) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadIntegratedData();
-  preloadShowcaseCache();
   preloadFullMatchCache();
   document.getElementById('dispatch-board').addEventListener('click', handleBoardClick);
   document.getElementById('emp-modal-close').addEventListener('click', () => {
@@ -138,27 +133,11 @@ async function loadIntegratedData() {
   }
 }
 
-async function preloadShowcaseCache() {
-  try {
-    await fetchShowcaseCache();
-  } catch {
-    /* 缓存可选，失败时一键演示会提示 */
-  }
-}
-
-async function fetchShowcaseCache() {
-  if (showcaseMatchCache) return showcaseMatchCache;
-  const res = await fetch(SHOWCASE_CACHE_URL);
-  if (!res.ok) throw new Error('演示缓存未找到，请运行 npm run cache:showcase');
-  showcaseMatchCache = await res.json();
-  return showcaseMatchCache;
-}
-
 async function preloadFullMatchCache() {
   try {
     await fetchFullMatchCache();
   } catch {
-    /* 缓存可选 */
+    /* 缓存可选，全量匹配时会回退实时 API */
   }
 }
 
@@ -170,16 +149,23 @@ async function fetchFullMatchCache() {
   return fullMatchCache;
 }
 
+function getRemapMissingIds(remapped, expectedIds) {
+  const pairedIds = new Set((remapped.pairings || []).map((p) => p.customerId));
+  return expectedIds.filter((id) => !pairedIds.has(id));
+}
+
 async function loadFullMatchAndMatch() {
   if (!sessionId) {
     await loadIntegratedData();
   }
 
-  try {
-    const cache = await fetchFullMatchCache();
-    const remapped = remapCacheResult(cache, { preferDemo: false });
-    const ids = resolveFullMatchSelectIds(remapped);
+  fullMatchBtn.disabled = true;
+  fullMatchBtn.classList.add('loading');
+  const prevLabel = fullMatchBtn.textContent;
+  fullMatchBtn.textContent = '匹配中...';
 
+  try {
+    const ids = resolveFullMatchSelectIds(fullMatchCache || {});
     if (!ids.length) {
       showToast('未找到公司数据');
       return;
@@ -199,20 +185,46 @@ async function loadFullMatchAndMatch() {
     activeView = 'results';
     switchView('results');
 
-    applyDispatchResult({
-      pairings: remapped.pairings || [],
-      unmatchedCompanies: remapped.unmatchedCompanies || [],
-      employeeSchedules: remapped.employeeSchedules || [],
-      message: (remapped.message || '全量匹配完成') + '（缓存）',
-      distanceSource: remapped.distanceSource || 'local',
-      maxCommuteMinutes: remapped.maxCommuteMinutes || 60,
-    });
+    let resultPayload = null;
+
+    try {
+      const cache = await fetchFullMatchCache();
+      const remapped = remapCacheResult(cache, { preferDemo: false });
+      const missing = getRemapMissingIds(remapped, ids);
+      const cacheOk = missing.length === 0 && !(remapped.unmatchedCompanies || []).length;
+
+      if (cacheOk) {
+        resultPayload = {
+          pairings: remapped.pairings || [],
+          unmatchedCompanies: remapped.unmatchedCompanies || [],
+          employeeSchedules: remapped.employeeSchedules || [],
+          message: remapped.message || `已为 ${ids.length} 家公司完成全量匹配`,
+          distanceSource: remapped.distanceSource || 'local',
+          maxCommuteMinutes: remapped.maxCommuteMinutes || 60,
+        };
+      } else if (missing.length) {
+        showToast(`缓存映射缺 ${missing.length} 家，改用实时匹配…`);
+      }
+    } catch {
+      showToast('缓存未就绪，改用实时匹配…');
+    }
+
+    if (!resultPayload) {
+      const data = await callSelectApi({ fullMatch: true });
+      resultPayload = data;
+    }
+
+    applyDispatchResult(resultPayload);
     renderBoard({ animate: true });
     renderSchedules();
     updateStats();
-    showToast((remapped.message || '全量匹配完成') + '（缓存）');
+    showToast(resultPayload.message || '全量匹配完成');
   } catch (err) {
     showToast(err.message);
+  } finally {
+    fullMatchBtn.disabled = false;
+    fullMatchBtn.classList.remove('loading');
+    fullMatchBtn.textContent = prevLabel || '全量匹配';
   }
 }
 
@@ -221,59 +233,6 @@ function resolveFullMatchSelectIds(cache) {
   if (cache?.fullMatchCustomerIds?.length) return cache.fullMatchCustomerIds;
   if (allCompanies.length) return allCompanies.map((c) => c.id);
   return [];
-}
-
-async function loadShowcaseAndMatch() {
-  if (!sessionId) {
-    await loadIntegratedData();
-  }
-
-  try {
-    const cache = await fetchShowcaseCache();
-    const remapped = remapCacheResult(cache, { preferDemo: true });
-    const ids = resolveShowcaseSelectIds(remapped);
-
-    if (!ids.length) {
-      showToast('未找到演示公司数据');
-      return;
-    }
-
-    selectedCompanies.clear();
-    ids.forEach((id) => selectedCompanies.add(id));
-
-    if (!document.querySelector('#company-list input')) {
-      renderCompanies();
-    } else {
-      syncCompanySelectionUI();
-    }
-    scrollToFirstSelectedCompany();
-    updateStats();
-
-    activeView = 'results';
-    switchView('results');
-
-    applyDispatchResult({
-      pairings: remapped.pairings || [],
-      unmatchedCompanies: remapped.unmatchedCompanies || [],
-      employeeSchedules: remapped.employeeSchedules || [],
-      message: (remapped.message || '演示匹配完成') + '（缓存）',
-      distanceSource: remapped.distanceSource || 'local',
-      maxCommuteMinutes: remapped.maxCommuteMinutes || 60,
-    });
-    renderBoard({ animate: true });
-    renderSchedules();
-    updateStats();
-    showToast((remapped.message || '演示匹配完成') + '（缓存）');
-  } catch (err) {
-    showToast(err.message);
-  }
-}
-
-function resolveShowcaseSelectIds(cache) {
-  const byTag = allCompanies.filter((c) => c.sourceTag === '演示').map((c) => c.id);
-  if (byTag.length) return byTag;
-  if (cache?.showcaseCustomerIds?.length) return cache.showcaseCustomerIds;
-  return showcaseCustomerIds;
 }
 
 function findEmployeeInSession(name, departureAddress, preferDemo = false) {
@@ -1157,8 +1116,6 @@ function updateStats() {
     const label = distanceSource === 'deepseek' ? 'DeepSeek' : distanceSource === 'mixed' ? 'AI+本地' : '本地估算';
     tag.textContent = `通勤来源: ${label}`;
   }
-
-  dispatchBtn.disabled = selected === 0 || isMatching;
 }
 
 function toggleAllCompanies() {
@@ -1218,33 +1175,6 @@ async function fetchPreview() {
   } catch (err) {
     isMatching = false;
     showToast(err.message);
-    renderBoard();
-    updateStats();
-  }
-}
-
-async function runDispatch() {
-  if (!sessionId || getSelectedIds().length === 0) return;
-  dispatchBtn.disabled = true;
-  dispatchBtn.classList.add('loading');
-  dispatchBtn.textContent = '匹配中...';
-  isMatching = true;
-  renderBoard();
-  updateStats();
-
-  try {
-    const data = await callSelectApi({ fullMatch: true });
-    applyDispatchResult(data);
-    expandedRows.clear();
-    expandedRules.clear();
-    showToast(data.message);
-    renderSchedules();
-  } catch (err) {
-    showToast(err.message);
-  } finally {
-    isMatching = false;
-    dispatchBtn.classList.remove('loading');
-    dispatchBtn.textContent = '重新 AI 匹配';
     renderBoard();
     updateStats();
   }

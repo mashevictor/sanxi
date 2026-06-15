@@ -214,7 +214,7 @@ app.get('/api/showcase-data', (_req, res) => {
 /** 选择公司派单（员工自动最优匹配 + 规则明细 + DeepSeek 通勤） */
 app.post('/api/dispatch/select', async (req, res) => {
   try {
-    const { sessionId, customerIds, employeeIds, parkNames, lockedPairings, matchOnlyCustomerIds } = req.body;
+    const { sessionId, customerIds, employeeIds, employeePoolIds, parkNames, lockedPairings, matchOnlyCustomerIds } = req.body;
 
     if (!sessionId || !parseSessions.has(sessionId)) {
       res.status(400).json({ error: '数据会话已过期，请重新加载数据' });
@@ -247,6 +247,7 @@ app.post('/api/dispatch/select', async (req, res) => {
       {
         lockedPairings: Array.isArray(lockedPairings) ? lockedPairings : undefined,
         matchOnlyCustomerIds: Array.isArray(matchOnlyCustomerIds) ? matchOnlyCustomerIds : undefined,
+        employeePoolIds: Array.isArray(employeePoolIds) ? employeePoolIds : undefined,
       }
     );
     res.json(response);

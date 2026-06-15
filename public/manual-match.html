@@ -543,13 +543,52 @@
       background: rgba(99,102,241,.08); border: 1px solid rgba(99,102,241,.15);
     }
     .manual-page .manual-table-scroll { max-height: calc(100vh - 280px); }
-    .manual-result { padding: 12px; max-height: 240px; overflow-y: auto; }
+    .manual-result { padding: 12px; max-height: none; overflow-y: visible; }
     .manual-result-item {
       padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; font-size: 0.78rem;
       border: 1px solid var(--border); background: rgba(15,23,42,.5);
     }
     .manual-result-item.ok { border-color: rgba(52,211,153,.3); color: #6ee7b7; }
     .manual-result-item.fail { border-color: rgba(248,113,113,.3); color: #fca5a5; }
+    .manual-result-row {
+      display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 10px; align-items: center;
+      padding: 12px 14px; margin-bottom: 8px; border-radius: 12px;
+      border: 1px solid var(--border); background: rgba(15,23,42,.55);
+      animation: rowEnter .4s ease both;
+    }
+    .manual-result-row.ok { border-color: rgba(52,211,153,.28); }
+    .manual-result-row.fail { border-color: rgba(248,113,113,.28); }
+    .manual-result-row .co-line { font-weight: 700; font-size: 0.82rem; }
+    .manual-result-row .sub-line { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+    .manual-result-row .arrow { color: #818cf8; font-size: 1rem; }
+    .manual-result-row .emp-line { font-weight: 700; font-size: 0.82rem; color: #c4b5fd; }
+    .manual-result-row .commute { font-size: 0.72rem; color: #6ee7b7; white-space: nowrap; }
+    .manual-result-row .fail-tag { font-size: 0.72rem; color: #fca5a5; }
+    .match-progress {
+      margin: 0 16px 12px; padding: 14px 16px; border-radius: 12px;
+      background: rgba(99,102,241,.08); border: 1px solid rgba(99,102,241,.22);
+    }
+    .match-progress[hidden] { display: none; }
+    .match-progress-bar {
+      height: 6px; border-radius: 999px; background: rgba(99,102,241,.15); overflow: hidden;
+    }
+    .match-progress-fill {
+      height: 100%; width: 0; border-radius: 999px;
+      background: linear-gradient(90deg, #6366f1, #34d399, #6366f1);
+      background-size: 200% 100%; transition: width .35s ease;
+      animation: progressShine 1.2s linear infinite;
+    }
+    @keyframes progressShine { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+    .match-progress-text {
+      margin-top: 10px; font-size: 0.78rem; color: #a5b4fc;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .match-progress-text .ai-orbit { width: 22px; height: 22px; flex-shrink: 0; }
+    .manual-result-hd {
+      padding: 12px 16px 0; display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.82rem; font-weight: 700; color: #c4b5fd;
+    }
+    .manual-result-summary { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
   </style>
 </head>
 <body class="manual-page">
@@ -562,7 +601,7 @@
     <div class="topbar">
       <div>
         <h1>手动派单</h1>
-        <div class="sub">表格多选公司与员工 · 批量指派 · 规则校验</div>
+        <div class="sub">表格多选公司与员工 · 确认匹配 · 规则校验</div>
       </div>
       <div class="toolbar">
         <nav class="page-nav">
@@ -575,8 +614,8 @@
     <div class="stat-grid">
       <div class="stat-card info"><div class="num" id="stat-co-picked">0</div><div class="lbl">已选公司</div></div>
       <div class="stat-card info"><div class="num" id="stat-emp-picked">0</div><div class="lbl">已选员工</div></div>
-      <div class="stat-card ok"><div class="num" id="stat-manual-ok">0</div><div class="lbl">指派成功</div></div>
-      <div class="stat-card fail"><div class="num" id="stat-manual-fail">0</div><div class="lbl">不合规</div></div>
+      <div class="stat-card ok"><div class="num" id="stat-manual-ok">0</div><div class="lbl">匹配成功</div></div>
+      <div class="stat-card fail"><div class="num" id="stat-manual-fail">0</div><div class="lbl">匹配失败</div></div>
     </div>
 
     <div class="panel">
@@ -585,7 +624,7 @@
         <div class="manual-actions" style="display:flex;gap:6px">
           <button type="button" class="btn-sm" id="manual-clear-btn">清空选择</button>
           <button type="button" class="btn-sm" id="manual-emp-info-btn">查看员工</button>
-          <button type="button" class="btn-sm primary" id="manual-assign-btn">确认指派</button>
+          <button type="button" class="btn-sm primary" id="manual-match-btn">确认匹配</button>
         </div>
       </div>
       <div class="manual-panel" style="margin:0;border:none;border-radius:0">
@@ -634,10 +673,23 @@
         </div>
       </div>
       <div class="ai-hint">
-        勾选公司与员工后点「确认指派」：1 名员工可派多家，或等数量一一配对。不合规将显示具体原因（如<strong>时段不匹配</strong>）。
+        勾选公司后点「确认匹配」执行 AI 智能匹配；可选勾选员工作为<strong>候选池</strong>（不选则从全部员工中匹配）。不合规将显示具体原因（如<strong>时段不匹配</strong>）。
       </div>
-      <div class="manual-result" id="manual-result">
-        <div class="empty" style="padding:24px">指派结果将显示在这里</div>
+      <div class="match-progress" id="manual-progress" hidden>
+        <div class="match-progress-bar"><div class="match-progress-fill" id="manual-progress-fill"></div></div>
+        <div class="match-progress-text">
+          <div class="ai-orbit"></div>
+          <span id="manual-progress-text">正在智能匹配…</span>
+        </div>
+      </div>
+      <div id="manual-result-section">
+        <div class="manual-result-hd">
+          <span>匹配结果</span>
+          <span class="manual-result-summary" id="manual-result-summary"></span>
+        </div>
+        <div class="manual-result" id="manual-result">
+          <div class="empty" style="padding:24px">匹配结果将显示在这里</div>
+        </div>
       </div>
     </div>
   </div>

@@ -96,6 +96,7 @@ export interface SelectDispatchResponse {
 export interface DispatchOptions {
   lockedPairings?: LockedPairing[];
   matchOnlyCustomerIds?: number[];
+  employeePoolIds?: number[];
 }
 
 export async function dispatchSelectedCompanies(
@@ -130,7 +131,13 @@ export async function dispatchSelectedCompanies(
     result = findOptimalPairing(customers, employees);
     employeeMap = new Map(employees.map((e) => [e.id, e]));
   } else {
-    result = await findOptimalAutoPairingAsync(customers, data.employees, pairingOptions);
+    let employees = data.employees;
+    if (options.employeePoolIds?.length) {
+      const poolSet = new Set(options.employeePoolIds);
+      employees = data.employees.filter((e) => poolSet.has(e.id));
+      if (employees.length === 0) throw new Error('所选员工池为空');
+    }
+    result = await findOptimalAutoPairingAsync(customers, employees, pairingOptions);
     employeeMap = new Map(data.employees.map((e) => [e.id, e]));
   }
 

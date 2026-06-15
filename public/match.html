@@ -482,6 +482,7 @@
       border: 1px solid rgba(99,102,241,.35);
     }
     .btn-secondary:hover { background: rgba(99,102,241,.22); transform: translateY(-1px); }
+    .btn-secondary.loading { animation: pulse .9s infinite; opacity: .75; }
 
     .view-tabs { display: flex; gap: 6px; background: rgba(0,0,0,.2); padding: 4px; border-radius: 10px; }
     .view-tab {
@@ -570,9 +571,7 @@
           <a class="nav-link active" href="match.html">AI 匹配</a>
           <a class="nav-link" href="manual-match.html">手动派单</a>
         </nav>
-        <button class="btn-secondary" id="showcase-btn">一键演示（缓存）</button>
-        <button class="btn-secondary" id="full-match-btn">全量55家匹配（缓存）</button>
-        <button class="btn-primary" id="dispatch-btn" disabled>重新 AI 匹配</button>
+        <button class="btn-secondary" id="full-match-btn">全量匹配</button>
       </div>
     </div>
 
