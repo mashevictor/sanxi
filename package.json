@@ -17,6 +17,7 @@
     "cache:showcase": "tsx scripts/cache-showcase.ts",
     "compare:dispatch": "tsx scripts/compare-dispatch-results.ts",
     "compare:employee": "tsx scripts/compare-employee-roster.ts",
+    "compare:rationale": "tsx scripts/compare-roster-rationale.ts",
     "deploy": "bash deploy/deploy.sh"
   },
   "keywords": [
