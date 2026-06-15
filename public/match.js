@@ -16,6 +16,11 @@ let distanceSource = '';
 let maxCommuteMinutes = 60;
 let openPickerId = null;
 let pickerSearch = '';
+const manualSelectedCompanies = new Set();
+const manualSelectedEmployees = new Set();
+let manualCoSearch = '';
+let manualEmpSearch = '';
+let manualTablesBound = false;
 let activeView = 'results';
 
 let showcaseCustomerIds = [];
@@ -44,10 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
   preloadFullMatchCache();
   document.getElementById('dispatch-board').addEventListener('click', handleBoardClick);
   document.getElementById('manual-assign-btn').addEventListener('click', onManualAssign);
+  document.getElementById('manual-clear-btn').addEventListener('click', clearManualSelection);
   document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
-    const eid = parseInt(document.getElementById('manual-emp-select').value, 10);
-    if (eid) showEmployeeModal(eid);
-    else showToast('请先选择员工');
+    const ids = Array.from(manualSelectedEmployees);
+    if (ids.length === 1) showEmployeeModal(ids[0]);
+    else if (ids.length > 1) showToast('已选多名员工，请只勾选 1 人查看详情');
+    else showToast('请先在表格中勾选员工');
   });
   document.getElementById('emp-modal-close').addEventListener('click', () => {
     document.getElementById('emp-modal').hidden = true;
@@ -114,7 +121,7 @@ async function loadIntegratedData() {
     if (!res.ok) throw new Error(data.error || '加载失败');
     applySessionData(data);
     renderCompanies();
-    updateManualSelects();
+    renderManualTables();
     renderBoard();
     updateStats();
   } catch (err) {
@@ -438,7 +445,7 @@ function updateManualHint() {
   }
   hint.hidden = false;
   const manual = countManualAssignments();
-  const base = '可在上方<strong>手动派单栏</strong>自选公司与员工后确认指派，或点击每行<strong>员工下拉框</strong>改派；合规指派将<strong>锁定</strong>不再被 AI 覆盖。';
+  const base = '在上方<strong>表格</strong>多选公司与员工后点「确认指派」（1 名员工可派多家，或等数量一一配对），也可点击每行员工下拉改派；合规指派将<strong>锁定</strong>。';
   if (manual > 0) {
     el.innerHTML = `${base} <span class="manual-count">（已手动调整 ${manual} 条）</span>`;
   } else {
@@ -786,64 +793,244 @@ function renderBoard(options = {}) {
 
   board.innerHTML = html || '<div class="empty">暂无结果</div>';
   bindBoardEvents();
-  updateManualSelects();
+  renderManualTables();
   updateManualHint();
 }
 
-function updateManualSelects() {
-  const coSel = document.getElementById('manual-co-select');
-  const empSel = document.getElementById('manual-emp-select');
-  if (!coSel || !empSel) return;
-
-  const prevCo = coSel.value;
-  const prevEmp = empSel.value;
-
-  const coOptions = ['<option value="">选择公司…</option>'];
-  const selectedFirst = allCompanies.filter((c) => selectedCompanies.has(c.id));
-  const rest = allCompanies.filter((c) => !selectedCompanies.has(c.id));
-  [...selectedFirst, ...rest].forEach((c) => {
-    const mark = selectedCompanies.has(c.id) ? '★ ' : '';
-    coOptions.push(`<option value="${c.id}">${mark}${esc(c.companyName)} · ${esc(c.timeSlot)}</option>`);
+function filterManualCompanies() {
+  const q = manualCoSearch.toLowerCase();
+  if (!q) return allCompanies;
+  return allCompanies.filter((c) => {
+    const hay = `${c.companyName} ${c.customerType} ${c.timeSlot} ${c.parkName}`.toLowerCase();
+    return hay.includes(q);
   });
-  coSel.innerHTML = coOptions.join('');
-  if (prevCo && allCompanies.some((c) => c.id === parseInt(prevCo, 10))) coSel.value = prevCo;
+}
 
-  const empOptions = ['<option value="">选择员工…</option>'];
-  allEmployees.forEach((e) => {
-    const tags = (e.tags || e.roles || []).slice(0, 2).join(' · ');
-    empOptions.push(`<option value="${e.id}">${esc(e.name)}${tags ? ` · ${esc(tags)}` : ''}</option>`);
+function filterManualEmployees() {
+  const q = manualEmpSearch.toLowerCase();
+  if (!q) return allEmployees;
+  return allEmployees.filter((e) => {
+    const tags = (e.tags || e.roles || []).join(' ');
+    const hay = `${e.name} ${e.departureAddress || ''} ${tags}`.toLowerCase();
+    return hay.includes(q);
   });
-  empSel.innerHTML = empOptions.join('');
-  if (prevEmp && allEmployees.some((e) => e.id === parseInt(prevEmp, 10))) empSel.value = prevEmp;
+}
+
+function renderManualTables() {
+  const coBody = document.getElementById('manual-co-tbody');
+  const empBody = document.getElementById('manual-emp-tbody');
+  const coCount = document.getElementById('manual-co-count');
+  const empCount = document.getElementById('manual-emp-count');
+  if (!coBody || !empBody) return;
+
+  const companies = filterManualCompanies();
+  const employees = filterManualEmployees();
+
+  coBody.innerHTML = companies.map((c) => {
+    const on = manualSelectedCompanies.has(c.id);
+    const mark = selectedCompanies.has(c.id) ? '<span class="source-tag" style="font-size:0.58rem">已勾选</span>' : '';
+    return `
+      <tr class="${on ? 'selected' : ''}" data-cid="${c.id}">
+        <td><input type="checkbox" class="manual-co-cb" value="${c.id}" ${on ? 'checked' : ''}></td>
+        <td class="co-name-cell">${esc(c.companyName)} ${mark}</td>
+        <td class="sub-cell">${esc(c.customerType)}</td>
+        <td class="sub-cell">${esc(c.timeSlot)}</td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="4" class="sub-cell" style="padding:12px;text-align:center">无匹配公司</td></tr>';
+
+  empBody.innerHTML = employees.map((e) => {
+    const on = manualSelectedEmployees.has(e.id);
+    const roles = (e.tags || e.roles || []).slice(0, 2).join(' · ');
+    const tag = e.sourceTag ? `<span class="source-tag" style="font-size:0.58rem">${esc(e.sourceTag)}</span>` : '';
+    return `
+      <tr class="${on ? 'selected' : ''}" data-eid="${e.id}">
+        <td><input type="checkbox" class="manual-emp-cb" value="${e.id}" ${on ? 'checked' : ''}></td>
+        <td class="co-name-cell">${esc(e.name)} ${tag}</td>
+        <td class="sub-cell">${esc(roles)}</td>
+        <td class="sub-cell">${esc((e.departureAddress || '').slice(0, 18))}</td>
+        <td><button type="button" class="btn-emp-info manual-emp-info-row" data-eid="${e.id}">ⓘ</button></td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="5" class="sub-cell" style="padding:12px;text-align:center">无匹配员工</td></tr>';
+
+  if (coCount) coCount.textContent = `已选 ${manualSelectedCompanies.size}`;
+  if (empCount) empCount.textContent = `已选 ${manualSelectedEmployees.size}`;
+
+  syncManualTableSelectAll('manual-co-all', companies, manualSelectedCompanies);
+  syncManualTableSelectAll('manual-emp-all', employees, manualSelectedEmployees);
+  bindManualTableEvents();
+}
+
+function syncManualTableSelectAll(allId, visibleItems, selectedSet) {
+  const allCb = document.getElementById(allId);
+  if (!allCb) return;
+  const visibleIds = visibleItems.map((x) => x.id);
+  const selectedVisible = visibleIds.filter((id) => selectedSet.has(id)).length;
+  allCb.checked = visibleIds.length > 0 && selectedVisible === visibleIds.length;
+  allCb.indeterminate = selectedVisible > 0 && selectedVisible < visibleIds.length;
+}
+
+function bindManualTableEvents() {
+  if (manualTablesBound) return;
+  manualTablesBound = true;
+
+  document.getElementById('manual-co-search')?.addEventListener('input', (e) => {
+    manualCoSearch = e.target.value;
+    renderManualTables();
+  });
+  document.getElementById('manual-emp-search')?.addEventListener('input', (e) => {
+    manualEmpSearch = e.target.value;
+    renderManualTables();
+  });
+
+  document.getElementById('manual-co-all')?.addEventListener('change', (e) => {
+    const on = e.target.checked;
+    filterManualCompanies().forEach((c) => {
+      if (on) manualSelectedCompanies.add(c.id);
+      else manualSelectedCompanies.delete(c.id);
+    });
+    renderManualTables();
+  });
+  document.getElementById('manual-emp-all')?.addEventListener('change', (e) => {
+    const on = e.target.checked;
+    filterManualEmployees().forEach((emp) => {
+      if (on) manualSelectedEmployees.add(emp.id);
+      else manualSelectedEmployees.delete(emp.id);
+    });
+    renderManualTables();
+  });
+
+  document.getElementById('manual-co-tbody')?.addEventListener('change', (e) => {
+    const cb = e.target.closest('.manual-co-cb');
+    if (!cb) return;
+    const id = parseInt(cb.value, 10);
+    if (cb.checked) manualSelectedCompanies.add(id);
+    else manualSelectedCompanies.delete(id);
+    cb.closest('tr')?.classList.toggle('selected', cb.checked);
+    document.getElementById('manual-co-count').textContent = `已选 ${manualSelectedCompanies.size}`;
+    syncManualTableSelectAll('manual-co-all', filterManualCompanies(), manualSelectedCompanies);
+  });
+
+  document.getElementById('manual-emp-tbody')?.addEventListener('change', (e) => {
+    const cb = e.target.closest('.manual-emp-cb');
+    if (!cb) return;
+    const id = parseInt(cb.value, 10);
+    if (cb.checked) manualSelectedEmployees.add(id);
+    else manualSelectedEmployees.delete(id);
+    cb.closest('tr')?.classList.toggle('selected', cb.checked);
+    document.getElementById('manual-emp-count').textContent = `已选 ${manualSelectedEmployees.size}`;
+    syncManualTableSelectAll('manual-emp-all', filterManualEmployees(), manualSelectedEmployees);
+  });
+
+  document.getElementById('manual-co-tbody')?.addEventListener('click', (e) => {
+    if (e.target.closest('input, button')) return;
+    const row = e.target.closest('tr[data-cid]');
+    if (!row) return;
+    const cb = row.querySelector('.manual-co-cb');
+    if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+  });
+
+  document.getElementById('manual-emp-tbody')?.addEventListener('click', (e) => {
+    const infoBtn = e.target.closest('.manual-emp-info-row');
+    if (infoBtn) {
+      e.stopPropagation();
+      showEmployeeModal(parseInt(infoBtn.dataset.eid, 10));
+      return;
+    }
+    if (e.target.closest('input, button')) return;
+    const row = e.target.closest('tr[data-eid]');
+    if (!row) return;
+    const cb = row.querySelector('.manual-emp-cb');
+    if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+  });
+}
+
+function clearManualSelection() {
+  manualSelectedCompanies.clear();
+  manualSelectedEmployees.clear();
+  renderManualTables();
+  showToast('已清空表格选择');
+}
+
+function ensureCompaniesInSelection(companyIds) {
+  for (const id of companyIds) {
+    if (!selectedCompanies.has(id)) {
+      selectedCompanies.add(id);
+      const cb = document.querySelector(`#company-list input[value="${id}"]`);
+      if (cb) {
+        cb.checked = true;
+        cb.closest('.co-item')?.classList.add('checked');
+      }
+    }
+  }
+  if (companyIds.some((id) => !document.querySelector(`#company-list input[value="${id}"]`))) {
+    renderCompanies();
+  }
+  updateStats();
+}
+
+function buildManualAssignPairs() {
+  const coIds = Array.from(manualSelectedCompanies).sort((a, b) => a - b);
+  const empIds = Array.from(manualSelectedEmployees).sort((a, b) => a - b);
+  if (!coIds.length || !empIds.length) return null;
+
+  if (empIds.length === 1) {
+    return coIds.map((cid) => ({ customerId: cid, employeeId: empIds[0] }));
+  }
+  if (coIds.length === empIds.length) {
+    return coIds.map((cid, i) => ({ customerId: cid, employeeId: empIds[i] }));
+  }
+  if (coIds.length === 1 && empIds.length > 1) {
+    return null;
+  }
+  return null;
 }
 
 async function onManualAssign() {
-  const coId = parseInt(document.getElementById('manual-co-select').value, 10);
-  const empId = parseInt(document.getElementById('manual-emp-select').value, 10);
-  if (!coId) {
-    showToast('请先选择公司');
+  const pairs = buildManualAssignPairs();
+  const coN = manualSelectedCompanies.size;
+  const empN = manualSelectedEmployees.size;
+
+  if (!coN) {
+    showToast('请先在表格中勾选公司');
     return;
   }
-  if (!empId) {
-    showToast('请先选择员工');
+  if (!empN) {
+    showToast('请先在表格中勾选员工');
+    return;
+  }
+  if (!pairs) {
+    showToast('请选 1 名员工派给多家公司，或等数量的公司与员工一一配对');
     return;
   }
 
-  if (!selectedCompanies.has(coId)) {
-    selectedCompanies.add(coId);
-    const cb = document.querySelector(`#company-list input[value="${coId}"]`);
-    if (cb) {
-      cb.checked = true;
-      cb.closest('.co-item')?.classList.add('checked');
-    } else {
-      renderCompanies();
-    }
-    updateStats();
-  }
-
+  ensureCompaniesInSelection(pairs.map((p) => p.customerId));
   openPickerId = null;
   pickerSearch = '';
-  await applyEmployeeChange(coId, empId);
+
+  let ok = 0;
+  let fail = 0;
+  for (const { customerId, employeeId } of pairs) {
+    const before = assignmentMap.get(customerId);
+    await applyEmployeeChange(customerId, employeeId, { silent: true });
+    const after = assignmentMap.get(customerId);
+    if (after?.type === 'ok' && after.manual) ok++;
+    else fail++;
+    void before;
+  }
+
+  renderBoard({ animate: false });
+  renderSchedules();
+  updateStats();
+
+  if (fail === 0) {
+    showToast(`✓ 手动指派完成：${ok} 条全部合规`);
+  } else if (ok === 0) {
+    showToast(`✗ ${fail} 条均不合规，请查看失败原因`);
+  } else {
+    showToast(`手动指派：${ok} 条成功，${fail} 条不合规`);
+  }
 }
 
 function showEmployeeModal(employeeId) {
@@ -1025,10 +1212,13 @@ async function clearEmployeeAssignment(customerId) {
   showToast('已清除指派，可重新选择员工');
 }
 
-async function applyEmployeeChange(customerId, employeeId) {
+async function applyEmployeeChange(customerId, employeeId, options = {}) {
+  const silent = options.silent === true;
   if (getUsedEmployeeIds(customerId).includes(employeeId)) {
-    showToast('该员工在此时段已被其他公司占用');
-    renderBoard();
+    if (!silent) {
+      showToast('该员工在此时段已被其他公司占用');
+      renderBoard();
+    }
     return;
   }
 
@@ -1070,7 +1260,7 @@ async function applyEmployeeChange(customerId, employeeId) {
       const commuteNote = data.commuteMinutes > maxCommuteMinutes
         ? `（通勤${data.commuteMinutes}分，超过${maxCommuteMinutes}分但仍可派单）`
         : `通勤 ${data.commuteMinutes} 分钟`;
-      showToast(`✓ 手动改派成功：${data.companyName} → ${data.employeeName} · ${commuteNote} · 已锁定`);
+      if (!silent) showToast(`✓ 手动改派成功：${data.companyName} → ${data.employeeName} · ${commuteNote} · 已锁定`);
     } else {
       assignmentMap.set(customerId, {
         type: 'fail',
@@ -1091,16 +1281,18 @@ async function applyEmployeeChange(customerId, employeeId) {
         manual: true,
       });
       const detail = data.failedRules.map((r) => `${r.rule}: ${r.message}`).join('；');
-      showToast(`✗ 不合规，请换其他员工：${data.failedRules.map((r) => r.rule).join('、')}（${detail}）`);
+      if (!silent) showToast(`✗ 不合规，请换其他员工：${data.failedRules.map((r) => r.rule).join('、')}（${detail}）`);
     }
 
     syncPreviewFromAssignment();
-    renderBoard();
-    renderSchedules();
-    updateStats();
+    if (!silent) {
+      renderBoard();
+      renderSchedules();
+      updateStats();
+    }
   } catch (err) {
-    showToast(err.message);
-    renderBoard();
+    if (!silent) showToast(err.message);
+    if (!silent) renderBoard();
   }
 }
 
