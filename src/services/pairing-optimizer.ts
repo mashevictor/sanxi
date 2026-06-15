@@ -3,7 +3,7 @@
  */
 
 import { Customer, Employee, MatchDetail, TimeSlot } from '../types';
-import { matchCustomerToEmployee, MatchResult, sortCustomersByPlusPriority } from './match-rules';
+import { matchCustomerToEmployee, MatchResult, sortCustomersForDispatch } from './match-rules';
 import { estimateCommuteMinutes } from '../utils/commute';
 import { buildCommuteMatrix, CommuteMatrix, RouteEstimate } from './distance-service';
 
@@ -227,7 +227,7 @@ function findCapacitatedMatching(
     return !pairings.some((p) => p.customerId === c.id);
   });
 
-  for (const customer of sortCustomersByPlusPriority(toMatch)) {
+  for (const customer of sortCustomersForDispatch(toMatch)) {
     let bestEmp: Employee | null = null;
     let bestMatch: MatchResult | null = null;
     let bestScore = -Infinity;

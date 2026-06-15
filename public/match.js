@@ -43,6 +43,20 @@ document.addEventListener('DOMContentLoaded', () => {
   preloadShowcaseCache();
   preloadFullMatchCache();
   document.getElementById('dispatch-board').addEventListener('click', handleBoardClick);
+  document.getElementById('manual-assign-btn').addEventListener('click', onManualAssign);
+  document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
+    const eid = parseInt(document.getElementById('manual-emp-select').value, 10);
+    if (eid) showEmployeeModal(eid);
+    else showToast('请先选择员工');
+  });
+  document.getElementById('emp-modal-close').addEventListener('click', () => {
+    document.getElementById('emp-modal').hidden = true;
+  });
+  document.getElementById('emp-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'emp-modal') document.getElementById('emp-modal').hidden = true;
+  });
+  window.addEventListener('resize', positionOpenPicker);
+  document.getElementById('dispatch-board').closest('.scroll')?.addEventListener('scroll', positionOpenPicker);
   document.addEventListener('click', (e) => {
     if (openPickerId !== null && !e.target.closest('.emp-picker')) {
       openPickerId = null;
@@ -53,6 +67,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function handleBoardClick(e) {
+  const infoBtn = e.target.closest('.btn-emp-info');
+  if (infoBtn) {
+    e.stopPropagation();
+    const eid = parseInt(infoBtn.dataset.eid, 10);
+    if (eid) showEmployeeModal(eid);
+    return;
+  }
   const detailBtn = e.target.closest('.btn-detail');
   if (detailBtn) {
     e.stopPropagation();
@@ -93,6 +114,7 @@ async function loadIntegratedData() {
     if (!res.ok) throw new Error(data.error || '加载失败');
     applySessionData(data);
     renderCompanies();
+    updateManualSelects();
     renderBoard();
     updateStats();
   } catch (err) {
@@ -416,7 +438,7 @@ function updateManualHint() {
   }
   hint.hidden = false;
   const manual = countManualAssignments();
-  const base = '匹配成功或失败后，均可点击每行<strong>员工下拉框</strong>手动改派；合规指派将<strong>锁定</strong>不再被 AI 覆盖，不合规会提示具体原因。';
+  const base = '可在上方<strong>手动派单栏</strong>自选公司与员工后确认指派，或点击每行<strong>员工下拉框</strong>改派；合规指派将<strong>锁定</strong>不再被 AI 覆盖。';
   if (manual > 0) {
     el.innerHTML = `${base} <span class="manual-count">（已手动调整 ${manual} 条）</span>`;
   } else {
@@ -451,6 +473,16 @@ function syncAssignmentFromApi(pairings, unmatched) {
     if (existing?.type === 'ok' && existing.manual) continue;
     assignmentMap.set(u.customerId, { type: 'fail', data: u, manual: false });
   }
+
+  for (const id of selectedCompanies) {
+    if (!assignmentMap.has(Number(id))) {
+      assignmentMap.set(Number(id), {
+        type: 'fail',
+        data: buildFailFromCompany(Number(id), 'AI 未匹配，请手动选择员工或点击下方「确认指派」'),
+        manual: false,
+      });
+    }
+  }
 }
 
 function getExistingPairings(excludeCustomerId) {
@@ -481,7 +513,8 @@ function renderEmployeePicker(customerId, currentEmployeeId, disabled) {
   const isOpen = openPickerId === customerId;
 
   const filtered = allEmployees.filter((e) => {
-    if (!pickerSearch || !isOpen) return true;
+    if (!isOpen) return false;
+    if (!pickerSearch) return true;
     const q = pickerSearch.toLowerCase();
     const tags = (e.tags || e.roles || []).join(' ');
     const hay = `${e.name} ${e.departureAddress || ''} ${tags}`.toLowerCase();
@@ -504,7 +537,7 @@ function renderEmployeePicker(customerId, currentEmployeeId, disabled) {
            data-cid="${customerId}" data-eid="${e.id}" data-taken="${taken ? '1' : '0'}">
         <div class="emp-option-top">
           <span class="emp-option-name">${esc(e.name)} ${showcaseTag}</span>
-          ${taken ? '<span class="emp-taken">同时段已占用</span>' : ''}
+          <button type="button" class="btn-emp-info" data-eid="${e.id}" title="查看员工信息">ⓘ</button>
         </div>
         <div class="emp-option-tags">${tags.map((t) => `<span class="etag">${esc(t)}</span>`).join('')}</div>
         <div class="emp-option-dep">出发：${esc(e.departureAddress || '未填写')}</div>
@@ -523,7 +556,7 @@ function renderEmployeePicker(customerId, currentEmployeeId, disabled) {
       </button>
       <div class="emp-picker-panel" ${isOpen ? '' : 'hidden'} data-cid="${customerId}">
         <input type="text" class="emp-search" placeholder="搜索姓名 / 出发地 / 标签" value="${esc(pickerSearch)}" data-cid="${customerId}">
-        <div class="emp-picker-list">${clearOption}${items || '<div style="padding:12px;color:var(--muted);font-size:0.8rem">无匹配员工</div>'}</div>
+        <div class="emp-picker-list">${clearOption}${items || (isOpen ? (allEmployees.length ? '<div style="padding:12px;color:var(--muted);font-size:0.8rem">无匹配员工</div>' : '<div style="padding:12px;color:var(--muted);font-size:0.8rem">员工数据未加载</div>') : '')}</div>
       </div>
     </div>
   `;
@@ -604,8 +637,6 @@ function renderExpandContent(entry) {
 function renderDispatchRow(customerId, entry, animIndex = 0, animate = true) {
   const company = allCompanies.find((c) => c.id === customerId);
   const expanded = expandedRows.has(customerId);
-  const used = getUsedEmployeeIds(customerId);
-  const isDup = entry.type === 'ok' && used.filter((id) => id === entry.data.employeeId).length > 0;
 
   if (entry.type === 'pending') {
     const p = entry.data;
@@ -637,7 +668,7 @@ function renderDispatchRow(customerId, entry, animIndex = 0, animate = true) {
 
   if (entry.type === 'ok') {
     const p = entry.data;
-    const rowCls = ['dispatch-row', 'row-ok', animate ? 'row-enter' : '', entry.manual ? 'row-manual' : '', isDup ? 'row-dup' : ''].filter(Boolean).join(' ');
+    const rowCls = ['dispatch-row', 'row-ok', animate ? 'row-enter' : '', entry.manual ? 'row-manual' : ''].filter(Boolean).join(' ');
     const animStyle = animate ? `style="animation-delay:${animIndex * 0.06}s"` : '';
     return `
       <div class="${rowCls}" data-cid="${customerId}" ${animStyle}>
@@ -652,10 +683,10 @@ function renderDispatchRow(customerId, entry, animIndex = 0, animate = true) {
             ${renderEmployeePicker(customerId, p.employeeId, isMatching)}
             ${entry.manual ? '<span class="manual-tag">手动调整</span>' : '<span class="manual-tag hint-tag">点击可改派</span>'}
             ${entry.manual ? '<span class="manual-tag" style="background:rgba(99,102,241,.2);color:#c4b5fd">已锁定</span>' : ''}
-            ${isDup ? '<span class="manual-tag" style="background:rgba(239,68,68,.2);color:#fca5a5">同时段冲突</span>' : ''}
           </div>
           ${renderCommuteCell(p.commuteMinutes, p.route)}
           <div class="cell-action">
+            <button type="button" class="btn-emp-info" data-eid="${p.employeeId}" title="查看员工信息">员工</button>
             <button class="btn-ghost btn-detail ${expanded ? 'open' : ''}" data-cid="${customerId}">${expanded ? '收起' : '详情'}</button>
           </div>
         </div>
@@ -755,7 +786,118 @@ function renderBoard(options = {}) {
 
   board.innerHTML = html || '<div class="empty">暂无结果</div>';
   bindBoardEvents();
+  updateManualSelects();
   updateManualHint();
+}
+
+function updateManualSelects() {
+  const coSel = document.getElementById('manual-co-select');
+  const empSel = document.getElementById('manual-emp-select');
+  if (!coSel || !empSel) return;
+
+  const prevCo = coSel.value;
+  const prevEmp = empSel.value;
+
+  const coOptions = ['<option value="">选择公司…</option>'];
+  const selectedFirst = allCompanies.filter((c) => selectedCompanies.has(c.id));
+  const rest = allCompanies.filter((c) => !selectedCompanies.has(c.id));
+  [...selectedFirst, ...rest].forEach((c) => {
+    const mark = selectedCompanies.has(c.id) ? '★ ' : '';
+    coOptions.push(`<option value="${c.id}">${mark}${esc(c.companyName)} · ${esc(c.timeSlot)}</option>`);
+  });
+  coSel.innerHTML = coOptions.join('');
+  if (prevCo && allCompanies.some((c) => c.id === parseInt(prevCo, 10))) coSel.value = prevCo;
+
+  const empOptions = ['<option value="">选择员工…</option>'];
+  allEmployees.forEach((e) => {
+    const tags = (e.tags || e.roles || []).slice(0, 2).join(' · ');
+    empOptions.push(`<option value="${e.id}">${esc(e.name)}${tags ? ` · ${esc(tags)}` : ''}</option>`);
+  });
+  empSel.innerHTML = empOptions.join('');
+  if (prevEmp && allEmployees.some((e) => e.id === parseInt(prevEmp, 10))) empSel.value = prevEmp;
+}
+
+async function onManualAssign() {
+  const coId = parseInt(document.getElementById('manual-co-select').value, 10);
+  const empId = parseInt(document.getElementById('manual-emp-select').value, 10);
+  if (!coId) {
+    showToast('请先选择公司');
+    return;
+  }
+  if (!empId) {
+    showToast('请先选择员工');
+    return;
+  }
+
+  if (!selectedCompanies.has(coId)) {
+    selectedCompanies.add(coId);
+    const cb = document.querySelector(`#company-list input[value="${coId}"]`);
+    if (cb) {
+      cb.checked = true;
+      cb.closest('.co-item')?.classList.add('checked');
+    } else {
+      renderCompanies();
+    }
+    updateStats();
+  }
+
+  openPickerId = null;
+  pickerSearch = '';
+  await applyEmployeeChange(coId, empId);
+}
+
+function showEmployeeModal(employeeId) {
+  const emp = allEmployees.find((e) => e.id === employeeId);
+  if (!emp) {
+    showToast('未找到该员工');
+    return;
+  }
+  const modal = document.getElementById('emp-modal');
+  const title = document.getElementById('emp-modal-title');
+  const body = document.getElementById('emp-modal-body');
+  if (!modal || !title || !body) return;
+
+  const roles = (emp.roles || emp.tags || []).join('、') || '—';
+  const capacity = (emp.capacityLabels || emp.orderCapacity || []).join('、') || '—';
+  const tags = (emp.tags || []).join('、');
+
+  title.textContent = emp.name;
+  body.innerHTML = `
+    <div class="info-row"><span class="k">姓名</span><span class="v">${esc(emp.name)}</span></div>
+    <div class="info-row"><span class="k">出发地</span><span class="v">${esc(emp.departureAddress || '未填写')}</span></div>
+    <div class="info-row"><span class="k">职责</span><span class="v">${esc(roles)}</span></div>
+    <div class="info-row"><span class="k">接单时段</span><span class="v">${esc(capacity)}</span></div>
+    ${tags ? `<div class="info-row"><span class="k">标签</span><span class="v">${esc(tags)}</span></div>` : ''}
+    ${emp.sourceTag ? `<div class="info-row"><span class="k">来源</span><span class="v">${esc(emp.sourceTag)}</span></div>` : ''}
+    ${emp.remark ? `<div class="info-row"><span class="k">备注</span><span class="v">${esc(emp.remark)}</span></div>` : ''}
+  `;
+  modal.hidden = false;
+}
+
+function positionOpenPicker() {
+  if (openPickerId === null) return;
+  const picker = document.querySelector(`.emp-picker[data-cid="${openPickerId}"]`);
+  const panel = document.querySelector(`.emp-picker-panel[data-cid="${openPickerId}"]`);
+  if (!picker || !panel || panel.hidden) return;
+
+  const rect = picker.getBoundingClientRect();
+  const gap = 4;
+  const panelMax = 320;
+  const spaceBelow = window.innerHeight - rect.bottom - gap - 12;
+  const spaceAbove = rect.top - gap - 12;
+  const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+
+  panel.style.width = `${Math.max(rect.width, 220)}px`;
+  panel.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - Math.max(rect.width, 220) - 8)}px`;
+
+  if (openUp) {
+    const h = Math.min(panelMax, spaceAbove);
+    panel.style.top = `${rect.top - gap - h}px`;
+    panel.style.maxHeight = `${h}px`;
+  } else {
+    panel.style.top = `${rect.bottom + gap}px`;
+    panel.style.maxHeight = `${Math.min(panelMax, spaceBelow)}px`;
+  }
 }
 
 function renderSchedules() {
@@ -821,8 +963,11 @@ function bindBoardEvents() {
       }
       renderBoard({ animate: false });
       if (openPickerId) {
-        const input = document.querySelector(`.emp-search[data-cid="${openPickerId}"]`);
-        if (input) input.focus();
+        requestAnimationFrame(() => {
+          positionOpenPicker();
+          const input = document.querySelector(`.emp-search[data-cid="${openPickerId}"]`);
+          if (input) input.focus();
+        });
       }
     });
   });
@@ -831,17 +976,28 @@ function bindBoardEvents() {
     input.addEventListener('input', () => {
       pickerSearch = input.value;
       renderBoard({ animate: false });
-      const el = document.querySelector(`.emp-search[data-cid="${openPickerId}"]`);
-      if (el) {
-        el.focus();
-        el.setSelectionRange(el.value.length, el.value.length);
-      }
+      requestAnimationFrame(() => {
+        positionOpenPicker();
+        const el = document.querySelector(`.emp-search[data-cid="${openPickerId}"]`);
+        if (el) {
+          el.focus();
+          el.setSelectionRange(el.value.length, el.value.length);
+        }
+      });
     });
     input.addEventListener('click', (e) => e.stopPropagation());
   });
 
+  document.querySelectorAll('.emp-option .btn-emp-info').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showEmployeeModal(parseInt(btn.dataset.eid, 10));
+    });
+  });
+
   document.querySelectorAll('.emp-option:not(.disabled)').forEach((opt) => {
     opt.addEventListener('click', async (e) => {
+      if (e.target.closest('.btn-emp-info')) return;
       e.stopPropagation();
       const customerId = parseInt(opt.dataset.cid, 10);
       openPickerId = null;

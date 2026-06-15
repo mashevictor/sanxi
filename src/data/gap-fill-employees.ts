@@ -47,8 +47,8 @@ const GAP_TEMPLATES: GapTemplate[] = [
   { name: '补位-郑金山', park: '加盟-金山资本现代产业园', roles: [EmployeeRole.BACK], slots: [TimeSlot.AFTERNOON_2] },
   { name: '补位-冯金山', park: '加盟-金山资本现代产业园', roles: [EmployeeRole.BACK], slots: [TimeSlot.AFTERNOON_2] },
   { name: '补位-陈金山', park: '加盟-金山资本现代产业园', roles: [EmployeeRole.BACK], slots: [TimeSlot.AFTERNOON_2] },
-  { name: '补位-褚金山', park: '加盟-金山资本现代产业园', roles: [EmployeeRole.BACK], slots: [TimeSlot.AFTERNOON_2] },
-  // 下午2 — 金山前道
+  // 下午2 — 金山后道（加 1 人兜底指定人冲突）
+  { name: '补位-朱金山', park: '加盟-金山资本现代产业园', roles: [EmployeeRole.BACK], slots: [TimeSlot.AFTERNOON_2] },
   { name: '补位-卫金山前', park: '加盟-金山资本现代产业园', roles: [EmployeeRole.FRONT], slots: [TimeSlot.AFTERNOON_2] },
   // 下午2 — 宝山后道
   { name: '补位-蒋宝山', park: '宝山高新', roles: [EmployeeRole.BACK], slots: [TimeSlot.AFTERNOON_2] },

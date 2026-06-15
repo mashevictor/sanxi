@@ -25,6 +25,13 @@ async function main() {
     showcaseSnapshot.showcaseCustomerIds
   );
 
+  const fullDispatch = await dispatchSelectedCompanies(integrated, integrated.fullMatchCustomerIds);
+
+  if (fullDispatch.unmatchedCompanies.length) {
+    fullDispatch.unmatchedCompanies.forEach((u) => console.log('  未匹配:', u.companyName, u.reason));
+    process.exit(1);
+  }
+
   const showcaseCache = {
     version: 1,
     generatedAt: new Date().toISOString(),
@@ -39,7 +46,6 @@ async function main() {
     employeeSchedules: showcaseDispatch.employeeSchedules,
   };
 
-  const fullDispatch = await dispatchSelectedCompanies(integrated, integrated.fullMatchCustomerIds);
   const fullCache = {
     version: 1,
     generatedAt: new Date().toISOString(),
@@ -58,11 +64,11 @@ async function main() {
 
   console.log(`✓ showcase-match.json (${showcaseDispatch.stats.matched}/${showcaseDispatch.stats.selected})`);
   console.log(`✓ full-match.json (${fullDispatch.stats.matched}/${fullDispatch.stats.selected})`);
-  if (fullDispatch.unmatchedCompanies.length) {
-    fullDispatch.unmatchedCompanies.forEach((u) => console.log('  未匹配:', u.companyName, u.reason));
-    process.exit(1);
-  }
   console.log('全量 55 家匹配 100% 成功');
+
+  const { execSync } = await import('child_process');
+  console.log('\n运行合理性校验...');
+  execSync('npx tsx scripts/validate-all-matches.ts', { cwd: DATA_DIR, stdio: 'inherit' });
 }
 
 main().catch((err) => {

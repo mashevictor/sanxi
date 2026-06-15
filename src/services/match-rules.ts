@@ -213,6 +213,18 @@ export function sortCustomersByPlusPriority(customers: Customer[]): Customer[] {
   });
 }
 
+/** 派单排序：指定人客户优先，再按 Plus 优先级 */
+export function sortCustomersForDispatch(customers: Customer[]): Customer[] {
+  const plusSorted = sortCustomersByPlusPriority(customers);
+  const orderIndex = new Map(plusSorted.map((c, i) => [c.id, i]));
+  return [...customers].sort((a, b) => {
+    const aDes = a.designatedPerson ? 0 : 1;
+    const bDes = b.designatedPerson ? 0 : 1;
+    if (aDes !== bDes) return aDes - bDes;
+    return (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0);
+  });
+}
+
 export function groupCustomersByDispatchType(customers: Customer[]): {
   frontProject: Customer[];
   back: Customer[];
