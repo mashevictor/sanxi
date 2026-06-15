@@ -105,9 +105,19 @@ function switchView(view) {
 
 async function loadIntegratedData() {
   try {
-    const res = await fetch('/api/sample-data');
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '加载失败');
+    const data = await bootstrapIntegratedData({
+      onCacheReady: (cached) => {
+        allCompanies = cached.companies || [];
+        allEmployees = cached.employees || [];
+        showcaseCustomerIds = cached.showcaseCustomerIds || [];
+        fullMatchCustomerIds = cached.fullMatchCustomerIds || [];
+        maxCommuteMinutes = cached.maxCommuteMinutes || 60;
+        renderCompanies();
+        renderBoard();
+        updateStats();
+        pageLoader.classList.add('hide');
+      },
+    });
     applySessionData(data);
     const stored = loadDispatchState();
     if (stored?.selectedCompanies?.length) {
@@ -277,11 +287,31 @@ function findEmployeeInSession(name, departureAddress, preferDemo = false) {
   );
 }
 
+function findCompanyInSession(pairing, preferDemo = false) {
+  const byId = allCompanies.find((c) => c.id === pairing.customerId);
+  if (byId) return byId;
+
+  const sameName = allCompanies.filter((c) => c.companyName === pairing.companyName);
+  if (!sameName.length) return null;
+  if (sameName.length === 1) return sameName[0];
+
+  const byParkSlot = sameName.find(
+    (c) => c.parkName === pairing.parkName && c.timeSlot === pairing.timeSlot
+  );
+  if (byParkSlot) return byParkSlot;
+
+  if (preferDemo) {
+    const demo = sameName.find((c) => c.sourceTag === '演示');
+    if (demo) return demo;
+  }
+
+  return sameName.find((c) => c.id < 90100) || sameName[0];
+}
+
 function remapCacheResult(cache, options = {}) {
   const preferDemo = options.preferDemo ?? false;
-  const companyByName = new Map(allCompanies.map((c) => [c.companyName, c]));
   const pairings = (cache.pairings || []).map((p) => {
-    const company = companyByName.get(p.companyName);
+    const company = findCompanyInSession(p, preferDemo);
     const emp = findEmployeeInSession(p.employeeName, p.departureAddress, preferDemo);
     return {
       ...p,
@@ -298,7 +328,10 @@ function remapCacheResult(cache, options = {}) {
       ...s,
       employeeId: emp?.id ?? s.employeeId,
       orders: (s.orders || []).map((o) => {
-        const company = companyByName.get(o.companyName);
+        const company = findCompanyInSession(
+          { customerId: o.customerId, companyName: o.companyName, parkName: o.parkName, timeSlot: o.timeSlot },
+          preferDemo
+        );
         return { ...o, customerId: company?.id ?? o.customerId };
       }),
     };
@@ -1200,7 +1233,7 @@ async function runDispatch() {
   updateStats();
 
   try {
-    const data = await callSelectApi({ fullMatch: false });
+    const data = await callSelectApi({ fullMatch: true });
     applyDispatchResult(data);
     expandedRows.clear();
     expandedRules.clear();

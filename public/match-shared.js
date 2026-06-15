@@ -1,5 +1,6 @@
 /** 派单看板共享工具 */
 const DISPATCH_STORE_KEY = 'dispatch-board-state';
+const SAMPLE_DATA_CACHE_URL = '/cache/sample-data.json';
 
 function esc(s) {
   if (!s) return '';
@@ -101,4 +102,32 @@ function showEmployeeModal(employeeId, allEmployees) {
     ${emp.remark ? `<div class="info-row"><span class="k">备注</span><span class="v">${esc(emp.remark)}</span></div>` : ''}
   `;
   modal.hidden = false;
+}
+
+/**
+ * 首屏加速：静态 JSON 立即渲染 + 并行获取 sessionId
+ * @param {{ onCacheReady?: (data: object) => void }} [options]
+ */
+async function bootstrapIntegratedData(options = {}) {
+  const cachePromise = fetch(SAMPLE_DATA_CACHE_URL)
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+  const bootstrapPromise = fetch('/api/bootstrap')
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+
+  const cached = await cachePromise;
+  if (cached && typeof options.onCacheReady === 'function') {
+    options.onCacheReady(cached);
+  }
+
+  const boot = await bootstrapPromise;
+  if (cached && boot?.sessionId) {
+    return { ...cached, sessionId: boot.sessionId };
+  }
+
+  const res = await fetch('/api/sample-data');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || '加载失败');
+  return data;
 }

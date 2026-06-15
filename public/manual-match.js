@@ -32,9 +32,20 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadData() {
   try {
     const stored = loadDispatchState();
-    const res = await fetch('/api/sample-data');
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '加载失败');
+    const data = await bootstrapIntegratedData({
+      onCacheReady: (cached) => {
+        allCompanies = cached.companies || [];
+        allEmployees = cached.employees || [];
+        if (stored?.assignmentMap?.length) {
+          const map = deserializeAssignmentMap(stored.assignmentMap);
+          for (const [k, v] of map) assignmentMap.set(k, v);
+        }
+        renderManualTables();
+        renderManualResults();
+        updateManualStats();
+        pageLoader.classList.add('hide');
+      },
+    });
     sessionId = data.sessionId;
     allCompanies = data.companies;
     allEmployees = data.employees;

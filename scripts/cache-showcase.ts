@@ -6,6 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { buildIntegratedData, buildShowcaseSnapshot } from '../src/data/integrated-data';
+import { buildSampleDataPayload } from '../src/services/parse-metadata';
 import { dispatchSelectedCompanies } from '../src/services/select-dispatch';
 
 const DATA_DIR = path.join(__dirname, '..');
@@ -61,9 +62,11 @@ async function main() {
 
   await writeCache('showcase-match.json', showcaseCache);
   await writeCache('full-match.json', fullCache);
+  await writeCache('sample-data.json', buildSampleDataPayload(integrated));
 
   console.log(`✓ showcase-match.json (${showcaseDispatch.stats.matched}/${showcaseDispatch.stats.selected})`);
   console.log(`✓ full-match.json (${fullDispatch.stats.matched}/${fullDispatch.stats.selected})`);
+  console.log(`✓ sample-data.json (${integrated.customers.length} 家公司、${integrated.employees.length} 名员工)`);
   console.log('全量 55 家匹配 100% 成功');
 
   const { execSync } = await import('child_process');
