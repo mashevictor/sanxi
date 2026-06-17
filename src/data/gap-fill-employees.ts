@@ -36,6 +36,7 @@ interface GapTemplate {
   park: string;
   roles: EmployeeRole[];
   slots: TimeSlot[];
+  departure?: string;
 }
 
 const GAP_TEMPLATES: GapTemplate[] = [
@@ -63,6 +64,14 @@ const GAP_TEMPLATES: GapTemplate[] = [
   { name: '补位-金山全2', park: '加盟-金山资本现代产业园', roles: [EmployeeRole.BACK], slots: ALL_SLOTS },
   { name: '补位-宝山全', park: '宝山高新', roles: [EmployeeRole.BACK], slots: ALL_SLOTS },
   { name: '补位-镇江全', park: '江苏镇江', roles: [EmployeeRole.PROJECT, EmployeeRole.FRONT], slots: ALL_SLOTS },
+  // 杨浦区域前道（出发地在杨浦，可覆盖 杨浦-* 园区试算/派单）
+  {
+    name: '补位-杨浦前',
+    park: '加盟-金山资本现代产业园',
+    roles: [EmployeeRole.FRONT, EmployeeRole.PROJECT],
+    slots: ALL_SLOTS,
+    departure: '上海市杨浦区邯郸路',
+  },
 ];
 
 /** 修正指定人/园区/时段不满足的既有员工 */
@@ -80,6 +89,11 @@ export const EMPLOYEE_FULL_MATCH_PATCHES: Record<
   黄健: { departureAddress: PARK_DEPARTURES['江苏徐州'], orderCapacity: ALL_SLOTS },
   殷汝飞: { departureAddress: PARK_DEPARTURES['山东济南'], orderCapacity: ALL_SLOTS },
   王睿: { departureAddress: PARK_DEPARTURES['江苏徐州'], orderCapacity: ALL_SLOTS },
+  /** 金山32家手动派单常用15人：补足下午2（原 Excel 仅上午+下午1） */
+  韩哲川: { orderCapacity: ALL_SLOTS },
+  傅丽: { orderCapacity: ALL_SLOTS },
+  宋樑: { orderCapacity: ALL_SLOTS },
+  舒立旻: { departureAddress: '上海市长宁区宣化路', orderCapacity: ALL_SLOTS },
 };
 
 export function applyEmployeePatches(employees: Employee[]): Employee[] {
@@ -105,7 +119,7 @@ export function buildGapFillEmployees(parkIdByName: Map<string, number>): Employ
       cityName: '上海市',
       roles: t.roles,
       status: EmployeeStatus.ACTIVE,
-      departureAddress: PARK_DEPARTURES[t.park],
+      departureAddress: t.departure || PARK_DEPARTURES[t.park],
       orderCapacity: t.slots,
       plusCapabilities: FULL_PLUS,
       serviceParkId: parkId,

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>派单系统 · 正式环境功能与匹配逻辑</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: #111827;
+      --border: rgba(99,102,241,.22);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #818cf8;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --fail: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 28px 20px 60px;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; }
+    h1 {
+      font-size: 1.75rem;
+      background: linear-gradient(135deg, #e0e7ff, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+    .nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+    .nav a {
+      color: #c4b5fd; text-decoration: none; font-size: 0.82rem;
+      padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+      background: rgba(99,102,241,.1);
+    }
+    .nav a:hover { background: rgba(99,102,241,.22); }
+    section {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 22px 24px; margin-bottom: 20px;
+    }
+    h2 { font-size: 1.15rem; color: #c4b5fd; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    h3 { font-size: 0.95rem; color: #a5b4fc; margin: 18px 0 10px; }
+    p, li { font-size: 0.88rem; color: #cbd5e1; }
+    ul, ol { padding-left: 1.3rem; margin: 8px 0; }
+    li { margin-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 12px 0; }
+    th, td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+    th { background: rgba(99,102,241,.12); color: var(--muted); font-weight: 600; }
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; margin-right: 4px;
+    }
+    .tag.prod { background: rgba(52,211,153,.15); color: var(--ok); }
+    .tag.test { background: rgba(251,191,36,.15); color: var(--warn); }
+    .tag.core { background: rgba(129,140,248,.2); color: #a5b4fc; }
+    .tag.soft { background: rgba(148,163,184,.15); color: var(--muted); }
+    .flow {
+      background: rgba(0,0,0,.3); border-radius: 10px; padding: 16px 18px;
+      font-family: Consolas, "Courier New", monospace; font-size: 0.78rem;
+      color: #94a3b8; overflow-x: auto; white-space: pre; line-height: 1.5;
+    }
+    .example {
+      border-left: 3px solid var(--accent); padding: 12px 16px; margin: 12px 0;
+      background: rgba(99,102,241,.06); border-radius: 0 10px 10px 0;
+    }
+    .example h4 { font-size: 0.88rem; color: #e0e7ff; margin-bottom: 8px; }
+    .ok { color: var(--ok); }
+    .fail { color: var(--fail); }
+    .warn { color: var(--warn); }
+    code { background: rgba(0,0,0,.35); padding: 2px 6px; border-radius: 4px; font-size: 0.82em; color: #c4b5fd; }
+    .mermaid-note { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+    .toc { columns: 2; column-gap: 24px; }
+    @media (max-width: 640px) { .toc { columns: 1; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>派单系统 · 正式环境说明</h1>
+    <p class="sub">功能清单、数据流、匹配逻辑与实例 · 基于当前线上代码（<code>matchCustomerToEmployee</code> + <code>findCapacitatedMatching</code>）</p>
+
+    <div class="nav">
+      <a href="index.html">Excel 上传派单</a>
+      <a href="match.html">AI 匹配</a>
+      <a href="manual-match.html">手动派单</a>
+      <a href="test-match.html">测试报告</a>
+      <a href="compare-dispatch.html">Excel 对比</a>
+    </div>
+
+  <section id="toc-sec">
+    <h2>目录</h2>
+    <ol class="toc">
+      <li><a href="#features" style="color:#a5b4fc">正式环境功能清单</a></li>
+      <li><a href="#vs-test" style="color:#a5b4fc">正式 vs 测试环境</a></li>
+      <li><a href="#dataflow" style="color:#a5b4fc">数据流</a></li>
+      <li><a href="#rules" style="color:#a5b4fc">匹配逻辑（7 条规则）</a></li>
+      <li><a href="#optimizer" style="color:#a5b4fc">派单优化与一人多单</a></li>
+      <li><a href="#examples" style="color:#a5b4fc">举例说明</a></li>
+      <li><a href="#api" style="color:#a5b4fc">正式 API 一览</a></li>
+    </ol>
+  </section>
+
+  <section id="features">
+    <h2>一、正式环境功能清单</h2>
+    <p>正式环境指服务器上运行的派单 Web 应用，数据以 <strong>Excel 主数据</strong> 为来源，匹配结果可导出，不写回 Excel 源文件。</p>
+
+    <table>
+      <thead>
+        <tr><th>页面 / 模块</th><th>路径</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag prod">正式</span> Excel 上传派单</td>
+          <td><code>/</code> · <code>index.html</code></td>
+          <td>上传员工表 + 首访/项目/回访 Excel，一次性全量派单，下载结果</td>
+        </tr>
+        <tr>
+          <td><span class="tag prod">正式</span> 选择园区派单</td>
+          <td><code>/select.html</code></td>
+          <td>上传后按园区筛选公司，批量派单</td>
+        </tr>
+        <tr>
+          <td><span class="tag prod">正式</span> AI 匹配</td>
+          <td><code>/match.html</code></td>
+          <td>加载整合数据，勾选公司 AI 自动匹配；支持本地通勤（默认）加速</td>
+        </tr>
+        <tr>
+          <td><span class="tag prod">正式</span> 手动派单</td>
+          <td><code>/manual-match.html</code></td>
+          <td>勾选公司 + 锁定部分配对 + 增量匹配；可调员工池、查看行程</td>
+        </tr>
+        <tr>
+          <td><span class="tag prod">正式</span> Excel 对比</td>
+          <td><code>/compare-dispatch.html</code></td>
+          <td>系统派单结果与历史 Excel 指派对比</td>
+        </tr>
+        <tr>
+          <td><span class="tag test">测试</span> 匹配测试报告</td>
+          <td><code>/test-match.html</code></td>
+          <td>合成/全国模拟场景 + 即时试算；<strong>不替代正式派单</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>正式环境核心能力</h3>
+    <ul>
+      <li>从 Excel 导入园区、员工、待派单客户（主数据 INPUT）</li>
+      <li>按 7 条规则筛选合规员工，支持<strong>一人多单</strong>（同一员工不同时段各 1 单）</li>
+      <li>在合规员工中按得分 + 通勤距离选最优（容量约束匹配）</li>
+      <li>输出派单结果 + 员工当日行程表（派单后 OUTPUT）</li>
+      <li>通勤估算：本地矩阵（默认）或 DeepSeek API（可选，余额不足时自动降级本地）</li>
+    </ul>
+  </section>
+
+  <section id="vs-test">
+    <h2>二、正式环境 vs 测试环境</h2>
+    <table>
+      <thead>
+        <tr><th>对比项</th><th>正式环境</th><th>测试环境（test-match）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>员工/客户来源</td><td><code>data/*.xlsx</code> + 内存整合（演示/补位）</td><td>另含全国模拟、上海 20 组合成数据</td>
+        <tr><td>匹配规则引擎</td><td colspan="2" style="text-align:center"><strong>相同</strong>：<code>matchCustomerToEmployee</code></td></tr>
+        <tr><td>是否写库/改 Excel</td><td>仅导出结果文件，不改源 Excel</td><td>纯试算，不落库</td></tr>
+        <tr><td>典型用途</td><td>日常派单、上线验证</td><td>规则合理性压测、单地址试算</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="dataflow">
+    <h2>三、数据流</h2>
+
+    <h3>3.1 主数据（派单前 INPUT）</h3>
+    <table>
+      <thead><tr><th>实体</th><th>Excel 来源</th><th>关键字段</th></tr></thead>
+      <tbody>
+        <tr><td>园区 <code>InvestmentPark</code></td><td>园区数据.xlsx（可选，也可从客户单补全）</td><td>园区名称、城市、地址</td></tr>
+        <tr><td>员工 <code>Employee</code></td><td>派单员工表 (1).xls</td><td>姓名、出发地、负责园区、职责、时段容量、Plus 能力</td></tr>
+        <tr><td>客户 <code>Customer</code></td><td>首访/项目/回访数据.xlsx</td><td>公司名、拜访地址、所属园区、类型、时段、指定人/放弃人</td></tr>
+      </tbody>
+    </table>
+    <p><strong>原则：</strong>园区与员工是独立主数据；员工的「负责园区」仅用于规则匹配，表示服务范围，不是组织归属。</p>
+
+    <h3>3.2 整合数据管线（AI 匹配 / 手动派单默认加载）</h3>
+    <div class="flow">Excel 五表 importAllData()
+    │
+    ├─► 原始客户 + 员工 + 园区
+    │
+    ├─► + 演示数据 showcase（带 [演示] 标签）
+    │
+    ├─► + 补位员工 gap-fill（带 [补位] 标签，保证 55 家全量可匹配）
+    │
+    └─► applyEmployeePatches() 修正出发地/时段
+            │
+            ▼
+    getIntegratedData() 内存缓存（Excel 变更自动失效）
+            │
+            ▼
+    前端 sessionId ──► POST /api/dispatch/select</div>
+
+    <h3>3.3 派单后 OUTPUT</h3>
+    <ul>
+      <li><strong>派单结果</strong>：每条 = 1 客户 → 1 员工，含通勤、得分、规则明细</li>
+      <li><strong>员工行程表</strong>：按员工汇总当日单量（上午/下午）、路线段、总通勤</li>
+      <li><strong>导出</strong>：<code>POST /api/export</code> 生成 Excel 下载</li>
+    </ul>
+
+    <h3>3.4 端到端流程（AI 匹配页）</h3>
+    <div class="flow">用户打开 match.html
+    → GET /api/sample-data（或 bootstrap）
+    → 展示 55+ 家公司、51+ 名员工
+    → 用户勾选公司
+    → POST /api/dispatch/select { customerIds, commuteMode: 'local' }
+    → pairing-optimizer 容量约束匹配
+    → 返回 pairings + employeeSchedules + unmatched
+    → 前端展示成功条 / 未匹配原因</div>
+  </section>
+
+  <section id="rules">
+    <h2>四、匹配逻辑（7 条规则）</h2>
+    <p>函数：<code>matchCustomerToEmployee(customer, employee, availableNames, assignedCustomers)</code></p>
+    <p>正式派单与测试试算<strong>共用同一实现</strong>（<code>src/services/match-rules.ts</code>）。</p>
+
+    <table>
+      <thead>
+        <tr><th>#</th><th>规则</th><th>类型</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td><td>城市匹配</td><td><span class="tag core">硬约束</span></td>
+          <td><code>customer.cityId === employee.cityId</code>，必须同城</td>
+        </tr>
+        <tr>
+          <td>2</td><td>职责匹配</td><td><span class="tag core">硬约束</span></td>
+          <td>首访→前道 FRONT；项目→项目 PROJECT；回访→后道 BACK</td>
+        </tr>
+        <tr>
+          <td>3</td><td>时段匹配</td><td><span class="tag core">硬约束</span></td>
+          <td>员工 <code>orderCapacity</code> 含该时段；且该时段尚未被该员工其他单占用（一人多单核心）</td>
+        </tr>
+        <tr>
+          <td>4</td><td>指定人</td><td><span class="tag core">硬约束</span></td>
+          <td>有指定人时必须派给指定人；指定人在候选池中则不能派给别人</td>
+        </tr>
+        <tr>
+          <td>5</td><td>放弃人</td><td><span class="tag core">硬约束</span></td>
+          <td>不能派给放弃人字段中的员工</td>
+        </tr>
+        <tr>
+          <td>6</td><td>园区匹配</td><td><span class="tag core">硬约束</span></td>
+          <td>员工<strong>出发地</strong>能否地理覆盖客户<strong>所属园区名</strong>（<code>canDepartureServePark</code>）<br>
+          例：园区「浦东-张江」→ 出发地需含浦东/张江等地域词；「加盟-金山…」→ 需含上海或金山</td>
+        </tr>
+        <tr>
+          <td>7</td><td>Plus 匹配</td><td><span class="tag soft">软约束</span></td>
+          <td>选择派单 / 测试模式默认<strong>不要求</strong> Plus；Excel 全量派单模式可要求</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>合规判定</h3>
+    <p>全部硬约束通过 → <code>eligible = true</code>。得分用于在多个合规员工中选优（指定人加分、园区覆盖加分、已接单数减分）。</p>
+
+    <h3>通勤（优化用，非硬失败）</h3>
+    <p>合规员工间优先选通勤更短者；超过 60 分为软提示，指定人等情况仍可匹配成功。</p>
+  </section>
+
+  <section id="optimizer">
+    <h2>五、派单优化与一人多单</h2>
+    <p>函数：<code>findCapacitatedMatching</code>（<code>pairing-optimizer.ts</code>）</p>
+    <ol>
+      <li>客户按指定人优先、Plus 优先级排序</li>
+      <li>对每个客户，在<strong>当前已分配上下文</strong>下找所有 <code>eligible</code> 员工</li>
+      <li>维护 <code>assignedPerEmp</code>：每位员工已接客户列表</li>
+      <li>同一员工：上午 / 下午1 / 下午2 各最多 1 单（时段匹配第 3 条）</li>
+      <li>在合规员工中选 <code>score - 通勤×0.2</code> 最高者</li>
+      <li>无法匹配时分析原因：无合规员工 / 时段已满（冲突员工）</li>
+    </ol>
+    <p>输出 <code>employeeSchedules</code>：按 上午→下午1→下午2 排序，计算段间路线与总通勤。</p>
+  </section>
+
+  <section id="examples">
+    <h2>六、举例说明</h2>
+
+    <div class="example">
+      <h4>例 1 · 金山亭林 · 首访 + 上午 → 0 人（规则正确）</h4>
+      <p><strong>输入：</strong>园区「加盟-金山资本现代产业园」或「金山-亭林」；地址「上海金山区亭林路10号」；首访；上午</p>
+      <p><strong>现象：</strong>亭林镇有多名员工（姚焕、李路路等），通勤约 21 分，但 <span class="fail">合规 0 人</span></p>
+      <p><strong>原因：</strong></p>
+      <ul>
+        <li>这些员工职责为 <strong>后道</strong>，首访需要 <strong>前道</strong> → 职责不匹配</li>
+        <li>补位员工「补位-韩金山」等仅有 <strong>下午2</strong> 容量 → 上午时段不匹配</li>
+        <li>园区匹配、城市匹配通常 <span class="ok">通过</span></li>
+      </ul>
+      <p><strong>若改为回访 + 上午：</strong>可匹配 20+ 名后道员工，推荐亭林出发的姚焕等。</p>
+    </div>
+
+    <div class="example">
+      <h4>例 2 · 杨浦复旦 · 首访 + 上午 → 需前道员工</h4>
+      <p><strong>输入：</strong>园区「杨浦-复旦」；地址「上海市杨浦区邯郸路220号」；首访；上午</p>
+      <p><strong>现象：</strong>宋樑、盛雅琴（杨浦出发）<span class="fail">不能</span>接首访 — 他们是后道</p>
+      <p><strong>解决：</strong>补位员工「补位-杨浦前」（前道+项目，全时段，邯郸路出发）可合规匹配；或客户类型改为回访由后道接单。</p>
+    </div>
+
+    <div class="example">
+      <h4>例 3 · 一人多单 · 同一员工一天 3 单</h4>
+      <p><strong>场景：</strong>张全能（浦东张江出发，前道+后道+项目，全时段）</p>
+      <table>
+        <thead><tr><th>时段</th><th>客户</th><th>类型</th><th>结果</th></tr></thead>
+        <tbody>
+          <tr><td>上午</td><td>A 公司</td><td>首访</td><td class="ok">✓ 张全能</td></tr>
+          <tr><td>下午1</td><td>C 公司</td><td>项目</td><td class="ok">✓ 张全能</td></tr>
+          <tr><td>下午2</td><td>E 公司</td><td>首访</td><td class="ok">✓ 张全能</td></tr>
+        </tbody>
+      </table>
+      <p>若再派一个<strong>上午</strong>客户给张全能 → <span class="fail">时段已满</span>，引擎改派李备岗或标记未匹配。</p>
+    </div>
+
+    <div class="example">
+      <h4>例 4 · 指定人</h4>
+      <p>客户指定「黄健」，候选池中有黄健 → 只能派给黄健；派给他人则指定人规则失败。</p>
+      <p>指定人不在候选池 → 可派给其他合规员工，并在得分上优先非指定场景。</p>
+    </div>
+
+    <div class="example">
+      <h4>例 5 · 园区匹配（地理覆盖，非名称相等）</h4>
+      <p>客户园区「浦东-张江」，员工出发地「上海市浦东新区张江路100号」→ <span class="ok">通过</span>（地域词覆盖）</p>
+      <p>客户园区「浦东-张江」，员工出发地「上海市闵行区莘庄镇」→ <span class="fail">失败</span>（出发地无法覆盖园区）</p>
+      <p>推荐园区命名：<code>区域-地标</code>，如「浦东-张江」「金山-亭林」。</p>
+    </div>
+
+    <div class="example">
+      <h4>例 6 · 正式全量 55 家匹配</h4>
+      <p>数据源：Excel 45 家 + 演示 10 家；员工含补位后约 52 人。</p>
+      <p>AI 匹配页勾选全部 → <code>POST /api/dispatch/select</code> → 典型结果 <span class="ok">55/55 全匹配</span>，支持员工一天多单，均合规。</p>
+    </div>
+  </section>
+
+  <section id="api">
+    <h2>七、正式 API 一览</h2>
+    <table>
+      <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/dispatch</code></td><td>上传 Excel 一次性派单</td></tr>
+        <tr><td>POST</td><td><code>/api/parse-data</code></td><td>解析上传，返回 session + 元数据</td></tr>
+        <tr><td>GET</td><td><code>/api/sample-data</code></td><td>加载整合数据（正式默认数据集）</td></tr>
+        <tr><td>GET</td><td><code>/api/bootstrap</code></td><td>轻量 session，数据来自内存缓存</td></tr>
+        <tr><td>POST</td><td><code>/api/dispatch/select</code></td><td><strong>核心</strong>：勾选公司批量匹配，支持锁定配对、员工池、commuteMode</td></tr>
+        <tr><td>POST</td><td><code>/api/dispatch/validate-pair</code></td><td>单条公司-员工校验（手动调整时）</td></tr>
+        <tr><td>POST</td><td><code>/api/export</code></td><td>导出派单结果 Excel</td></tr>
+        <tr><td>POST</td><td><code>/api/test-match-lookup</code></td><td><span class="tag test">测试</span> 单地址试算，不落库</td></tr>
+        <tr><td>GET</td><td><code>/api/test-match-report</code></td><td><span class="tag test">测试</span> 批量场景报告</td></tr>
+      </tbody>
+    </table>
+    <p class="mermaid-note">部署：服务器 <code>git pull && bash deploy/deploy.sh</code>；本地默认端口见 <code>.env</code> 中 <code>PORT</code>。</p>
+  </section>
+
+  <section>
+    <h2>八、代码索引</h2>
+    <table>
+      <thead><tr><th>模块</th><th>文件</th></tr></thead>
+      <tbody>
+        <tr><td>匹配规则</td><td><code>src/services/match-rules.ts</code></td></tr>
+        <tr><td>园区地理匹配</td><td><code>src/utils/park-match.ts</code></td></tr>
+        <tr><td>容量约束优化</td><td><code>src/services/pairing-optimizer.ts</code></td></tr>
+        <tr><td>选择派单 API</td><td><code>src/services/select-dispatch.ts</code></td></tr>
+        <tr><td>Excel 整合</td><td><code>src/data/integrated-data.ts</code></td></tr>
+        <tr><td>数据模型文档</td><td><code>docs/DATA_MODEL.md</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <p style="text-align:center;color:var(--muted);font-size:0.78rem;margin-top:24px">
+    文档生成说明页 · 与测试报告规则一致 · 最后更新 2026-06
+  </p>
+  </div>
+</body>
+</html>

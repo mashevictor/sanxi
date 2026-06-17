@@ -12,7 +12,7 @@ import {
   PlusLevel,
 } from '../types';
 import { customerTypeToRole, isFrontOrProject } from '../utils/parsers';
-import { canDepartureServePark } from '../utils/park-match';
+import { canDepartureServePark, explainParkMatchFailure } from '../utils/park-match';
 
 export interface MatchResult {
   employee: Employee;
@@ -122,7 +122,7 @@ function checkParkMatch(customer: Customer, employee: Employee): MatchDetail {
     passed,
     message: passed
       ? `园区匹配: 客户园区[${customer.parkName}] ↔ 员工出发地[${employee.departureAddress}]可覆盖`
-      : `园区不匹配: 客户园区[${customer.parkName}]，员工出发地[${employee.departureAddress}]不在该园区服务范围`,
+      : explainParkMatchFailure(employee.departureAddress, customer.parkName),
   };
 }
 

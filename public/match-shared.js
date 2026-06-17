@@ -399,3 +399,26 @@ function scheduleRender(fn) {
     setTimeout(fn, 0);
   }
 }
+
+/** 带超时的 fetch JSON，避免匹配请求无限 loading */
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 90000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(data.error || `请求失败 (${res.status})`);
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(`请求超时（${Math.round(timeoutMs / 1000)} 秒），请检查服务器是否正常运行`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}

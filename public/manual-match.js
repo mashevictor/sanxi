@@ -183,6 +183,15 @@ function renderManualTables() {
   });
 }
 
+function formatParkCell(c) {
+  const name = esc(c.parkName || '—');
+  const addr = c.parkAddress || c.address;
+  const addrLine = addr
+    ? `<span class="park-addr" title="${esc(addr)}">${esc(addr.length > 36 ? addr.slice(0, 36) + '…' : addr)}</span>`
+    : '';
+  return `<span>${name}</span>${addrLine}`;
+}
+
 function renderManualTablesNow() {
   const coBody = document.getElementById('manual-co-tbody');
   const empBody = document.getElementById('manual-emp-tbody');
@@ -198,7 +207,7 @@ function renderManualTablesNow() {
       <tr class="${on ? 'selected' : ''}" data-cid="${c.id}">
         <td><input type="checkbox" class="manual-co-cb" value="${c.id}" ${on ? 'checked' : ''}></td>
         <td class="co-name-cell">${esc(c.companyName)}${tag}</td>
-        <td class="park-cell">${esc(c.parkName || '—')}</td>
+        <td class="park-cell">${formatParkCell(c)}</td>
         <td class="sub-cell">${esc(c.customerType)}</td>
         <td class="sub-cell">${esc(c.timeSlot)}</td>
       </tr>
@@ -342,11 +351,14 @@ function showMatchProgress(total) {
   clearInterval(progressTimer);
   box.hidden = false;
   fill.style.width = '8%';
+  const startedAt = Date.now();
   text.textContent = `正在智能匹配 ${total} 家公司…`;
   let pct = 8;
   progressTimer = setInterval(() => {
     pct = Math.min(pct + Math.random() * 8 + 3, 90);
     fill.style.width = `${pct}%`;
+    const sec = Math.round((Date.now() - startedAt) / 1000);
+    text.textContent = `正在智能匹配 ${total} 家公司…（已 ${sec} 秒，本地模式通常 5–20 秒）`;
   }, 180);
 }
 
@@ -476,6 +488,11 @@ async function onManualMatch() {
   }
 
   const employeePoolIds = Array.from(manualSelectedEmployees);
+  const capacityHint = summarizePoolCapacity(employeePoolIds);
+  if (capacityHint && customerIds.length) {
+    console.info('[手动派单] 员工池容量:', capacityHint);
+  }
+
   const btn = document.getElementById('manual-match-btn');
   isMatching = true;
   btn.disabled = true;
@@ -487,13 +504,11 @@ async function onManualMatch() {
   if (employeePoolIds.length) body.employeePoolIds = employeePoolIds;
 
   try {
-    const res = await fetch('/api/dispatch/select', {
+    const data = await fetchJsonWithTimeout('/api/dispatch/select', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '匹配失败');
+    }, 90000);
 
     applyMatchResult(data);
     completeMatchProgress(data.stats?.matched ?? lastMatchPairings.length, customerIds.length);
@@ -518,9 +533,59 @@ async function onManualMatch() {
   }
 }
 
+function summarizePoolCapacity(employeePoolIds) {
+  if (!employeePoolIds.length) return null;
+  let morning = 0;
+  let afternoon1 = 0;
+  let afternoon2 = 0;
+  for (const id of employeePoolIds) {
+    const e = allEmployees.find((x) => x.id === id);
+    if (!e?.orderCapacity) continue;
+    if (e.orderCapacity.includes('MORNING')) morning++;
+    if (e.orderCapacity.includes('AFTERNOON_1')) afternoon1++;
+    if (e.orderCapacity.includes('AFTERNOON_2')) afternoon2++;
+  }
+  return { morning, afternoon1, afternoon2, total: morning + afternoon1 + afternoon2 };
+}
+
+function countSelectedBySlot() {
+  const counts = { morning: 0, afternoon1: 0, afternoon2: 0 };
+  for (const id of manualSelectedCompanies) {
+    const c = allCompanies.find((x) => x.id === id);
+    if (!c) continue;
+    if (c.timeSlot === '上午') counts.morning++;
+    else if (c.timeSlot === '下午1') counts.afternoon1++;
+    else if (c.timeSlot === '下午2') counts.afternoon2++;
+  }
+  return counts;
+}
+
 function updateManualStats() {
   document.getElementById('stat-co-picked').textContent = manualSelectedCompanies.size;
   document.getElementById('stat-emp-picked').textContent = manualSelectedEmployees.size;
   document.getElementById('stat-manual-ok').textContent = lastMatchPairings.length;
   document.getElementById('stat-manual-fail').textContent = lastMatchUnmatched.length;
+
+  const capEl = document.getElementById('manual-capacity-hint');
+  if (!capEl) return;
+  const pool = summarizePoolCapacity(Array.from(manualSelectedEmployees));
+  const need = countSelectedBySlot();
+  if (!manualSelectedCompanies.size) {
+    capEl.textContent = '';
+    capEl.hidden = true;
+    return;
+  }
+  capEl.hidden = false;
+  if (!pool) {
+    capEl.textContent = `已选公司：上午 ${need.morning} · 下午1 ${need.afternoon1} · 下午2 ${need.afternoon2}（未限定员工池，使用全员）`;
+    capEl.className = 'capacity-hint';
+    return;
+  }
+  const warn =
+    need.morning > pool.morning || need.afternoon1 > pool.afternoon1 || need.afternoon2 > pool.afternoon2;
+  capEl.className = warn ? 'capacity-hint warn' : 'capacity-hint ok';
+  capEl.textContent =
+    `需求 上午${need.morning}/下午1 ${need.afternoon1}/下午2 ${need.afternoon2} · ` +
+    `员工池容量 上午${pool.morning}/下午1 ${pool.afternoon1}/下午2 ${pool.afternoon2}` +
+    (warn ? ' · 容量可能不足' : '');
 }

@@ -3,6 +3,7 @@ import { MAX_ACCEPTABLE_COMMUTE_MINUTES } from '../utils/commute';
 import { SHOWCASE_TAG, IntegratedData } from '../data/integrated-data';
 import { GAP_FILL_TAG } from '../data/gap-fill-employees';
 import { ImportResult } from './excel-importer';
+import { getIntegratedDataVersion } from './integrated-cache';
 
 export function formatEmployee(emp: Employee) {
   const roleLabels = emp.roles.map((r) => EMPLOYEE_ROLE_LABELS[r]);
@@ -31,23 +32,39 @@ export function buildParseMetadata(
   const scSet = new Set(options?.showcaseCustomerIds || []);
   const seSet = new Set(options?.showcaseEmployeeIds || []);
   const gfSet = new Set(options?.gapFillEmployeeIds || []);
+  const parkByName = new Map(data.parks.map((p) => [p.name, p]));
   return {
-    companies: data.customers.map((c) => ({
-      id: c.id,
-      companyName: c.companyName,
-      address: c.address,
-      parkName: c.parkName,
-      customerType: CUSTOMER_TYPE_LABELS[c.customerType],
-      timeSlot: TIME_SLOT_LABELS[c.timeSlot],
-      plusCount: c.plusCount,
-      designatedPerson: c.designatedPerson,
-      rejectedPerson: c.rejectedPerson,
-      sourceTag: scSet.has(c.id) ? SHOWCASE_TAG : undefined,
+    parks: data.parks.map((p) => ({
+      id: p.id,
+      name: p.name,
+      cityName: p.cityName,
+      address: p.address || '',
     })),
-    employees: data.employees.map((emp) => ({
-      ...formatEmployee(emp),
-      sourceTag: seSet.has(emp.id) ? SHOWCASE_TAG : gfSet.has(emp.id) ? GAP_FILL_TAG : undefined,
-    })),
+    companies: data.customers.map((c) => {
+      const park = parkByName.get(c.parkName);
+      return {
+        id: c.id,
+        companyName: c.companyName,
+        address: c.address,
+        parkName: c.parkName,
+        parkAddress: park?.address || '',
+        customerType: CUSTOMER_TYPE_LABELS[c.customerType],
+        timeSlot: TIME_SLOT_LABELS[c.timeSlot],
+        plusCount: c.plusCount,
+        designatedPerson: c.designatedPerson,
+        rejectedPerson: c.rejectedPerson,
+        sourceTag: scSet.has(c.id) ? SHOWCASE_TAG : undefined,
+      };
+    }),
+    employees: data.employees.map((emp) => {
+      const park = parkByName.get(emp.serviceParkName);
+      return {
+        ...formatEmployee(emp),
+        serviceParkName: emp.serviceParkName,
+        serviceParkAddress: park?.address || '',
+        sourceTag: seSet.has(emp.id) ? SHOWCASE_TAG : gfSet.has(emp.id) ? GAP_FILL_TAG : undefined,
+      };
+    }),
     stats: data.stats,
     totalCompanies: data.customers.length,
     totalEmployees: data.employees.length,
@@ -61,7 +78,8 @@ export function buildParseMetadata(
 /** 静态缓存 / 首屏 payload（不含 sessionId） */
 export function buildSampleDataPayload(data: IntegratedData) {
   return {
-    version: 1,
+    version: 2,
+    dataVersion: getIntegratedDataVersion(),
     generatedAt: new Date().toISOString(),
     ...buildParseMetadata(data, {
       showcaseCustomerIds: data.showcaseCustomerIds,

@@ -371,7 +371,11 @@
     .manual-table tr.selected { background: rgba(99,102,241,.15); }
     .manual-table tr.selected td { color: #e0e7ff; }
     .manual-table .co-name-cell { font-weight: 600; max-width: 140px; word-break: break-all; }
-    .manual-table .park-cell { font-size: 0.68rem; color: #a5b4fc; max-width: 120px; word-break: break-all; }
+    .manual-table .park-cell { font-size: 0.68rem; color: #a5b4fc; max-width: 160px; word-break: break-all; line-height: 1.35; }
+    .park-addr { display: block; font-size: 0.62rem; color: #64748b; margin-top: 2px; }
+    .capacity-hint { margin: 0 0 12px; padding: 8px 12px; font-size: 0.75rem; border-radius: 8px; background: #f1f5f9; color: #475569; }
+    .capacity-hint.ok { background: #ecfdf5; color: #047857; }
+    .capacity-hint.warn { background: #fff7ed; color: #c2410c; }
     .manual-table .sub-cell { font-size: 0.68rem; color: var(--muted); }
     .manual-table input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
 
@@ -680,6 +684,8 @@
       <div class="stat-card fail"><div class="num" id="stat-manual-fail">0</div><div class="lbl">匹配失败</div></div>
     </div>
 
+    <p id="manual-capacity-hint" class="capacity-hint" hidden></p>
+
     <div class="match-status-strip" id="match-status-strip">
       <div class="match-status-idle" id="match-status-idle">勾选公司后点击「确认匹配」，进度与结果将显示在此处</div>
       <div class="match-progress" id="manual-progress" hidden>
@@ -715,7 +721,7 @@
                   <tr>
                     <th style="width:28px"><input type="checkbox" id="manual-co-all" title="全选"></th>
                     <th>公司</th>
-                    <th>园区</th>
+                    <th>园区 / 地址</th>
                     <th>类型</th>
                     <th>时段</th>
                   </tr>

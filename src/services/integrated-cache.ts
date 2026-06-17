@@ -13,8 +13,17 @@ const EXCEL_FILES = [
 let cached: IntegratedData | null = null;
 let cachedSignature = '';
 
+const INTEGRATED_DATA_VERSION = '20260617-front-back-tests';
+
+export function getIntegratedDataVersion(): string {
+  return INTEGRATED_DATA_VERSION;
+}
+
 function getDataSignature(dataDir: string): string {
-  return EXCEL_FILES.map((f) => {
+  return (
+    INTEGRATED_DATA_VERSION +
+    '|' +
+    EXCEL_FILES.map((f) => {
     const filePath = path.join(dataDir, f);
     try {
       const stat = fs.statSync(filePath);
@@ -22,7 +31,8 @@ function getDataSignature(dataDir: string): string {
     } catch {
       return `${f}:missing`;
     }
-  }).join('|');
+    }).join('|')
+  );
 }
 
 /** 内存缓存整合数据，Excel 变更时自动失效 */

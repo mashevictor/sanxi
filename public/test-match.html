@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 匹配测试报告</title>
+  <style>
+    :root {
+      --bg: #060912;
+      --panel: #12182a;
+      --border: rgba(99,102,241,.22);
+      --text: #f1f5f9;
+      --muted: #8b9cb8;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --fail: #f87171;
+      --info: #818cf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .wrap { max-width: 1280px; margin: 0 auto; }
+    h1 {
+      font-size: 1.5rem;
+      background: linear-gradient(135deg, #e0e7ff, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .sub { color: var(--muted); font-size: 0.86rem; margin: 8px 0 20px; }
+    .nav-links { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    .nav-links a {
+      color: #c4b5fd; text-decoration: none; font-size: 0.82rem;
+      padding: 6px 14px; border-radius: 8px;
+      border: 1px solid var(--border); background: rgba(99,102,241,.1);
+    }
+    .nav-links a:hover { background: rgba(99,102,241,.22); }
+    .cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px; margin-bottom: 20px;
+    }
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; text-align: center;
+    }
+    .card .n { font-size: 1.6rem; font-weight: 800; }
+    .card .l { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+    .card.ok .n { color: var(--ok); }
+    .card.fail .n { color: var(--fail); }
+    .card.info .n { color: var(--info); }
+    .card.warn .n { color: var(--warn); }
+    .toolbar {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;
+    }
+    button {
+      padding: 8px 16px; border-radius: 10px; border: 1px solid var(--border);
+      background: rgba(99,102,241,.15); color: #c4b5fd;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    }
+    button:hover { background: rgba(99,102,241,.28); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .tab {
+      padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 0.8rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .tab.active { background: rgba(99,102,241,.25); color: #e0e7ff; border-color: rgba(99,102,241,.4); }
+    .tab .badge {
+      margin-left: 6px; padding: 1px 6px; border-radius: 999px; font-size: 0.68rem;
+    }
+    .tab .badge.ok { background: rgba(52,211,153,.2); color: var(--ok); }
+    .tab .badge.fail { background: rgba(248,113,113,.2); color: var(--fail); }
+    .role-filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+    .role-filter .label { font-size: 0.75rem; color: var(--muted); margin-right: 4px; }
+    .role-filter button {
+      padding: 6px 12px; font-size: 0.76rem;
+    }
+    .role-filter button.active {
+      background: rgba(52,211,153,.18); color: var(--ok); border-color: rgba(52,211,153,.35);
+    }
+    .role-tag {
+      display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+      font-size: 0.65rem; font-weight: 700; vertical-align: middle;
+    }
+    .role-tag.front { background: rgba(129,140,248,.2); color: #a5b4fc; }
+    .role-tag.back { background: rgba(52,211,153,.15); color: #6ee7b7; }
+    section {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px; margin-bottom: 16px;
+    }
+    section h2 { font-size: 1rem; margin-bottom: 6px; }
+    section .desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 14px; }
+    .scenario-hd {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+    }
+    .status-pill {
+      padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+    }
+    .status-pill.ok { background: rgba(52,211,153,.15); color: var(--ok); }
+    .status-pill.fail { background: rgba(248,113,113,.15); color: var(--fail); }
+    .meta-row { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.78rem; color: var(--muted); }
+    .meta-row span strong { color: #a5b4fc; }
+    .table-wrap { overflow-x: auto; margin-top: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    th, td {
+      border-bottom: 1px solid var(--border); padding: 10px 10px;
+      text-align: left; vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+    tr.row-ok { background: rgba(52,211,153,.04); }
+    tr.row-warn { background: rgba(251,191,36,.05); }
+    tr.row-fail { background: rgba(248,113,113,.06); }
+    .tag {
+      display: inline-block; padding: 2px 7px; border-radius: 6px;
+      font-size: 0.68rem; margin: 2px 4px 2px 0; white-space: nowrap;
+    }
+    .tag.ok { background: rgba(52,211,153,.15); color: var(--ok); }
+    .tag.warn { background: rgba(251,191,36,.15); color: var(--warn); }
+    .tag.fail { background: rgba(248,113,113,.15); color: var(--fail); }
+    .rules-cell { max-width: 280px; color: var(--muted); font-size: 0.72rem; line-height: 1.45; }
+    .rules-cell .r-ok { color: #6ee7b7; }
+    .rules-cell .r-fail { color: #fca5a5; }
+    .addr { color: var(--muted); font-size: 0.72rem; max-width: 220px; word-break: break-all; line-height: 1.4; }
+    .emp-name { font-weight: 700; color: #c4b5fd; font-size: 0.82rem; }
+    .emp-meta { font-size: 0.72rem; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+    .emp-meta strong { color: #a5b4fc; font-weight: 600; }
+    .co-meta { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+    .co-meta strong { color: #94a3b8; }
+    .sub-tabs { display: flex; gap: 8px; margin: 12px 0; }
+    .sub-tab {
+      padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 0.76rem; cursor: pointer;
+    }
+    .sub-tab.active { background: rgba(99,102,241,.2); color: #e0e7ff; }
+    .emp-pool-note { font-size: 0.76rem; color: var(--muted); margin-bottom: 10px; }
+    .notes { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: 0.82rem; }
+    .notes li { margin-bottom: 8px; }
+    .loading {
+      padding: 48px; text-align: center; color: var(--muted);
+    }
+    .park-demo { display: grid; gap: 10px; }
+    .park-case {
+      padding: 12px 14px; border-radius: 10px;
+      border: 1px solid var(--border); background: rgba(15,23,42,.5);
+      font-size: 0.8rem;
+    }
+    .park-case.ok { border-color: rgba(52,211,153,.3); }
+    .park-case.fail { border-color: rgba(248,113,113,.3); }
+    .detail-panel {
+      margin-top: 8px; padding: 10px 12px; border-radius: 8px;
+      background: rgba(0,0,0,.25); font-size: 0.72rem; color: var(--muted);
+      display: none;
+    }
+    tr.expanded .detail-panel { display: block; }
+    .click-row { cursor: pointer; }
+    .click-row:hover td { background: rgba(99,102,241,.06); }
+    #gen-time { font-size: 0.72rem; color: var(--muted); }
+    .schedule-grid { display: grid; gap: 12px; margin-top: 8px; }
+    .schedule-card {
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px; background: rgba(15,23,42,.45);
+    }
+    .schedule-card.ok { border-color: rgba(52,211,153,.28); }
+    .schedule-card.fail { border-color: rgba(248,113,113,.35); }
+    .schedule-hd {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+    }
+    .schedule-hd h3 { font-size: 0.9rem; color: #c4b5fd; }
+    .schedule-meta { font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+    .schedule-orders { margin-top: 10px; }
+    .schedule-order {
+      padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
+      background: rgba(0,0,0,.2); font-size: 0.76rem;
+    }
+    .schedule-order .slot { color: #a5b4fc; font-weight: 600; }
+    .route-seg { font-size: 0.7rem; color: var(--muted); margin-top: 8px; line-height: 1.45; }
+    .issue-list { margin-top: 8px; font-size: 0.72rem; color: var(--fail); }
+    .rule-box {
+      padding: 14px; border-radius: 12px; border: 1px solid var(--border);
+      background: rgba(99,102,241,.08); margin-bottom: 16px; font-size: 0.8rem;
+    }
+    .rule-box h2 { font-size: 0.95rem; margin-bottom: 8px; }
+    .rule-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .rule-tag {
+      padding: 3px 8px; border-radius: 6px; font-size: 0.72rem;
+      background: rgba(52,211,153,.12); color: var(--ok);
+    }
+    .src-badge {
+      display: inline-block; padding: 3px 8px; border-radius: 6px;
+      font-size: 0.68rem; margin-left: 8px; vertical-align: middle;
+    }
+    .src-badge.synthetic { background: rgba(129,140,248,.2); color: #a5b4fc; }
+    .src-badge.production { background: rgba(251,191,36,.15); color: var(--warn); }
+    .src-badge.nationwide { background: rgba(52,211,153,.15); color: var(--ok); }
+    .ds-grid { display: grid; gap: 8px; margin-top: 10px; }
+    .ds-item {
+      padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+      font-size: 0.76rem; color: var(--muted);
+    }
+    .lookup-box {
+      padding: 16px; border-radius: 14px; border: 1px solid rgba(52,211,153,.25);
+      background: rgba(15,23,42,.55); margin-bottom: 16px;
+    }
+    .lookup-box h2 { font-size: 1rem; margin-bottom: 6px; }
+    .lookup-form {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px; margin-top: 12px;
+    }
+    .lookup-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; color: var(--muted); }
+    .lookup-form input, .lookup-form select {
+      padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+      background: rgba(0,0,0,.25); color: var(--text); font-size: 0.82rem;
+    }
+    .lookup-form .wide { grid-column: 1 / -1; }
+    .lookup-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+    .lookup-result { margin-top: 14px; }
+    .best-card {
+      padding: 14px; border-radius: 12px; border: 1px solid rgba(52,211,153,.35);
+      background: rgba(52,211,153,.08); margin-bottom: 12px;
+    }
+    .best-card h3 { color: var(--ok); font-size: 0.92rem; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>AI 匹配测试报告</h1>
+    <p class="sub">独立测试页：合成数据 + Excel 存量 + 全国模拟，共用同一套匹配规则引擎</p>
+    <div class="nav-links">
+      <a href="match.html">AI 匹配</a>
+      <a href="manual-match.html">手动派单</a>
+      <a href="compare-dispatch.html">Excel 对比</a>
+      <a href="production-guide.html">正式环境说明</a>
+    </div>
+
+    <div class="toolbar">
+      <button type="button" id="refresh-btn">重新运行测试</button>
+      <span id="gen-time"></span>
+    </div>
+
+    <section class="lookup-box" id="lookup-section">
+      <h2>即时匹配试算（测试环境）</h2>
+      <p class="desc" style="margin:0">输入任意园区名称 + 拜访地址，从<strong style="color:#a5b4fc">全量员工数据</strong>（Excel + 补位）中自动找合规的人</p>
+      <form class="lookup-form" id="lookup-form">
+        <label class="wide">园区名称
+          <input type="text" name="parkName" placeholder="如：杨浦-复旦、浦东-张江" required>
+        </label>
+        <label class="wide">拜访地址
+          <input type="text" name="address" placeholder="如：上海市杨浦区邯郸路220号" required>
+        </label>
+        <label>城市（可留空自动推断）
+          <input type="text" name="cityName" placeholder="如：上海市">
+        </label>
+        <label>客户类型
+          <select name="customerType">
+            <option value="FIRST_VISIT">首访（前道）</option>
+            <option value="PROJECT">项目</option>
+            <option value="FOLLOW_UP">回访（后道）</option>
+          </select>
+        </label>
+        <label>时段
+          <select name="timeSlot">
+            <option value="MORNING">上午</option>
+            <option value="AFTERNOON_1">下午1</option>
+            <option value="AFTERNOON_2">下午2</option>
+          </select>
+        </label>
+      </form>
+      <div class="lookup-actions">
+        <button type="button" id="lookup-btn">立即匹配</button>
+        <span id="lookup-status" style="font-size:0.76rem;color:var(--muted)"></span>
+      </div>
+      <div id="lookup-result" class="lookup-result"></div>
+    </section>
+
+    <div id="summary-cards" class="cards"></div>
+    <div id="rule-section"></div>
+    <div id="role-filter" class="role-filter" hidden>
+      <span class="label">职责筛选</span>
+      <button type="button" data-role="全部" class="active">全部</button>
+      <button type="button" data-role="前道">前道 ×5</button>
+      <button type="button" data-role="后道">后道 ×5</button>
+    </div>
+    <div id="tabs" class="tabs"></div>
+    <div id="content">
+      <div class="loading">加载测试报告…</div>
+    </div>
+
+    <section id="park-section" hidden>
+      <h2 id="park-title">园区匹配说明</h2>
+      <div id="park-cases" class="park-demo"></div>
+    </section>
+
+    <section id="notes-section" hidden>
+      <h2>判读说明</h2>
+      <ul id="notes-list" class="notes"></ul>
+    </section>
+  </div>
+
+  <script src="/test-match.js?v=20260615-yangpu"></script>
+</body>
+</html>

@@ -21,13 +21,16 @@ import { validatePair } from './services/validate-pair';
 import { loadEnvFile } from './services/distance-service';
 import { getIntegratedData, warmIntegratedCache } from './services/integrated-cache';
 import { buildParseMetadata, buildSampleDataPayload } from './services/parse-metadata';
+import { buildMatchTestReport } from './services/match-test-report';
+import { lookupAdhocMatch } from './services/adhoc-match';
+import { CustomerType, TimeSlot } from './types';
 
 loadEnvFile();
 import { FrontProjectMode } from './types';
 import { MAX_ACCEPTABLE_COMMUTE_MINUTES } from './utils/commute';
 
 const app = express();
-const PORT = process.env.PORT || 3004;
+const PORT = process.env.PORT || 3005;
 const DATA_DIR = path.join(__dirname, '..');
 
 interface ParseSession {
@@ -167,6 +170,50 @@ app.get('/api/bootstrap', (_req, res) => {
   }
 });
 
+/** 匹配测试报告（新数据20组 + 存量55家） */
+app.get('/api/test-match-report', async (_req, res) => {
+  try {
+    const report = await buildMatchTestReport(DATA_DIR);
+    res.json(report);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err instanceof Error ? err.message : '生成测试报告失败' });
+  }
+});
+
+/** 测试环境：输入园区/地址即时匹配合规员工 */
+app.post('/api/test-match-lookup', (req, res) => {
+  try {
+    const { parkName, address, cityName, customerType, timeSlot } = req.body || {};
+    const typeMap: Record<string, CustomerType> = {
+      FIRST_VISIT: CustomerType.FIRST_VISIT,
+      PROJECT: CustomerType.PROJECT,
+      FOLLOW_UP: CustomerType.FOLLOW_UP,
+      首访: CustomerType.FIRST_VISIT,
+      项目: CustomerType.PROJECT,
+      回访: CustomerType.FOLLOW_UP,
+    };
+    const slotMap: Record<string, TimeSlot> = {
+      MORNING: TimeSlot.MORNING,
+      AFTERNOON_1: TimeSlot.AFTERNOON_1,
+      AFTERNOON_2: TimeSlot.AFTERNOON_2,
+      上午: TimeSlot.MORNING,
+      下午1: TimeSlot.AFTERNOON_1,
+      下午2: TimeSlot.AFTERNOON_2,
+    };
+    const result = lookupAdhocMatch({
+      parkName,
+      address,
+      cityName,
+      customerType: typeMap[customerType] || CustomerType.FIRST_VISIT,
+      timeSlot: slotMap[timeSlot] || TimeSlot.MORNING,
+    }, DATA_DIR);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : '试算失败' });
+  }
+});
+
 /** 加载完整数据：原始 Excel 样本 + 演示数据（演示项带标签） */
 app.get('/api/sample-data', (_req, res) => {
   try {
@@ -255,6 +302,7 @@ app.post('/api/dispatch/select', async (req, res) => {
       return;
     }
 
+    const t0 = Date.now();
     const response = await dispatchSelectedCompanies(
       data,
       selectedCustomerIds,
@@ -265,6 +313,10 @@ app.post('/api/dispatch/select', async (req, res) => {
         employeePoolIds: Array.isArray(employeePoolIds) ? employeePoolIds : undefined,
         commuteMode: commuteMode === 'deepseek' ? 'deepseek' : 'local',
       }
+    );
+    const elapsed = Date.now() - t0;
+    console.log(
+      `[dispatch/select] ${response.stats.matched}/${response.stats.selected} matched in ${elapsed}ms mode=${commuteMode === 'deepseek' ? 'deepseek' : 'local'}`
     );
     res.json(response);
   } catch (err) {
