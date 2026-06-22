@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>派单系统 · 完整匹配逻辑（AI 匹配 &amp; 手动派单）</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: #111827;
+      --border: rgba(99,102,241,.22);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #818cf8;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --fail: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 28px 20px 60px;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    h1 {
+      font-size: 1.75rem;
+      background: linear-gradient(135deg, #e0e7ff, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+    .nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+    .nav a {
+      color: #c4b5fd; text-decoration: none; font-size: 0.82rem;
+      padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+      background: rgba(99,102,241,.1);
+    }
+    .nav a:hover { background: rgba(99,102,241,.22); }
+    .nav a.active { background: rgba(99,102,241,.28); border-color: rgba(129,140,248,.45); }
+    section {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 22px 24px; margin-bottom: 20px;
+    }
+    h2 {
+      font-size: 1.15rem; color: #c4b5fd; margin-bottom: 14px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    h3 { font-size: 0.95rem; color: #a5b4fc; margin: 18px 0 10px; }
+    h4 { font-size: 0.88rem; color: #e0e7ff; margin: 14px 0 8px; }
+    p, li { font-size: 0.88rem; color: #cbd5e1; }
+    ul, ol { padding-left: 1.3rem; margin: 8px 0; }
+    li { margin-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 12px 0; }
+    th, td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+    th { background: rgba(99,102,241,.12); color: var(--muted); font-weight: 600; }
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; margin-right: 4px;
+    }
+    .tag.core { background: rgba(129,140,248,.2); color: #a5b4fc; }
+    .tag.soft { background: rgba(148,163,184,.15); color: var(--muted); }
+    .tag.ai { background: rgba(52,211,153,.15); color: var(--ok); }
+    .tag.manual { background: rgba(251,191,36,.15); color: var(--warn); }
+    .tag.legacy { background: rgba(248,113,113,.12); color: var(--fail); }
+    .flow {
+      background: rgba(0,0,0,.3); border-radius: 10px; padding: 16px 18px;
+      font-family: Consolas, "Courier New", monospace; font-size: 0.78rem;
+      color: #94a3b8; overflow-x: auto; white-space: pre; line-height: 1.55;
+    }
+    .diagram {
+      background: rgba(0,0,0,.25); border-radius: 10px; padding: 18px 20px;
+      font-size: 0.82rem; color: #cbd5e1; overflow-x: auto; line-height: 1.7;
+    }
+    .example {
+      border-left: 3px solid var(--accent); padding: 12px 16px; margin: 12px 0;
+      background: rgba(99,102,241,.06); border-radius: 0 10px 10px 0;
+    }
+    .ok { color: var(--ok); }
+    .fail { color: var(--fail); }
+    .warn { color: var(--warn); }
+    code { background: rgba(0,0,0,.35); padding: 2px 6px; border-radius: 4px; font-size: 0.82em; color: #c4b5fd; }
+    .toc { columns: 2; column-gap: 24px; }
+    .toc a { color: #a5b4fc; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .meta { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+    @media (max-width: 640px) { .toc { columns: 1; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>完整匹配逻辑说明</h1>
+    <p class="sub">
+      AI 匹配（<code>match.html</code>）与手动派单（<code>manual-match.html</code>）共用后端引擎
+      <code>findCapacitatedMatching</code> · 文档版本 2026-06-22
+    </p>
+
+    <div class="nav">
+      <a href="match.html">AI 匹配</a>
+      <a href="manual-match.html">手动派单</a>
+      <a href="production-guide.html">正式环境说明</a>
+      <a href="test-match.html">测试报告</a>
+      <a href="match-logic-guide.html" class="active">匹配逻辑（本文）</a>
+    </div>
+
+    <section id="toc">
+      <h2>目录</h2>
+      <ol class="toc">
+        <li><a href="#arch">总体架构</a></li>
+        <li><a href="#data">数据层</a></li>
+        <li><a href="#rules">单条合规规则（7+1）</a></li>
+        <li><a href="#capacity">一人多单与容量</a></li>
+        <li><a href="#afternoon">后道下午捆绑</a></li>
+        <li><a href="#optimizer">全局优化算法</a></li>
+        <li><a href="#ai">AI 匹配页流程</a></li>
+        <li><a href="#manual">手动派单页流程</a></li>
+        <li><a href="#compare">AI vs 手动对比</a></li>
+        <li><a href="#api">API 与参数</a></li>
+        <li><a href="#legacy">Excel 旧引擎（另路）</a></li>
+        <li><a href="#example">完整示例</a></li>
+        <li><a href="#fail">未匹配原因</a></li>
+        <li><a href="#files">代码索引</a></li>
+      </ol>
+    </section>
+
+    <section id="arch">
+      <h2>一、总体架构</h2>
+      <div class="diagram">
+        <strong>数据</strong>  Excel 存量 ─┐<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 演示 10 家 + 5 人 ─┼─→ buildIntegratedData ─→ 55 家 · 52 人<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 补位 20 人 + 员工补丁 ─┘<br><br>
+        <strong>页面</strong>  AI 匹配 match.html ──────┐<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 手动派单 manual-match.html ─┼─→ POST /api/dispatch/select<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dispatchSelectedCompanies<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ findOptimalAutoPairingAsync<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ findCapacitatedMatching<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├ matchCustomerToEmployee（规则）<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├ buildAfternoonParkPairs（下午捆绑）<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ buildCommuteMatrix（通勤，local / deepseek）
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>页面</th><th>路径</th><th>员工范围</th><th>特点</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tag ai">AI 匹配</span></td>
+            <td><code>/match.html</code></td>
+            <td>默认全员（52 人）</td>
+            <td>勾选即防抖预览、锁定已匹配、手动改派、增量重算</td>
+          </tr>
+          <tr>
+            <td><span class="tag manual">手动派单</span></td>
+            <td><code>/manual-match.html</code></td>
+            <td>可选员工池或全员</td>
+            <td>勾选公司+员工池，点按钮匹配，容量提示，结果列表</td>
+          </tr>
+          <tr>
+            <td><span class="tag legacy">Excel 上传</span></td>
+            <td><code>/index.html</code></td>
+            <td>上传表内员工</td>
+            <td><strong>旧引擎</strong> DispatchEngine，含牵手单，<strong>不走本文主链路</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="data">
+      <h2>二、数据层（匹配前）</h2>
+      <p>函数：<code>buildIntegratedData</code>（<code>src/data/integrated-data.ts</code>）</p>
+      <ol>
+        <li>读取 <code>data/</code> 目录 Excel：首访 / 项目 / 回访 / 员工表</li>
+        <li>追加 <strong>10 家演示公司</strong> + <strong>5 名演示员工</strong>（姓名带 <code>演示-</code> 前缀，如「演示-范金山」）</li>
+        <li>追加 <strong>20 名补位员工</strong>（<code>补位-*</code>，补下午2、外埠园区容量缺口）</li>
+        <li>应用 <strong>员工补丁</strong>（<code>gap-fill-employees.ts</code>）：修正出发地、扩展时段（如金山常用 15 人补下午2）</li>
+        <li><strong>校验全员姓名唯一</strong>：Excel + 演示 + 补位不能同名（<code>assertUniqueEmployeeNames</code>）</li>
+      </ol>
+      <p class="meta">整合结果：约 55 家公司、52 名员工。首屏可读缓存 <code>/cache/sample-data.json</code>。</p>
+    </section>
+
+    <section id="rules">
+      <h2>三、单条「公司 → 员工」合规规则</h2>
+      <p>核心函数：<code>matchCustomerToEmployee</code>（<code>src/services/match-rules.ts</code>）</p>
+      <p>对每一对客户，在<strong>该员工当前已分配的其他单</strong>上下文下逐条判定：</p>
+
+      <table>
+        <thead>
+          <tr><th>#</th><th>规则</th><th>类型</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td><td>城市匹配</td><td><span class="tag core">硬约束</span></td>
+            <td><code>customer.cityId === employee.cityId</code></td>
+          </tr>
+          <tr>
+            <td>2</td><td>职责匹配</td><td><span class="tag core">硬约束</span></td>
+            <td>首访→前道 FRONT；项目→PROJECT；回访→后道 BACK</td>
+          </tr>
+          <tr>
+            <td>3</td><td>时段匹配</td><td><span class="tag core">硬约束</span></td>
+            <td>员工 <code>orderCapacity</code> 含该时段；且该时段尚未被该员工其他单占用</td>
+          </tr>
+          <tr>
+            <td>4</td><td>指定人</td><td><span class="tag core">硬约束</span></td>
+            <td>有指定人必须派给指定人；指定人在候选池则不能派给别人</td>
+          </tr>
+          <tr>
+            <td>5</td><td>放弃人</td><td><span class="tag core">硬约束</span></td>
+            <td>不能派给放弃人字段中的员工</td>
+          </tr>
+          <tr>
+            <td>6</td><td>园区匹配</td><td><span class="tag core">硬约束</span></td>
+            <td>员工<strong>出发地</strong>能否地理覆盖客户<strong>所属园区名</strong>（<code>canDepartureServePark</code>）</td>
+          </tr>
+          <tr>
+            <td>7</td><td>下午捆绑</td><td><span class="tag core">硬约束</span></td>
+            <td>后道：同园区下午1+下午2 须同员工（在优化器层原子处理，成功后写入规则明细）</td>
+          </tr>
+          <tr>
+            <td>8</td><td>Plus 匹配</td><td><span class="tag soft">软约束</span></td>
+            <td>AI / 手动模式默认<strong>不要求</strong>（<code>requirePlus: false</code>）；Excel 全量模式可要求</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>合规判定</h3>
+      <p>AI / 手动：<strong>6 条核心规则</strong>（不含 Plus）全部通过 → <code>eligible = true</code>。</p>
+
+      <h3>得分（选优用，非硬失败）</h3>
+      <div class="flow">基础分 100
++ 指定人匹配        +50
++ 园区覆盖          +10
++ Plus 适配加分     最多 +20
+− 该员工已接单数 × 5</div>
+    </section>
+
+    <section id="capacity">
+      <h2>四、一人多单与容量模型</h2>
+      <p>优化器维护 <code>assignedPerEmp</code>：Map&lt;员工 ID, 已接客户列表&gt;。</p>
+      <ul>
+        <li>同一员工最多：<strong>上午 1 单 + 下午1 1 单 + 下午2 1 单</strong>（共 3 单，须不同时段）</li>
+        <li>时段冲突是<strong>硬约束</strong>，不是「一人只能接 1 单」</li>
+        <li>手动页可展示「需求时段 vs 员工池容量」预警（容量不足时提示，不硬拦截请求）</li>
+      </ul>
+    </section>
+
+    <section id="afternoon">
+      <h2>五、后道下午捆绑</h2>
+      <p>文件：<code>afternoon-park-pairs.ts</code> + <code>pairing-optimizer.ts</code></p>
+      <p><strong>业务规则</strong>：后道回访，同一<strong>园区</strong>内，下午1 与 下午2 必须派给<strong>同一名员工</strong>（该员工下午跑 2 单）。</p>
+
+      <h3>处理步骤</h3>
+      <ol>
+        <li>按 <code>parkName</code> 分组，拆成下午1 列表 / 下午2 列表</li>
+        <li>贪心配对（按指定人优先、Plus 优先级排序）
+          <ul>
+            <li>两单指定人不同 → <strong>不强行绑定</strong></li>
+            <li>数量不等（如 9 下午1 vs 8 下午2）→ 多出的单<strong>单独匹配</strong></li>
+          </ul>
+        </li>
+        <li>对每个绑定对，找能<strong>同时合规</strong>接下午1+下午2 的员工，选 <code>combinedPairScore</code> 最高者</li>
+        <li>原子写入 <code>assignedPerEmp</code>（一次占满两个时段）</li>
+        <li>失败 → 两条都标未匹配，原因「下午捆绑未满足…」</li>
+      </ol>
+
+      <div class="example">
+        <h4>配对得分</h4>
+        <p><code>combinedPairScore = combinedScore(下午1) + combinedScore(下午2)</code></p>
+        <p><code>combinedScore = match.score − 通勤分钟 × 0.2</code></p>
+      </div>
+    </section>
+
+    <section id="optimizer">
+      <h2>六、全局优化算法 findCapacitatedMatching</h2>
+      <p>文件：<code>src/services/pairing-optimizer.ts</code></p>
+
+      <div class="flow">① 处理 lockedPairings（AI 页已锁定 / 手动指定的配对，先占位）
+② 后道下午捆绑：成对 → 原子分配给同一员工
+③ 对其余客户（上午、未成对的下午单）按 sortCustomersForDispatch 排序后逐单贪心
+④ 每单：在 eligible 员工中选 combinedScore 最高者
+⑤ 未匹配分析：最近候选、失败规则、时段冲突员工
+⑥ 输出 pairings + employeeSchedules（上午→下午1→下午2 + 段间路线）</div>
+
+      <h3>客户排序 sortCustomersForDispatch</h3>
+      <ol>
+        <li>有指定人的客户优先</li>
+        <li>Plus 低→高（Plus0 → Plus1 → PlusN）</li>
+        <li>预约时间早→晚</li>
+      </ol>
+
+      <h3>通勤</h3>
+      <ul>
+        <li>默认 <code>commuteMode: 'local'</code>：区县矩阵 + 地址差异因子估算</li>
+        <li>可选 <code>deepseek</code>：对合规候选构建通勤矩阵</li>
+        <li><strong>超过 60 分钟不导致匹配失败</strong>，只影响排序；UI 显示软提示</li>
+      </ul>
+    </section>
+
+    <section id="ai">
+      <h2>七、AI 匹配页流程（match.html）</h2>
+
+      <h3>7.1 数据加载</h3>
+      <ol>
+        <li>首屏读缓存 <code>sample-data.json</code>（秒开）</li>
+        <li>后台 <code>bootstrapIntegratedData</code> 创建 session，之后可调 API</li>
+      </ol>
+
+      <h3>7.2 选公司与自动预览</h3>
+      <ol>
+        <li>用户勾选公司 → <code>selectedCompanies</code></li>
+        <li>防抖 400ms 调用 <code>POST /api/dispatch/select</code>（员工池=全员，不传 <code>employeePoolIds</code>）</li>
+        <li>结果写入 <code>assignmentMap</code>，渲染看板 + 员工行程 Tab</li>
+      </ol>
+
+      <h3>7.3 增量匹配（锁定 + 只重算未锁定）</h3>
+      <p>用户手动改派某行后，该行 <code>manual: true</code>。下次预览传：</p>
+      <div class="flow">{
+  "sessionId": "...",
+  "customerIds": [全部仍选中的公司],
+  "lockedPairings": [{ "customerId": 101, "employeeId": 7 }, ...],
+  "matchOnlyCustomerIds": [103, 104, ...],  // 未锁定的公司
+  "commuteMode": "local"
+}</div>
+      <ul>
+        <li><code>lockedPairings</code>：已成功匹配且仍被选中的公司（含未改动的自动匹配行）</li>
+        <li><code>matchOnlyCustomerIds</code>：选中公司 − 已锁定公司</li>
+        <li>若全部锁定、无待重算 → 不调 API，仅本地展示</li>
+      </ul>
+
+      <h3>7.4 手动改派（单条校验）</h3>
+      <p>下拉换员工 → <code>POST /api/dispatch/validate-pair</code>，传入 <code>existingPairings</code>（其他已分配）。</p>
+      <ul>
+        <li>同一套 <code>matchCustomerToEmployee</code> 规则</li>
+        <li>前端额外检查：该员工该时段是否已被其他公司占用</li>
+        <li>合规 → 写入 assignmentMap，触发对其余单的增量重算</li>
+      </ul>
+
+      <h3>7.5 一键全量匹配</h3>
+      <p>可读预生成 <code>/cache/full-match.json</code>，或调 API（<code>fullMatch: true</code>，不传 locked）匹配 55 家。</p>
+
+      <h3>7.6 历史</h3>
+      <p>结果存浏览器 <code>localStorage</code>（<code>dispatch-ai-history</code>），不写服务器数据库。</p>
+    </section>
+
+    <section id="manual">
+      <h2>八、手动派单页流程（manual-match.html）</h2>
+
+      <h3>8.1 操作</h3>
+      <ol>
+        <li>表格勾选<strong>公司</strong>（可多选）</li>
+        <li>可选勾选<strong>员工池</strong>（不选则用全员）</li>
+        <li>点击「开始匹配」→ <code>POST /api/dispatch/select</code></li>
+      </ol>
+
+      <div class="flow">{
+  "sessionId": "...",
+  "customerIds": [选中的公司 ID],
+  "employeePoolIds": [7, 8, 9, ...],   // 可选
+  "commuteMode": "local"
+}</div>
+
+      <h3>8.2 前置校验</h3>
+      <ul>
+        <li>员工池不能为空（若指定了 pool）</li>
+        <li>员工池<strong>姓名不能重复</strong>（前端 + 后端双重校验）</li>
+        <li>全选员工时，同名只保留一条</li>
+        <li>公司不能重复选择</li>
+      </ul>
+
+      <h3>8.3 结果</h3>
+      <ul>
+        <li>成功 / 失败列表</li>
+        <li><code>employeeSchedules</code>：多单员工全天行程</li>
+        <li>历史：<code>dispatch-manual-history</code>（localStorage）</li>
+      </ul>
+    </section>
+
+    <section id="compare">
+      <h2>九、AI 匹配 vs 手动派单</h2>
+      <table>
+        <thead>
+          <tr><th>项</th><th>AI 匹配</th><th>手动派单</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>后端引擎</td><td colspan="2" style="text-align:center">相同：<code>findCapacitatedMatching</code></td></tr>
+          <tr><td>员工范围</td><td>固定全员</td><td>可限定员工池</td></tr>
+          <tr><td>触发方式</td><td>勾选公司 → 防抖自动预览</td><td>点按钮才匹配</td></tr>
+          <tr><td>锁定 / 增量</td><td class="ok">支持 lockedPairings</td><td class="fail">不支持</td></tr>
+          <tr><td>手动改派</td><td class="ok">validate-pair</td><td class="fail">仅展示结果</td></tr>
+          <tr><td>容量提示</td><td>—</td><td>需求时段 vs 池容量</td></tr>
+          <tr><td>同名校验</td><td>数据层保证唯一</td><td>选池时禁止同名</td></tr>
+          <tr><td>超时</td><td>默认 fetch 无特殊超时</td><td>90s 超时</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="api">
+      <h2>十、API 与参数</h2>
+
+      <h3>POST /api/dispatch/select</h3>
+      <table>
+        <thead>
+          <tr><th>参数</th><th>AI</th><th>手动</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>sessionId</code></td><td>✓</td><td>✓</td><td>必须，会话 30 分钟有效</td></tr>
+          <tr><td><code>customerIds</code></td><td>✓</td><td>✓</td><td>待匹配公司 ID 数组</td></tr>
+          <tr><td><code>employeePoolIds</code></td><td>—</td><td>可选</td><td>限定员工子集</td></tr>
+          <tr><td><code>employeeIds</code></td><td>—</td><td>—</td><td>1:1 固定配对（选公司页）</td></tr>
+          <tr><td><code>lockedPairings</code></td><td>✓</td><td>—</td><td>锁定不重算</td></tr>
+          <tr><td><code>matchOnlyCustomerIds</code></td><td>✓</td><td>—</td><td>只重算这些 ID</td></tr>
+          <tr><td><code>commuteMode</code></td><td>local</td><td>local</td><td><code>local</code> / <code>deepseek</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>POST /api/dispatch/validate-pair</h3>
+      <p>仅 AI 页手动改派使用。参数：<code>sessionId</code>、<code>customerId</code>、<code>employeeId</code>、<code>existingPairings</code>。</p>
+
+      <h3>响应字段（select）</h3>
+      <ul>
+        <li><code>pairings</code>：每条含 rules、commuteMinutes、route、score</li>
+        <li><code>unmatchedCompanies</code>：reason、nearestAttempt、conflictWith</li>
+        <li><code>employeeSchedules</code>：按员工聚合的行程与段间路线</li>
+        <li><code>stats</code>：selected / matched / unmatched / avgCommute</li>
+      </ul>
+    </section>
+
+    <section id="legacy">
+      <h2>十一、Excel 上传旧引擎（另路）</h2>
+      <p><code>POST /api/dispatch</code> → <code>DispatchEngine</code>（<code>dispatch-engine.ts</code>）</p>
+      <ul>
+        <li><strong>不经过</strong> <code>pairing-optimizer</code></li>
+        <li>前道+项目 / 后道分开派单</li>
+        <li>支持<strong>牵手单</strong>（备注含「牵手单」的客户整组同员工）</li>
+        <li><strong>无</strong>下午捆绑、<strong>无</strong>AI 页锁定机制</li>
+      </ul>
+      <p class="warn">线上 AI 匹配与手动派单均不走此引擎。</p>
+    </section>
+
+    <section id="example">
+      <h2>十二、完整示例：金山 32 家回访 + 15 人池</h2>
+      <div class="example">
+        <h4>输入</h4>
+        <ul>
+          <li>园区：加盟-金山资本现代产业园</li>
+          <li>上午 15 家 + 下午1 九家 + 下午2 八家 = 32 家后道回访</li>
+          <li>员工池 15 人（李路路、傅丽、姚洁…，补丁后含下午2 容量）</li>
+        </ul>
+      </div>
+
+      <div class="flow">Step 1  下午捆绑预处理
+  → 8 对（同园区下午1+下午2）
+  → 1 家单独下午1（9 vs 8 余单：得韬会展）
+
+Step 2  8 对原子分配
+  → 各找 1 名员工同时合规接两单
+  → 例：傅丽 → 筱胜（下午1）+ 鸣旭（下午2）
+
+Step 3  其余 24 单贪心匹配
+  → 指定人客户优先
+  → 例：姚洁 → 惠铎（下午1，指定）+ 宝屋（下午2）
+
+Step 4  构建 employeeSchedules
+  → 傅丽：上午 1 + 下午1 + 下午2 = 3 单
+  → 盛雅琴：上午 1 + 单独下午1 = 2 单
+
+输出：32/32 成功（容量充足时）</div>
+    </section>
+
+    <section id="fail">
+      <h2>十三、未匹配原因类型</h2>
+      <table>
+        <thead>
+          <tr><th>原因</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>无合规员工（城市/职责/时段/指定人/放弃人/园区）</td>
+            <td>6 条核心规则中有不满足项</td>
+          </tr>
+          <tr>
+            <td>下午捆绑未满足</td>
+            <td>同园区下午对找不到能同时接两单的员工</td>
+          </tr>
+          <tr>
+            <td>该时段可用员工已满</td>
+            <td>有合规员工，但该时段已被其他单占满</td>
+          </tr>
+          <tr>
+            <td>员工池容量不足</td>
+            <td>手动页预警：需求时段 &gt; 池内该时段可用人数</td>
+          </tr>
+          <tr>
+            <td>员工姓名重复</td>
+            <td>手动选池含同名员工，API 拒绝</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="files">
+      <h2>十四、代码索引</h2>
+      <table>
+        <thead>
+          <tr><th>模块</th><th>文件</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>单条规则</td><td><code>src/services/match-rules.ts</code></td></tr>
+          <tr><td>下午捆绑</td><td><code>src/services/afternoon-park-pairs.ts</code></td></tr>
+          <tr><td>全局优化</td><td><code>src/services/pairing-optimizer.ts</code></td></tr>
+          <tr><td>派单编排</td><td><code>src/services/select-dispatch.ts</code></td></tr>
+          <tr><td>单条校验</td><td><code>src/services/validate-pair.ts</code></td></tr>
+          <tr><td>整合数据</td><td><code>src/data/integrated-data.ts</code></td></tr>
+          <tr><td>补位 / 补丁</td><td><code>src/data/gap-fill-employees.ts</code></td></tr>
+          <tr><td>园区匹配</td><td><code>src/utils/park-match.ts</code></td></tr>
+          <tr><td>通勤估算</td><td><code>src/utils/commute.ts</code></td></tr>
+          <tr><td>姓名唯一</td><td><code>src/utils/employee-names.ts</code></td></tr>
+          <tr><td>AI 页前端</td><td><code>public/match.js</code></td></tr>
+          <tr><td>手动页前端</td><td><code>public/manual-match.js</code></td></tr>
+          <tr><td>API 入口</td><td><code>src/server.ts</code> → <code>/api/dispatch/select</code></td></tr>
+          <tr><td>Excel 旧引擎</td><td><code>src/services/dispatch-engine.ts</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <p class="meta" style="margin-top:24px;text-align:center">
+      派单系统 · 匹配逻辑文档 · 与线上一致 · 更新 2026-06-22
+    </p>
+  </div>
+</body>
+</html>
