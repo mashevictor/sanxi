@@ -13,6 +13,7 @@ let lastMatchPairings = [];
 let lastMatchUnmatched = [];
 let lastEmployeeSchedules = [];
 let manualResultView = 'companies';
+let manualCompanySort = 'slot';
 let renderTablesPending = false;
 let sessionLoadError = '';
 
@@ -50,6 +51,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('manual-tab-companies')?.addEventListener('click', () => setManualResultView('companies'));
   document.getElementById('manual-tab-schedules')?.addEventListener('click', () => setManualResultView('schedules'));
+  document.querySelectorAll('#manual-company-sort .manual-sort-chip').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const sort = btn.dataset.sort;
+      if (!sort || sort === manualCompanySort) return;
+      manualCompanySort = sort;
+      document.querySelectorAll('#manual-company-sort .manual-sort-chip').forEach((b) => {
+        b.classList.toggle('active', b.dataset.sort === sort);
+      });
+      renderManualResults();
+    });
+  });
 });
 
 function buildDuplicateNameIds(employees) {
@@ -230,8 +242,29 @@ function resolveCompanyAddress(customerId, pairingAddress) {
 function formatCommuteLabel(p) {
   const min = p.commuteMinutes;
   if (!min) return '—';
-  const chained = p.route?.pathSummary?.includes('串联');
-  return chained ? `串联 ${min} 分` : `${min} 分`;
+  return `单程 ${min} 分`;
+}
+
+const MANUAL_SLOT_RANK = { 上午: 0, 下午1: 1, 下午2: 2 };
+
+function sortPairingsForDisplay(pairings) {
+  const list = [...pairings];
+  if (manualCompanySort === 'employee') {
+    return list.sort((a, b) => {
+      const nameCmp = (a.employeeName || '').localeCompare(b.employeeName || '', 'zh-CN');
+      if (nameCmp !== 0) return nameCmp;
+      return (MANUAL_SLOT_RANK[a.timeSlot] ?? 9) - (MANUAL_SLOT_RANK[b.timeSlot] ?? 9);
+    });
+  }
+  return list.sort((a, b) => {
+    const slotCmp = (MANUAL_SLOT_RANK[a.timeSlot] ?? 9) - (MANUAL_SLOT_RANK[b.timeSlot] ?? 9);
+    if (slotCmp !== 0) return slotCmp;
+    return (a.companyName || '').localeCompare(b.companyName || '', 'zh-CN');
+  });
+}
+
+function countPairingsByEmployee(name) {
+  return lastMatchPairings.filter((p) => p.employeeName === name).length;
 }
 
 function filterManualCompanies() {
@@ -515,8 +548,10 @@ function setManualResultView(view) {
   document.getElementById('manual-tab-schedules')?.classList.toggle('active', view === 'schedules');
   const resultBox = document.getElementById('manual-result');
   const scheduleBoard = document.getElementById('manual-schedule-board');
+  const sortBar = document.getElementById('manual-company-sort');
   if (resultBox) resultBox.hidden = view !== 'companies';
   if (scheduleBoard) scheduleBoard.hidden = view !== 'schedules';
+  if (sortBar) sortBar.hidden = view !== 'companies';
 }
 
 function sortEmployeeSchedules(schedules) {
@@ -545,7 +580,7 @@ function renderManualScheduleBoard() {
           <div class="schedule-meta">${esc(o.customerType || '')} · ${esc(o.parkName || '')}</div>
           <div class="order-addr">📍 ${esc(o.address || '—')}</div>
         </div>
-        <div class="commute-leg">${o.commuteMinutes ? `${o.commuteMinutes} 分` : '—'}</div>
+        <div class="commute-leg">${o.commuteMinutes ? `单程 ${o.commuteMinutes} 分` : '—'}</div>
       </div>
     `).join('');
 
@@ -605,6 +640,8 @@ function renderManualResults() {
 
   if (!ok && !fail) {
     if (tabs) tabs.hidden = true;
+    const sortBar = document.getElementById('manual-company-sort');
+    if (sortBar) sortBar.hidden = true;
     setManualResultView('companies');
     box.innerHTML = '<div class="empty" style="padding:24px">匹配结果将显示在这里</div>';
     renderManualScheduleBoard();
@@ -612,12 +649,22 @@ function renderManualResults() {
   }
 
   if (tabs) tabs.hidden = false;
+  const sortBar = document.getElementById('manual-company-sort');
+  if (sortBar) sortBar.hidden = false;
 
-  const okRows = lastMatchPairings.map((p, i) => {
+  const sortedOk = sortPairingsForDisplay(lastMatchPairings);
+  let lastEmpName = '';
+  const okRows = sortedOk.map((p, i) => {
     const addr = resolveCompanyAddress(p.customerId, p.address);
     const route = p.route?.pathSummary
       || (p.departureAddress && addr ? `${p.departureAddress} → ${addr}` : '');
-    return `
+    let groupHd = '';
+    if (manualCompanySort === 'employee' && p.employeeName !== lastEmpName) {
+      const cnt = countPairingsByEmployee(p.employeeName);
+      groupHd = `<div class="emp-group-hd">${esc(p.employeeName)}${cnt > 1 ? ` · ${cnt} 单` : ''}</div>`;
+      lastEmpName = p.employeeName;
+    }
+    return `${groupHd}
     <div class="manual-result-row ok" style="animation-delay:${i * 0.03}s">
       <div class="row-main">
         <div>

@@ -6,7 +6,7 @@
   <title>手动派单</title>
   <link rel="preload" href="/cache/sample-data.json?v=20260622-cache-ui" as="fetch" crossorigin="anonymous">
   <link rel="preload" href="/api/bootstrap" as="fetch" crossorigin="anonymous">
-  <script src="/match-shared.js?v=20260622-schedules"></script>
+  <script src="/match-shared.js?v=20260622-oneway-sort"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -655,6 +655,27 @@
       background: linear-gradient(135deg, rgba(99,102,241,.28), rgba(139,92,246,.18));
       color: #e0e7ff; border-color: rgba(99,102,241,.35);
     }
+    .manual-company-sort {
+      display: flex; align-items: center; gap: 8px; padding: 6px 16px 0;
+      font-size: 0.72rem;
+    }
+    .manual-company-sort[hidden] { display: none; }
+    .manual-company-sort .sort-label { color: #64748b; }
+    .manual-sort-chip {
+      padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(99,102,241,.25);
+      background: transparent; color: #94a3b8; font-size: 0.7rem; font-weight: 600;
+      cursor: pointer; transition: all .2s;
+    }
+    .manual-sort-chip:hover { color: #e0e7ff; background: rgba(99,102,241,.1); }
+    .manual-sort-chip.active {
+      background: rgba(52,211,153,.15); color: #6ee7b7; border-color: rgba(52,211,153,.35);
+    }
+    .emp-group-hd {
+      margin: 12px 0 6px; padding: 6px 10px; border-radius: 8px;
+      font-size: 0.72rem; font-weight: 700; color: #c4b5fd;
+      background: rgba(99,102,241,.12); border-left: 3px solid #818cf8;
+    }
+    .emp-group-hd:first-child { margin-top: 0; }
     .manual-schedule-board {
       padding: 12px 16px 16px; max-height: 520px; overflow-y: auto;
     }
@@ -828,6 +849,11 @@
           <button type="button" class="manual-view-tab active" id="manual-tab-companies" data-view="companies">按公司</button>
           <button type="button" class="manual-view-tab" id="manual-tab-schedules" data-view="schedules">员工行程</button>
         </div>
+        <div class="manual-company-sort" id="manual-company-sort" hidden>
+          <span class="sort-label">排序</span>
+          <button type="button" class="manual-sort-chip active" data-sort="slot">按时段</button>
+          <button type="button" class="manual-sort-chip" data-sort="employee">按人名</button>
+        </div>
         <div class="manual-result" id="manual-result">
           <div class="empty" style="padding:24px">匹配结果将显示在这里</div>
         </div>
@@ -846,6 +872,6 @@
       <button type="button" class="close-btn" id="emp-modal-close">关闭</button>
     </div>
   </div>
-  <script src="/manual-match.js?v=20260622-schedules"></script>
+  <script src="/manual-match.js?v=20260622-oneway-sort"></script>
 </body>
 </html>
