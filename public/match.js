@@ -24,8 +24,6 @@ let fullMatchCustomerIds = [];
 let fullMatchCache = null;
 let integratedDataVersion = '';
 
-const FULL_MATCH_CACHE_URL = '/cache/full-match.json';
-
 const fullMatchBtn = document.getElementById('full-match-btn');
 
 let aiHistorySaveTimer = null;

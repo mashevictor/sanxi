@@ -30,7 +30,8 @@ function prefetchFullMatchCache() {
 
 function prefetchBootstrap() {
   if (!_bootstrapPrefetch) {
-    _bootstrapPrefetch = fetchJsonWithTimeout('/api/bootstrap', {}, 12000)
+    _bootstrapPrefetch = fetch('/api/bootstrap')
+      .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
   }
   return _bootstrapPrefetch;
