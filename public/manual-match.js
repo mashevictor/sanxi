@@ -16,6 +16,13 @@ let manualResultView = 'companies';
 let manualCompanySort = 'slot';
 let renderTablesPending = false;
 let sessionLoadError = '';
+let pageLoaderHidden = false;
+
+function hidePageLoaderOnce() {
+  if (pageLoaderHidden) return;
+  pageLoaderHidden = true;
+  hidePageLoader();
+}
 
 async function ensureManualSession() {
   if (sessionId) return true;
@@ -25,14 +32,20 @@ async function ensureManualSession() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  showPageLoader('加载公司与员工列表…', '正在连接服务器…');
+  showPageLoader('加载公司与员工列表…', '正在读取缓存…');
   prefetchSampleData().then((cached) => {
     if (cached?.companies?.length) {
       allCompanies = cached.companies;
       allEmployees = cached.employees || [];
-      scheduleRender(() => renderManualTables());
+      scheduleRender(() => {
+        renderManualTables();
+        hidePageLoaderOnce();
+        if (!sessionId) updateSessionHint();
+      });
     }
   });
+  // 静态缓存异常时也不无限挡屏
+  setTimeout(hidePageLoaderOnce, 2500);
   loadData();
   document.getElementById('manual-history-btn').addEventListener('click', openManualMatchHistory);
   document.getElementById('manual-match-btn').addEventListener('click', onManualMatch);
@@ -119,6 +132,7 @@ async function loadData() {
   try {
     const stored = loadDispatchState('manual');
     const data = await bootstrapIntegratedData({
+      prefetchFullMatch: false,
       onCacheReady: (cached) => {
         allCompanies = cached.companies || [];
         allEmployees = cached.employees || [];
@@ -137,6 +151,8 @@ async function loadData() {
           renderManualTables();
           renderManualResults();
           updateManualStats();
+          hidePageLoaderOnce();
+          if (!sessionId) updateSessionHint();
         });
       },
     });
@@ -166,9 +182,14 @@ async function loadData() {
     sessionId = null;
     showToast(sessionLoadError);
   } finally {
-    hidePageLoader();
+    hidePageLoaderOnce();
     updateMatchButton();
     updateManualStats();
+    const capEl = document.getElementById('manual-capacity-hint');
+    if (capEl) {
+      if (sessionId) capEl.hidden = true;
+      else updateSessionHint();
+    }
   }
 }
 

@@ -52,8 +52,9 @@ function prefetchBootstrap() {
   return _bootstrapPrefetch;
 }
 
-/** 脚本加载时立即预取静态数据 */
+/** 脚本加载时立即预取静态数据与会话 */
 prefetchSampleData();
+prefetchBootstrap();
 
 function showPageLoader(message, subMessage) {
   const loader = document.getElementById('page-loader');
@@ -418,10 +419,19 @@ async function bootstrapIntegratedData(options = {}) {
   if (cached && boot?.sessionId) {
     const serverVersion = boot.dataVersion || cached.dataVersion;
     if (serverVersion && cached.dataVersion && cached.dataVersion !== serverVersion) {
-      resetStaticCachePrefetch();
-      const fresh = await fetchJsonWithTimeout('/api/sample-data', {}, 30000);
+      // 版本不一致：首屏仍用静态缓存 + session，后台拉最新数据不阻塞
+      fetchJsonWithTimeout('/api/sample-data', {}, 30000)
+        .then((fresh) => {
+          if (fresh?.companies?.length) {
+            _sampleDataPrefetch = Promise.resolve({
+              ...fresh,
+              dataVersion: serverVersion,
+            });
+          }
+        })
+        .catch(() => {});
       return {
-        ...fresh,
+        ...cached,
         sessionId: boot.sessionId,
         dataVersion: serverVersion,
       };
