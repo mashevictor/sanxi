@@ -247,15 +247,18 @@ function buildEmployeeSchedules(
       morningOrders: customers.filter((c) => c.timeSlot === TimeSlot.MORNING).length,
       afternoonOrders: customers.filter((c) => c.timeSlot !== TimeSlot.MORNING).length,
       totalCommuteMinutes: daily.totalMinutes,
-      orders: sorted.map(({ p, c }) => ({
-        customerId: p.customerId,
-        companyName: p.customerName,
-        timeSlot: TIME_SLOT_LABELS[c.timeSlot],
-        customerType: CUSTOMER_TYPE_LABELS[c.customerType],
-        address: c.address,
-        parkName: c.parkName,
-        commuteMinutes: p.commuteMinutes,
-      })),
+      orders: customers.map((c, idx) => {
+        const p = sorted.find((x) => x.c.id === c.id)!.p;
+        return {
+          customerId: p.customerId,
+          companyName: p.customerName,
+          timeSlot: TIME_SLOT_LABELS[c.timeSlot],
+          customerType: CUSTOMER_TYPE_LABELS[c.customerType],
+          address: c.address,
+          parkName: c.parkName,
+          commuteMinutes: daily.segments[idx]?.minutes ?? p.commuteMinutes,
+        };
+      }),
       routeSegments: daily.segments,
     };
   });

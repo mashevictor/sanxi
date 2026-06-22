@@ -11,6 +11,8 @@ let isMatching = false;
 let progressTimer = null;
 let lastMatchPairings = [];
 let lastMatchUnmatched = [];
+let lastEmployeeSchedules = [];
+let manualResultView = 'companies';
 let renderTablesPending = false;
 let sessionLoadError = '';
 
@@ -46,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('emp-modal').addEventListener('click', (e) => {
     if (e.target.id === 'emp-modal') document.getElementById('emp-modal').hidden = true;
   });
+  document.getElementById('manual-tab-companies')?.addEventListener('click', () => setManualResultView('companies'));
+  document.getElementById('manual-tab-schedules')?.addEventListener('click', () => setManualResultView('schedules'));
 });
 
 function buildDuplicateNameIds(employees) {
@@ -217,11 +221,24 @@ function openManualMatchHistory() {
   openMatchHistoryModal('manual', { onRestore: restoreManualHistoryEntry });
 }
 
+function resolveCompanyAddress(customerId, pairingAddress) {
+  if (pairingAddress) return pairingAddress;
+  const c = allCompanies.find((x) => x.id === customerId);
+  return c?.address || c?.parkAddress || '';
+}
+
+function formatCommuteLabel(p) {
+  const min = p.commuteMinutes;
+  if (!min) return '—';
+  const chained = p.route?.pathSummary?.includes('串联');
+  return chained ? `串联 ${min} 分` : `${min} 分`;
+}
+
 function filterManualCompanies() {
   const q = manualCoSearch.toLowerCase();
   if (!q) return allCompanies;
   return allCompanies.filter((c) => {
-    const hay = `${c.companyName} ${c.customerType} ${c.timeSlot} ${c.parkName}`.toLowerCase();
+    const hay = `${c.companyName} ${c.customerType} ${c.timeSlot} ${c.parkName} ${c.address || ''} ${c.parkAddress || ''}`.toLowerCase();
     return hay.includes(q);
   });
 }
@@ -246,12 +263,12 @@ function renderManualTables() {
 }
 
 function formatParkCell(c) {
-  const name = esc(c.parkName || '—');
-  const addr = c.parkAddress || c.address;
+  const park = esc(c.parkName || '—');
+  const addr = c.address || c.parkAddress;
   const addrLine = addr
-    ? `<span class="park-addr" title="${esc(addr)}">${esc(addr.length > 36 ? addr.slice(0, 36) + '…' : addr)}</span>`
-    : '';
-  return `<span>${name}</span>${addrLine}`;
+    ? `<span class="park-addr" title="${esc(addr)}">${esc(addr)}</span>`
+    : '<span class="park-addr muted">未填写拜访地址</span>';
+  return `<span class="park-name">${park}</span>${addrLine}`;
 }
 
 function renderManualTablesNow() {
@@ -492,9 +509,75 @@ function showMatchSuccessBanner(data, customerIds = []) {
   if (progress) progress.hidden = true;
 }
 
+function setManualResultView(view) {
+  manualResultView = view;
+  document.getElementById('manual-tab-companies')?.classList.toggle('active', view === 'companies');
+  document.getElementById('manual-tab-schedules')?.classList.toggle('active', view === 'schedules');
+  const resultBox = document.getElementById('manual-result');
+  const scheduleBoard = document.getElementById('manual-schedule-board');
+  if (resultBox) resultBox.hidden = view !== 'companies';
+  if (scheduleBoard) scheduleBoard.hidden = view !== 'schedules';
+}
+
+function sortEmployeeSchedules(schedules) {
+  return [...schedules].sort((a, b) => {
+    if (b.totalOrders !== a.totalOrders) return b.totalOrders - a.totalOrders;
+    return (a.employeeName || '').localeCompare(b.employeeName || '', 'zh-CN');
+  });
+}
+
+function renderManualScheduleBoard() {
+  const board = document.getElementById('manual-schedule-board');
+  if (!board) return;
+
+  if (!lastEmployeeSchedules.length) {
+    board.innerHTML = '<div class="empty" style="padding:24px">匹配成功后，可在此查看所有员工的当日行程（同一员工多单合并显示）</div>';
+    return;
+  }
+
+  const schedules = sortEmployeeSchedules(lastEmployeeSchedules);
+  board.innerHTML = schedules.map((s, idx) => {
+    const orders = s.orders.map((o, oi) => `
+      <div class="schedule-order">
+        <span class="slot-tag">${esc(o.timeSlot)}</span>
+        <div>
+          <div class="order-name">${esc(o.companyName)}</div>
+          <div class="schedule-meta">${esc(o.customerType || '')} · ${esc(o.parkName || '')}</div>
+          <div class="order-addr">📍 ${esc(o.address || '—')}</div>
+        </div>
+        <div class="commute-leg">${o.commuteMinutes ? `${o.commuteMinutes} 分` : '—'}</div>
+      </div>
+    `).join('');
+
+    const routes = (s.routeSegments || []).map((seg) => `
+      <div class="route-seg"><span>${esc(seg.from)}</span> → <span>${esc(seg.to)}</span> · ${seg.minutes} 分</div>
+    `).join('');
+
+    return `
+      <div class="schedule-card" style="animation-delay:${idx * 0.04}s">
+        <div class="schedule-hd">
+          <div>
+            <div class="schedule-name">${esc(s.employeeName)}</div>
+            <div class="schedule-meta">出发地：${esc(s.departureAddress || '—')}</div>
+          </div>
+          <div class="schedule-stats">
+            <span>${s.totalOrders} 单</span>
+            <span>上午 ${s.morningOrders}</span>
+            <span>下午 ${s.afternoonOrders}</span>
+            <span>总通勤 ${s.totalCommuteMinutes} 分</span>
+          </div>
+        </div>
+        ${orders}
+        ${routes ? `<div class="schedule-routes"><div class="schedule-routes-title">段间串联路线</div>${routes}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
 function applyMatchResult(data) {
   lastMatchPairings = data.pairings || [];
   lastMatchUnmatched = data.unmatchedCompanies || [];
+  lastEmployeeSchedules = data.employeeSchedules || [];
   assignmentMap.clear();
 
   for (const p of lastMatchPairings) {
@@ -508,50 +591,75 @@ function applyMatchResult(data) {
 function renderManualResults() {
   const box = document.getElementById('manual-result');
   const summary = document.getElementById('manual-result-summary');
+  const tabs = document.getElementById('manual-result-tabs');
   if (!box) return;
 
   const ok = lastMatchPairings.length;
   const fail = lastMatchUnmatched.length;
   if (summary) {
-    summary.textContent = ok + fail > 0 ? `${ok} 成功 · ${fail} 失败` : '';
+    const schedCount = lastEmployeeSchedules.length;
+    summary.textContent = ok + fail > 0
+      ? `${ok} 成功 · ${fail} 失败${schedCount ? ` · ${schedCount} 人有行程` : ''}`
+      : '';
   }
 
   if (!ok && !fail) {
+    if (tabs) tabs.hidden = true;
+    setManualResultView('companies');
     box.innerHTML = '<div class="empty" style="padding:24px">匹配结果将显示在这里</div>';
+    renderManualScheduleBoard();
     return;
   }
 
-  const okRows = lastMatchPairings.map((p, i) => `
+  if (tabs) tabs.hidden = false;
+
+  const okRows = lastMatchPairings.map((p, i) => {
+    const addr = resolveCompanyAddress(p.customerId, p.address);
+    const route = p.route?.pathSummary
+      || (p.departureAddress && addr ? `${p.departureAddress} → ${addr}` : '');
+    return `
     <div class="manual-result-row ok" style="animation-delay:${i * 0.03}s">
-      <div>
-        <div class="co-line">${esc(p.companyName)}</div>
-        <div class="sub-line">${esc(p.customerType)} · ${esc(p.timeSlot)} · ${esc(p.parkName)}</div>
+      <div class="row-main">
+        <div>
+          <div class="co-line">${esc(p.companyName)}</div>
+          <div class="sub-line">${esc(p.customerType)} · ${esc(p.timeSlot)} · ${esc(p.parkName)}</div>
+          ${addr ? `<div class="addr-line">📍 ${esc(addr)}</div>` : ''}
+        </div>
+        <div class="arrow">→</div>
+        <div>
+          <div class="emp-line">${esc(p.employeeName)}</div>
+          <div class="sub-line">出发 ${esc(p.departureAddress || '—')}</div>
+        </div>
+        <div class="commute">${formatCommuteLabel(p)}</div>
       </div>
-      <div class="arrow">→</div>
-      <div>
-        <div class="emp-line">${esc(p.employeeName)}</div>
-        <div class="sub-line">${esc(p.departureAddress || '')}</div>
-      </div>
-      <div class="commute">${p.commuteMinutes ? `${p.commuteMinutes} 分` : '—'}</div>
+      ${route ? `<div class="route-line">${esc(route)}</div>` : ''}
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   const failRows = lastMatchUnmatched.map((u, i) => {
     const reason = extractFailReason({ type: 'fail', data: u });
+    const addr = resolveCompanyAddress(u.customerId, u.address);
     return `
       <div class="manual-result-row fail" style="animation-delay:${(ok + i) * 0.03}s">
-        <div>
-          <div class="co-line">${esc(u.companyName)}</div>
-          <div class="sub-line">${esc(u.customerType || '')} · ${esc(u.parkName || '')}</div>
+        <div class="row-main">
+          <div>
+            <div class="co-line">${esc(u.companyName)}</div>
+            <div class="sub-line">${esc(u.customerType || '')} · ${esc(u.parkName || '')}</div>
+            ${addr ? `<div class="addr-line">📍 ${esc(addr)}</div>` : ''}
+          </div>
+          <div class="arrow">✕</div>
+          <div class="fail-tag" style="grid-column:3/5">${esc(reason)}</div>
         </div>
-        <div class="arrow">✕</div>
-        <div class="fail-tag" style="grid-column:3/5">${esc(reason)}</div>
       </div>
     `;
   }).join('');
 
   box.innerHTML = (failRows ? `<div style="margin-bottom:10px;font-size:0.72rem;color:#fca5a5;font-weight:600">匹配失败 / 待处理</div>${failRows}` : '')
     + (okRows ? `<div style="margin:${failRows ? '14px' : '0'} 0 10px;font-size:0.72rem;color:#6ee7b7;font-weight:600">匹配成功</div>${okRows}` : '');
+
+  renderManualScheduleBoard();
+  setManualResultView(manualResultView);
 }
 
 function scrollToManualResults() {

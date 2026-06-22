@@ -4,7 +4,11 @@
 
 import { Customer, Employee, MatchDetail, TimeSlot, CustomerType } from '../types';
 import { matchCustomerToEmployee, MatchResult, sortCustomersForDispatch } from './match-rules';
-import { estimateChainedLegMinutes, buildChainedRouteEstimate } from '../utils/commute';
+import {
+  estimateChainedLegMinutes,
+  buildChainedRouteEstimate,
+  sortCustomersByVisitOrder,
+} from '../utils/commute';
 import { buildCommuteMatrix, CommuteMatrix, CommuteMode, RouteEstimate } from './distance-service';
 import { buildAfternoonParkPairs, AfternoonParkPair } from './afternoon-park-pairs';
 
@@ -468,7 +472,50 @@ function findCapacitatedMatching(
     return (SLOT_ORDER[ca.timeSlot] ?? 0) - (SLOT_ORDER[cb.timeSlot] ?? 0);
   });
 
-  return { pairings, unmatched };
+  const recalculated = recalculateChainedPairings(pairings, customers, employees);
+  return { pairings: recalculated, unmatched };
+}
+
+/** 按最终全天行程重算每单串联通勤（修正下午捆绑先于上午匹配时的本段分钟数） */
+function recalculateChainedPairings(
+  pairings: CompanyEmployeePairing[],
+  customers: Customer[],
+  employees: Employee[]
+): CompanyEmployeePairing[] {
+  const customerMap = new Map(customers.map((c) => [c.id, c]));
+  const employeeMap = new Map(employees.map((e) => [e.id, e]));
+  const byEmp = new Map<number, CompanyEmployeePairing[]>();
+  for (const p of pairings) {
+    if (!byEmp.has(p.employeeId)) byEmp.set(p.employeeId, []);
+    byEmp.get(p.employeeId)!.push(p);
+  }
+
+  const updated = new Map<number, CompanyEmployeePairing>();
+  for (const [empId, orders] of byEmp) {
+    const emp = employeeMap.get(empId);
+    if (!emp) continue;
+    const customersForEmp = sortCustomersByVisitOrder(
+      orders.map((p) => customerMap.get(p.customerId)!).filter(Boolean)
+    );
+    const assigned: Customer[] = [];
+    for (const customer of customersForEmp) {
+      const pairing = orders.find((p) => p.customerId === customer.id);
+      if (!pairing) continue;
+      const route = buildChainedRouteEstimate(emp, assigned, customer);
+      updated.set(pairing.customerId, {
+        ...pairing,
+        commuteMinutes: route.minutes,
+        route: {
+          minutes: route.minutes,
+          pathSummary: route.pathSummary,
+          source: route.source,
+        },
+      });
+      assigned.push(customer);
+    }
+  }
+
+  return pairings.map((p) => updated.get(p.customerId) || p);
 }
 
 function resolveDistanceSource(commuteMatrix?: CommuteMatrix): PairingOptimizationResult['distanceSource'] {

@@ -47,8 +47,8 @@ npm install
 echo "==> 编译 TypeScript..."
 npm run build
 
-echo "==> 生成首屏缓存..."
-npm run cache:sample-data
+echo "==> 生成首屏与全量匹配缓存（含串联通勤）..."
+npm run cache:showcase
 
 if [ ! -f dist/server.js ]; then
   echo "错误: dist/server.js 未生成，构建失败"

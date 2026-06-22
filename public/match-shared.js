@@ -3,25 +3,40 @@ const LEGACY_DISPATCH_STORE_KEY = 'dispatch-board-state';
 const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-state' };
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
-const SAMPLE_DATA_CACHE_URL = '/cache/sample-data.json';
-const FULL_MATCH_CACHE_URL = '/cache/full-match.json';
+/** 与 integrated-cache.ts INTEGRATED_DATA_VERSION 保持一致，用于静态 JSON 缓存穿透 */
+const STATIC_CACHE_BUST = '20260622-cache-ui';
+
+function getSampleDataCacheUrl() {
+  return `/cache/sample-data.json?v=${STATIC_CACHE_BUST}`;
+}
+
+function getFullMatchCacheUrl() {
+  return `/cache/full-match.json?v=${STATIC_CACHE_BUST}`;
+}
 
 let _sampleDataPrefetch = null;
 let _bootstrapPrefetch = null;
 let _fullMatchPrefetch = null;
 
-function prefetchSampleData() {
+function resetStaticCachePrefetch() {
+  _sampleDataPrefetch = null;
+  _fullMatchPrefetch = null;
+}
+
+function prefetchSampleData(force = false) {
+  if (force) _sampleDataPrefetch = null;
   if (!_sampleDataPrefetch) {
-    _sampleDataPrefetch = fetch(SAMPLE_DATA_CACHE_URL)
+    _sampleDataPrefetch = fetch(getSampleDataCacheUrl())
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
   }
   return _sampleDataPrefetch;
 }
 
-function prefetchFullMatchCache() {
+function prefetchFullMatchCache(force = false) {
+  if (force) _fullMatchPrefetch = null;
   if (!_fullMatchPrefetch) {
-    _fullMatchPrefetch = fetch(FULL_MATCH_CACHE_URL)
+    _fullMatchPrefetch = fetch(getFullMatchCacheUrl())
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
   }
@@ -401,10 +416,20 @@ async function bootstrapIntegratedData(options = {}) {
   }
 
   if (cached && boot?.sessionId) {
+    const serverVersion = boot.dataVersion || cached.dataVersion;
+    if (serverVersion && cached.dataVersion && cached.dataVersion !== serverVersion) {
+      resetStaticCachePrefetch();
+      const fresh = await fetchJsonWithTimeout('/api/sample-data', {}, 30000);
+      return {
+        ...fresh,
+        sessionId: boot.sessionId,
+        dataVersion: serverVersion,
+      };
+    }
     return {
       ...cached,
       sessionId: boot.sessionId,
-      dataVersion: boot.dataVersion || cached.dataVersion,
+      dataVersion: serverVersion,
     };
   }
 
