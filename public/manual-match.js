@@ -12,6 +12,41 @@ let progressTimer = null;
 let lastMatchPairings = [];
 let lastMatchUnmatched = [];
 let renderTablesPending = false;
+let sessionLoadError = '';
+
+async function ensureManualSession() {
+  if (sessionId) return true;
+  showToast('正在连接服务器…');
+  await loadData();
+  return !!sessionId;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  showPageLoader('加载公司与员工列表…', '正在连接服务器…');
+  prefetchSampleData().then((cached) => {
+    if (cached?.companies?.length) {
+      allCompanies = cached.companies;
+      allEmployees = cached.employees || [];
+      scheduleRender(() => renderManualTables());
+    }
+  });
+  loadData();
+  document.getElementById('manual-history-btn').addEventListener('click', openManualMatchHistory);
+  document.getElementById('manual-match-btn').addEventListener('click', onManualMatch);
+  document.getElementById('manual-clear-btn').addEventListener('click', clearManualSelection);
+  document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
+    const ids = Array.from(manualSelectedEmployees);
+    if (ids.length === 1) showEmployeeModal(ids[0], allEmployees);
+    else if (ids.length > 1) showToast('请只勾选 1 名员工查看详情');
+    else showToast('请先在表格中勾选员工');
+  });
+  document.getElementById('emp-modal-close').addEventListener('click', () => {
+    document.getElementById('emp-modal').hidden = true;
+  });
+  document.getElementById('emp-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'emp-modal') document.getElementById('emp-modal').hidden = true;
+  });
+});
 
 function buildDuplicateNameIds(employees) {
   const byName = new Map();
@@ -63,37 +98,8 @@ function trySelectManualEmployee(id, on) {
   return true;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  showPageLoader('加载公司与员工列表…');
-  prefetchSampleData().then((cached) => {
-    if (cached?.companies?.length) {
-      allCompanies = cached.companies;
-      allEmployees = cached.employees || [];
-      scheduleRender(() => {
-        renderManualTables();
-        hidePageLoader();
-      });
-    }
-  });
-  loadData();
-  document.getElementById('manual-history-btn').addEventListener('click', openManualMatchHistory);
-  document.getElementById('manual-match-btn').addEventListener('click', onManualMatch);
-  document.getElementById('manual-clear-btn').addEventListener('click', clearManualSelection);
-  document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
-    const ids = Array.from(manualSelectedEmployees);
-    if (ids.length === 1) showEmployeeModal(ids[0], allEmployees);
-    else if (ids.length > 1) showToast('请只勾选 1 名员工查看详情');
-    else showToast('请先在表格中勾选员工');
-  });
-  document.getElementById('emp-modal-close').addEventListener('click', () => {
-    document.getElementById('emp-modal').hidden = true;
-  });
-  document.getElementById('emp-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'emp-modal') document.getElementById('emp-modal').hidden = true;
-  });
-});
-
 async function loadData() {
+  sessionLoadError = '';
   try {
     const stored = loadDispatchState('manual');
     const data = await bootstrapIntegratedData({
@@ -115,10 +121,12 @@ async function loadData() {
           renderManualTables();
           renderManualResults();
           updateManualStats();
-          hidePageLoader();
         });
       },
     });
+    if (!data?.sessionId) {
+      throw new Error('服务器未返回会话（请检查 pm2 是否运行）');
+    }
     sessionId = data.sessionId;
     allCompanies = data.companies;
     allEmployees = data.employees;
@@ -138,9 +146,13 @@ async function loadData() {
     updateManualStats();
     persistState();
   } catch (err) {
-    showToast(err.message);
+    sessionLoadError = err.message || '加载失败';
+    sessionId = null;
+    showToast(sessionLoadError);
   } finally {
     hidePageLoader();
+    updateMatchButton();
+    updateManualStats();
   }
 }
 
@@ -298,7 +310,20 @@ function renderManualTablesNow() {
 function updateMatchButton() {
   const btn = document.getElementById('manual-match-btn');
   if (!btn) return;
-  btn.disabled = isMatching || manualSelectedCompanies.size === 0;
+  const noSession = !sessionId;
+  btn.disabled = isMatching || manualSelectedCompanies.size === 0 || noSession;
+  btn.title = noSession ? '等待服务器连接，请稍后或刷新页面' : '';
+}
+
+function updateSessionHint() {
+  const capEl = document.getElementById('manual-capacity-hint');
+  if (!capEl) return;
+  if (sessionId) return;
+  capEl.hidden = false;
+  capEl.className = 'capacity-hint warn';
+  capEl.textContent = sessionLoadError
+    ? `服务器未连接：${sessionLoadError}（当前列表来自缓存，无法匹配。请检查 pm2 后刷新）`
+    : '正在连接服务器…（列表可先勾选，连接成功后即可匹配）';
 }
 
 function syncManualTableSelectAll(allId, visibleItems, selectedSet) {
@@ -538,8 +563,9 @@ function scrollToManualResults() {
 }
 
 async function onManualMatch() {
-  if (!sessionId) {
-    showToast('数据未加载，请刷新页面');
+  if (!(await ensureManualSession())) {
+    showToast(sessionLoadError || '无法连接服务器，请确认 pm2 已启动后刷新页面');
+    updateSessionHint();
     return;
   }
   const customerIds = Array.from(manualSelectedCompanies).sort((a, b) => a - b);
@@ -631,6 +657,9 @@ function updateManualStats() {
   document.getElementById('stat-emp-picked').textContent = manualSelectedEmployees.size;
   document.getElementById('stat-manual-ok').textContent = lastMatchPairings.length;
   document.getElementById('stat-manual-fail').textContent = lastMatchUnmatched.length;
+
+  updateSessionHint();
+  if (!sessionId) return;
 
   const capEl = document.getElementById('manual-capacity-hint');
   if (!capEl) return;

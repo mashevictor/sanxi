@@ -409,6 +409,7 @@ async function bootstrapIntegratedData(options = {}) {
   }
 
   const res = await fetchJsonWithTimeout('/api/sample-data', {}, 30000);
+  if (!res?.sessionId) throw new Error('服务器未返回会话（请检查 pm2 是否运行）');
   return res;
 }
 
