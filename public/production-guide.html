@@ -257,7 +257,12 @@
           例：园区「浦东-张江」→ 出发地需含浦东/张江等地域词；「加盟-金山…」→ 需含上海或金山</td>
         </tr>
         <tr>
-          <td>7</td><td>Plus 匹配</td><td><span class="tag soft">软约束</span></td>
+          <td>7</td><td>下午捆绑</td><td><span class="tag core">硬约束</span></td>
+          <td>后道回访：同一<strong>园区</strong>内，下午1 与 下午2 必须派给<strong>同一名员工</strong>（下午跑 2 单）<br>
+          指定人冲突的两单不强行配对；数量不等时（如 9 下午1 vs 8 下午2）剩余单可单独匹配</td>
+        </tr>
+        <tr>
+          <td>8</td><td>Plus 匹配</td><td><span class="tag soft">软约束</span></td>
           <td>选择派单 / 测试模式默认<strong>不要求</strong> Plus；Excel 全量派单模式可要求</td>
         </tr>
       </tbody>
@@ -275,11 +280,12 @@
     <p>函数：<code>findCapacitatedMatching</code>（<code>pairing-optimizer.ts</code>）</p>
     <ol>
       <li>客户按指定人优先、Plus 优先级排序</li>
-      <li>对每个客户，在<strong>当前已分配上下文</strong>下找所有 <code>eligible</code> 员工</li>
+      <li><strong>后道下午捆绑</strong>：同园区下午1+下午2 先成对，再原子分配给同一员工（<code>afternoon-park-pairs.ts</code>）</li>
+      <li>对其余客户（上午、未成对的下午单），在<strong>当前已分配上下文</strong>下找所有 <code>eligible</code> 员工</li>
       <li>维护 <code>assignedPerEmp</code>：每位员工已接客户列表</li>
       <li>同一员工：上午 / 下午1 / 下午2 各最多 1 单（时段匹配第 3 条）</li>
       <li>在合规员工中选 <code>score - 通勤×0.2</code> 最高者</li>
-      <li>无法匹配时分析原因：无合规员工 / 时段已满（冲突员工）</li>
+      <li>无法匹配时分析原因：无合规员工 / 时段已满 / 下午捆绑无法满足</li>
     </ol>
     <p>输出 <code>employeeSchedules</code>：按 上午→下午1→下午2 排序，计算段间路线与总通勤。</p>
   </section>

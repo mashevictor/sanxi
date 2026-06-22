@@ -48,7 +48,7 @@ function buildEmployeePool(data: ImportResult): MatchTestEmployeeRow[] {
   }));
 }
 
-const CORE_RULES = ['城市匹配', '职责匹配', '时段匹配', '指定人', '放弃人', '园区匹配'];
+const CORE_RULES = ['城市匹配', '职责匹配', '时段匹配', '指定人', '放弃人', '园区匹配', '下午捆绑'];
 const MAX_COMMUTE = 60;
 
 export interface MatchTestRuleRow {

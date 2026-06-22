@@ -146,13 +146,14 @@ export function buildRoleScenarioDefs(data: IntegratedData): RoleScenarioDef[] {
       employeePoolIds: backPool,
     },
     {
-      id: 'back-multi-order',
-      name: '后道 · 金山多单分工',
-      description: '金山32家 + 15人池，验证至少2名员工接满3单（上午+下午1+下午2）',
+      id: 'back-afternoon-bind',
+      name: '后道 · 下午捆绑',
+      description: '同园区后道：下午1+下午2 必须同一员工（8对绑定 + 余单单独匹配）',
       roleCategory: '后道',
       customerIds: (d) => idsOf(d, jinshanFollowUp),
       employeePoolIds: () => MANUAL_JINSHAN_BACK_POOL,
       expectMatched: (d, ids) => ids.length,
+      expectUnmatched: () => 0,
       minEmployeesWithThreePlus: 2,
     },
   ];

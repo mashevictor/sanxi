@@ -2,10 +2,11 @@
  * 公司-员工合规配对（支持一人多单、增量锁定配对）
  */
 
-import { Customer, Employee, MatchDetail, TimeSlot } from '../types';
+import { Customer, Employee, MatchDetail, TimeSlot, CustomerType } from '../types';
 import { matchCustomerToEmployee, MatchResult, sortCustomersForDispatch } from './match-rules';
 import { estimateCommuteMinutes } from '../utils/commute';
 import { buildCommuteMatrix, CommuteMatrix, CommuteMode, RouteEstimate } from './distance-service';
+import { buildAfternoonParkPairs, AfternoonParkPair } from './afternoon-park-pairs';
 
 export interface LockedPairing {
   customerId: number;
@@ -123,6 +124,148 @@ function combinedScore(customer: Customer, employee: Employee, match: MatchResul
   return match.score - commute * 0.2;
 }
 
+function combinedPairScore(
+  pair: AfternoonParkPair,
+  employee: Employee,
+  match1: MatchResult,
+  match2: MatchResult,
+  customers: Customer[],
+  employees: Employee[],
+  commuteMatrix?: CommuteMatrix
+): number {
+  const cell1 = findCommuteCell(pair.afternoon1, employee, customers, employees, commuteMatrix);
+  const cell2 = findCommuteCell(pair.afternoon2, employee, customers, employees, commuteMatrix);
+  return (
+    combinedScore(pair.afternoon1, employee, match1, cell1) +
+    combinedScore(pair.afternoon2, employee, match2, cell2)
+  );
+}
+
+function appendAfternoonBindDetail(details: MatchDetail[]): MatchDetail[] {
+  return [
+    ...details,
+    {
+      rule: '下午捆绑',
+      passed: true,
+      message: '同园区后道：下午1+下午2 绑定同一员工',
+    },
+  ];
+}
+
+function analyzeUnmatchedAfternoonPair(
+  pair: AfternoonParkPair,
+  employees: Employee[],
+  assignedPerEmp: Map<number, Customer[]>
+): UnmatchedCompany[] {
+  const availableNames = new Set(employees.map((e) => e.name));
+  let bestEmp: Employee | null = null;
+  let bestPass = -1;
+
+  for (const employee of employees) {
+    const assigned = assignedPerEmp.get(employee.id) || [];
+    const m1 = matchCustomerToEmployee(pair.afternoon1, employee, availableNames, assigned, {
+      requirePlus: false,
+    });
+    const m2 = matchCustomerToEmployee(pair.afternoon2, employee, availableNames, [...assigned, pair.afternoon1], {
+      requirePlus: false,
+    });
+    const pass = m1.details.filter((d) => d.passed && d.rule !== 'Plus匹配').length
+      + m2.details.filter((d) => d.passed && d.rule !== 'Plus匹配').length;
+    if (pass > bestPass) {
+      bestPass = pass;
+      bestEmp = employee;
+    }
+  }
+
+  const reason = bestEmp
+    ? `下午捆绑未满足：同园区后道需同一员工承接下午1+下午2（最近候选 ${bestEmp.name} 无法同时合规）`
+    : '下午捆绑未满足：同园区后道无员工可同时承接下午1+下午2';
+
+  const mk = (c: Customer): UnmatchedCompany => ({
+    customerId: c.id,
+    customerName: c.companyName,
+    parkName: c.parkName,
+    customerType: c.customerType,
+    address: c.address,
+    eligibleCount: 0,
+    reason,
+    nearestAttempt: bestEmp
+      ? {
+          employeeName: bestEmp.name,
+          departureAddress: bestEmp.departureAddress,
+          failedRules: [{ rule: '下午捆绑', message: reason }],
+        }
+      : undefined,
+  });
+
+  return [mk(pair.afternoon1), mk(pair.afternoon2)];
+}
+
+function matchAfternoonParkPairs(
+  pairs: AfternoonParkPair[],
+  customers: Customer[],
+  employees: Employee[],
+  commuteMatrix: CommuteMatrix | undefined,
+  availableNames: Set<string>,
+  assignedPerEmp: Map<number, Customer[]>,
+  pairings: CompanyEmployeePairing[]
+): AfternoonParkPair[] {
+  const failed: AfternoonParkPair[] = [];
+
+  for (const pair of pairs) {
+    let bestEmp: Employee | null = null;
+    let bestMatch1: MatchResult | null = null;
+    let bestMatch2: MatchResult | null = null;
+    let bestScore = -Infinity;
+    let bestCell1: RouteEstimate | undefined;
+    let bestCell2: RouteEstimate | undefined;
+
+    for (const employee of employees) {
+      const assigned = assignedPerEmp.get(employee.id) || [];
+      const match1 = matchCustomerToEmployee(pair.afternoon1, employee, availableNames, assigned, {
+        requirePlus: false,
+      });
+      if (!match1.eligible) continue;
+      const match2 = matchCustomerToEmployee(
+        pair.afternoon2,
+        employee,
+        availableNames,
+        [...assigned, pair.afternoon1],
+        { requirePlus: false }
+      );
+      if (!match2.eligible) continue;
+
+      const sc = combinedPairScore(pair, employee, match1, match2, customers, employees, commuteMatrix);
+      if (sc > bestScore) {
+        bestScore = sc;
+        bestEmp = employee;
+        bestMatch1 = match1;
+        bestMatch2 = match2;
+        bestCell1 = findCommuteCell(pair.afternoon1, employee, customers, employees, commuteMatrix);
+        bestCell2 = findCommuteCell(pair.afternoon2, employee, customers, employees, commuteMatrix);
+      }
+    }
+
+    if (bestEmp && bestMatch1 && bestMatch2) {
+      pairings.push({
+        ...buildPairing(pair.afternoon1, bestEmp, bestMatch1, bestCell1, false),
+        details: appendAfternoonBindDetail(bestMatch1.details),
+      });
+      pairings.push({
+        ...buildPairing(pair.afternoon2, bestEmp, bestMatch2, bestCell2, false),
+        details: appendAfternoonBindDetail(bestMatch2.details),
+      });
+      const assigned = assignedPerEmp.get(bestEmp.id) || [];
+      assigned.push(pair.afternoon1, pair.afternoon2);
+      assignedPerEmp.set(bestEmp.id, assigned);
+    } else {
+      failed.push(pair);
+    }
+  }
+
+  return failed;
+}
+
 function analyzeUnmatched(
   customer: Customer,
   employees: Employee[],
@@ -228,7 +371,24 @@ function findCapacitatedMatching(
     return !pairings.some((p) => p.customerId === c.id);
   });
 
-  for (const customer of sortCustomersForDispatch(toMatch)) {
+  const { pairs: afternoonPairs, unpairedAfternoon, otherCustomers } = buildAfternoonParkPairs(toMatch);
+  const failedPairs = matchAfternoonParkPairs(
+    afternoonPairs,
+    customers,
+    employees,
+    commuteMatrix,
+    availableNames,
+    assignedPerEmp,
+    pairings
+  );
+
+  const pairedIds = new Set(pairings.map((p) => p.customerId));
+  const stillToMatch = [
+    ...otherCustomers.filter((c) => !pairedIds.has(c.id)),
+    ...unpairedAfternoon.filter((c) => !pairedIds.has(c.id)),
+  ];
+
+  for (const customer of sortCustomersForDispatch(stillToMatch)) {
     let bestEmp: Employee | null = null;
     let bestMatch: MatchResult | null = null;
     let bestScore = -Infinity;
@@ -257,9 +417,18 @@ function findCapacitatedMatching(
   }
 
   const matchedIds = new Set(pairings.map((p) => p.customerId));
-  const unmatched = customers
-    .filter((c) => !matchedIds.has(c.id))
-    .map((c) => analyzeUnmatched(c, employees, assignedPerEmp, pairings));
+  const failedPairCustomerIds = new Set(
+    failedPairs.flatMap((pair) => [pair.afternoon1.id, pair.afternoon2.id])
+  );
+  const unmatchedFromPairs = failedPairs.flatMap((pair) =>
+    analyzeUnmatchedAfternoonPair(pair, employees, assignedPerEmp)
+  );
+  const unmatched = [
+    ...unmatchedFromPairs,
+    ...customers
+      .filter((c) => !matchedIds.has(c.id) && !failedPairCustomerIds.has(c.id))
+      .map((c) => analyzeUnmatched(c, employees, assignedPerEmp, pairings)),
+  ];
 
   pairings.sort((a, b) => {
     const ca = customers.find((c) => c.id === a.customerId);
