@@ -20,6 +20,7 @@ import {
   PairingOptions,
 } from './pairing-optimizer';
 import { CommuteMode } from './distance-service';
+import { validateEmployeePoolNames } from '../utils/employee-names';
 
 export interface EmployeeSchedule {
   employeeId: number;
@@ -128,6 +129,8 @@ export async function dispatchSelectedCompanies(
       .map((id) => data.employees.find((e) => e.id === id))
       .filter((e): e is Employee => !!e);
     if (employees.length !== employeeIds.length) throw new Error('部分员工 ID 不存在');
+    const poolNameError = validateEmployeePoolNames(employees);
+    if (poolNameError) throw new Error(poolNameError);
     if (customers.length !== employees.length) {
       throw new Error(`公司与员工数量必须一致（当前 ${customers.length} : ${employees.length}）`);
     }
@@ -139,6 +142,8 @@ export async function dispatchSelectedCompanies(
       const poolSet = new Set(options.employeePoolIds);
       employees = data.employees.filter((e) => poolSet.has(e.id));
       if (employees.length === 0) throw new Error('所选员工池为空');
+      const poolNameError = validateEmployeePoolNames(employees);
+      if (poolNameError) throw new Error(poolNameError);
     }
     result = await findOptimalAutoPairingAsync(customers, employees, pairingOptions);
     employeeMap = new Map(data.employees.map((e) => [e.id, e]));

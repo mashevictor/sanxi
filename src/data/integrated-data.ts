@@ -10,6 +10,7 @@ import {
   getGapFillEmployeeIds,
   GAP_FILL_TAG,
 } from './gap-fill-employees';
+import { assertUniqueEmployeeNames } from '../utils/employee-names';
 import { Customer, Employee, CustomerType } from '../types';
 
 export const SHOWCASE_TAG = '演示';
@@ -76,6 +77,7 @@ export function buildIntegratedData(dataDir: string): IntegratedData {
   const gapFillEmployees = buildGapFillEmployees(parkIdByName);
   const gapFillEmployeeIds = getGapFillEmployeeIds();
   const patchedEmployees = applyEmployeePatches([...mergedEmployees, ...gapFillEmployees]);
+  assertUniqueEmployeeNames(patchedEmployees);
 
   return {
     parks: base.parks,

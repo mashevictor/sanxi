@@ -13,6 +13,56 @@ let lastMatchPairings = [];
 let lastMatchUnmatched = [];
 let renderTablesPending = false;
 
+function buildDuplicateNameIds(employees) {
+  const byName = new Map();
+  for (const e of employees) {
+    const n = (e.name || '').trim();
+    if (!n) continue;
+    if (!byName.has(n)) byName.set(n, []);
+    byName.get(n).push(e.id);
+  }
+  const dupIds = new Set();
+  for (const ids of byName.values()) {
+    if (ids.length > 1) ids.forEach((id) => dupIds.add(id));
+  }
+  return dupIds;
+}
+
+function getManualEmployeeById(id) {
+  return allEmployees.find((e) => e.id === id);
+}
+
+function findDuplicateNameInPool(selectedIds) {
+  const byName = new Map();
+  for (const id of selectedIds) {
+    const e = getManualEmployeeById(id);
+    if (!e) continue;
+    const n = (e.name || '').trim();
+    if (byName.has(n)) return { name: n, ids: [byName.get(n), id] };
+    byName.set(n, id);
+  }
+  return null;
+}
+
+function trySelectManualEmployee(id, on) {
+  if (!on) {
+    manualSelectedEmployees.delete(id);
+    return true;
+  }
+  const emp = getManualEmployeeById(id);
+  if (!emp) return false;
+  const name = (emp.name || '').trim();
+  for (const existingId of manualSelectedEmployees) {
+    const existing = getManualEmployeeById(existingId);
+    if (existing && (existing.name || '').trim() === name) {
+      showToast(`员工「${name}」已在池中，不能选同名员工`);
+      return false;
+    }
+  }
+  manualSelectedEmployees.add(id);
+  return true;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   showPageLoader('加载公司与员工列表…');
   prefetchSampleData().then((cached) => {
@@ -199,6 +249,7 @@ function renderManualTablesNow() {
 
   const companies = filterManualCompanies();
   const employees = filterManualEmployees();
+  const duplicateNameIds = buildDuplicateNameIds(allEmployees);
 
   coBody.innerHTML = companies.map((c) => {
     const on = manualSelectedCompanies.has(c.id);
@@ -218,12 +269,15 @@ function renderManualTablesNow() {
     const on = manualSelectedEmployees.has(e.id);
     const roles = (e.tags || e.roles || []).join(' · ');
     const tag = e.sourceTag ? `<span class="source-tag" style="font-size:0.58rem">${esc(e.sourceTag)}</span>` : '';
+    const dupTag = duplicateNameIds.has(e.id)
+      ? '<span class="source-tag" style="font-size:0.58rem;background:#7f1d1d;color:#fecaca;margin-left:4px">同名</span>'
+      : '';
     const dep = e.departureAddress || '未填写';
     const slots = getEmpSlotLabels(e);
     return `
       <tr class="${on ? 'selected' : ''}" data-eid="${e.id}">
         <td><input type="checkbox" class="manual-emp-cb" value="${e.id}" ${on ? 'checked' : ''}></td>
-        <td class="co-name-cell">${esc(e.name)} ${tag}</td>
+        <td class="co-name-cell">${esc(e.name)} ${tag}${dupTag}</td>
         <td class="sub-cell">${esc(roles)}</td>
         <td class="sub-cell">${esc(dep)}</td>
         <td class="sub-cell" style="color:#a5b4fc">${esc(slots)}</td>
@@ -278,10 +332,18 @@ function bindManualTableEvents() {
   });
   document.getElementById('manual-emp-all')?.addEventListener('change', (e) => {
     const on = e.target.checked;
-    filterManualEmployees().forEach((emp) => {
-      if (on) manualSelectedEmployees.add(emp.id);
-      else manualSelectedEmployees.delete(emp.id);
-    });
+    if (on) {
+      manualSelectedEmployees.clear();
+      const seen = new Set();
+      filterManualEmployees().forEach((emp) => {
+        const name = (emp.name || '').trim();
+        if (seen.has(name)) return;
+        seen.add(name);
+        manualSelectedEmployees.add(emp.id);
+      });
+    } else {
+      filterManualEmployees().forEach((emp) => manualSelectedEmployees.delete(emp.id));
+    }
     renderManualTables();
   });
   document.getElementById('manual-co-tbody')?.addEventListener('change', (e) => {
@@ -296,8 +358,7 @@ function bindManualTableEvents() {
     const cb = e.target.closest('.manual-emp-cb');
     if (!cb) return;
     const id = parseInt(cb.value, 10);
-    if (cb.checked) manualSelectedEmployees.add(id);
-    else manualSelectedEmployees.delete(id);
+    if (!trySelectManualEmployee(id, cb.checked)) cb.checked = false;
     renderManualTables();
   });
   document.getElementById('manual-co-tbody')?.addEventListener('click', (e) => {
@@ -488,6 +549,11 @@ async function onManualMatch() {
   }
 
   const employeePoolIds = Array.from(manualSelectedEmployees);
+  const dupInPool = findDuplicateNameInPool(employeePoolIds);
+  if (dupInPool) {
+    showToast(`员工池存在同名「${dupInPool.name}」，请只保留其中一人`);
+    return;
+  }
   const capacityHint = summarizePoolCapacity(employeePoolIds);
   if (capacityHint && customerIds.length) {
     console.info('[手动派单] 员工池容量:', capacityHint);
@@ -576,6 +642,12 @@ function updateManualStats() {
     return;
   }
   capEl.hidden = false;
+  const dupInPool = findDuplicateNameInPool(Array.from(manualSelectedEmployees));
+  if (dupInPool) {
+    capEl.className = 'capacity-hint warn';
+    capEl.textContent = `员工池存在同名「${dupInPool.name}」，请只保留其中一人后再匹配`;
+    return;
+  }
   if (!pool) {
     capEl.textContent = `已选公司：上午 ${need.morning} · 下午1 ${need.afternoon1} · 下午2 ${need.afternoon2}（未限定员工池，使用全员）`;
     capEl.className = 'capacity-hint';
