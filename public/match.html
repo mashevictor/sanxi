@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>派单匹配看板</title>
   <link rel="preload" href="/cache/sample-data.json" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="/cache/full-match.json" as="fetch" crossorigin="anonymous">
   <link rel="preload" href="/api/bootstrap" as="fetch" crossorigin="anonymous">
-  <script src="/match-shared.js?v=20260614-nav"></script>
+  <script src="/match-shared.js?v=20260622-perf"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -598,6 +599,7 @@
           <div class="nav-tabs">
             <a class="nav-link active" href="match.html">AI 匹配</a>
             <a class="nav-link" href="manual-match.html">手动派单</a>
+            <a class="nav-link" href="match-logic-guide.html">匹配逻辑</a>
           </div>
         </nav>
         <div class="toolbar-actions" aria-label="页面操作">
@@ -653,6 +655,6 @@
       <button type="button" class="close-btn" id="emp-modal-close">关闭</button>
     </div>
   </div>
-  <script src="/match.js?v=20260614-nav"></script>
+  <script src="/match.js?v=20260622-perf"></script>
 </body>
 </html>

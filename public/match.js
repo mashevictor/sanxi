@@ -22,6 +22,7 @@ let activeView = 'results';
 let showcaseCustomerIds = [];
 let fullMatchCustomerIds = [];
 let fullMatchCache = null;
+let integratedDataVersion = '';
 
 const FULL_MATCH_CACHE_URL = '/cache/full-match.json';
 
@@ -38,7 +39,10 @@ document.querySelectorAll('.view-tab').forEach((tab) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  showPageLoader('加载派单数据...');
+  showPageLoader('加载派单数据...', '正在读取公司与员工列表');
+  prefetchFullMatchCache().then((cache) => {
+    if (cache) fullMatchCache = cache;
+  });
   prefetchSampleData().then((cached) => {
     if (cached?.companies?.length) {
       allCompanies = cached.companies;
@@ -123,12 +127,15 @@ function switchView(view) {
 async function loadIntegratedData() {
   try {
     const stored = loadDispatchState('ai');
+    showPageLoader('连接服务器...', '正在创建匹配会话');
     const data = await bootstrapIntegratedData({
+      prefetchFullMatch: true,
       onCacheReady: (cached) => {
         allCompanies = cached.companies || [];
         allEmployees = cached.employees || [];
         showcaseCustomerIds = cached.showcaseCustomerIds || [];
         fullMatchCustomerIds = cached.fullMatchCustomerIds || [];
+        integratedDataVersion = cached.dataVersion || '';
         maxCommuteMinutes = cached.maxCommuteMinutes || 60;
         renderCompanies();
         renderBoard();
@@ -162,21 +169,32 @@ function applySessionMeta(data) {
   allEmployees = data.employees;
   showcaseCustomerIds = data.showcaseCustomerIds || [];
   fullMatchCustomerIds = data.fullMatchCustomerIds || [];
+  integratedDataVersion = data.dataVersion || integratedDataVersion || '';
   maxCommuteMinutes = data.maxCommuteMinutes || 60;
 }
 
-async function fetchFullMatchCache() {
-  if (fullMatchCache) return fullMatchCache;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const res = await fetch(FULL_MATCH_CACHE_URL, { signal: controller.signal });
-    if (!res.ok) throw new Error('全量匹配缓存未找到，请运行 npm run cache:showcase');
-    fullMatchCache = await res.json();
-    return fullMatchCache;
-  } finally {
-    clearTimeout(timer);
+function isFullMatchCacheUsable(cache) {
+  if (!cache?.pairings?.length) return false;
+  if (integratedDataVersion && cache.dataVersion && cache.dataVersion !== integratedDataVersion) {
+    return false;
   }
+  return true;
+}
+
+async function ensureSessionReady() {
+  if (sessionId) return true;
+  await loadIntegratedData();
+  return !!sessionId;
+}
+
+async function resolveFullMatchCache() {
+  if (fullMatchCache && isFullMatchCacheUsable(fullMatchCache)) return fullMatchCache;
+  const cache = await prefetchFullMatchCache();
+  if (cache && isFullMatchCacheUsable(cache)) {
+    fullMatchCache = cache;
+    return cache;
+  }
+  return null;
 }
 
 function getRemapMissingIds(remapped, expectedIds) {
@@ -216,9 +234,10 @@ async function loadFullMatchAndMatch() {
     switchView('results');
 
     let resultPayload = null;
+    let usedLiveMatch = false;
 
-    try {
-      const cache = await fetchFullMatchCache();
+    const cache = await resolveFullMatchCache();
+    if (cache) {
       const remapped = remapCacheResult(cache, { preferDemo: false });
       const missing = getRemapMissingIds(remapped, ids);
       const cacheOk = missing.length === 0 && !(remapped.unmatchedCompanies || []).length;
@@ -228,27 +247,36 @@ async function loadFullMatchAndMatch() {
           pairings: remapped.pairings || [],
           unmatchedCompanies: remapped.unmatchedCompanies || [],
           employeeSchedules: remapped.employeeSchedules || [],
-          message: remapped.message || `已为 ${ids.length} 家公司完成全量匹配`,
+          message: remapped.message || `已为 ${ids.length} 家公司完成全量匹配（缓存）`,
           distanceSource: remapped.distanceSource || 'local',
           maxCommuteMinutes: remapped.maxCommuteMinutes || 60,
         };
       } else if (missing.length) {
-        showToast(`缓存映射缺 ${missing.length} 家，改用实时匹配…`);
+        console.warn('[全量匹配] 缓存映射缺', missing.length, '家，改用实时匹配');
       }
-    } catch {
-      showToast('缓存未就绪，改用实时匹配…');
+    } else {
+      console.warn('[全量匹配] 缓存不可用（未部署或版本不一致），改用实时匹配');
     }
 
     if (!resultPayload) {
-      const data = await callSelectApi({ fullMatch: true });
-      resultPayload = data;
+      usedLiveMatch = true;
+      fullMatchBtn.textContent = '实时匹配中...';
+      if (!(await ensureSessionReady())) {
+        showToast('会话未就绪，请刷新页面后重试');
+        return;
+      }
+      resultPayload = await callSelectApi({ fullMatch: true });
     }
 
     applyDispatchResult(resultPayload, { historyLabel: '全量匹配', immediate: true, showToast: true });
     renderBoard({ animate: true });
     renderSchedules();
     updateStats();
-    showToast(resultPayload.message || '全量匹配完成');
+    showToast(
+      usedLiveMatch
+        ? (resultPayload.message || '全量匹配完成（实时计算）')
+        : (resultPayload.message || '全量匹配完成（缓存）')
+    );
   } catch (err) {
     showToast(err.message);
   } finally {
@@ -301,7 +329,8 @@ function remapCacheResult(cache, options = {}) {
   const preferDemo = options.preferDemo ?? false;
   const pairings = (cache.pairings || []).map((p) => {
     const company = findCompanyInSession(p, preferDemo);
-    const emp = findEmployeeInSession(p.employeeName, p.departureAddress, preferDemo);
+    const useDemoEmp = preferDemo || company?.sourceTag === '演示' || (company?.id >= 90100);
+    const emp = findEmployeeInSession(p.employeeName, p.departureAddress, useDemoEmp);
     return {
       ...p,
       customerId: company?.id ?? p.customerId,
@@ -1219,7 +1248,7 @@ function toggleAllCompanies() {
 
 function schedulePreview() {
   clearTimeout(previewTimer);
-  if (!sessionId || getSelectedIds().length === 0) {
+  if (getSelectedIds().length === 0) {
     previewPairings = [];
     previewUnmatched = [];
     employeeSchedules = [];
@@ -1228,6 +1257,13 @@ function schedulePreview() {
     renderBoard();
     renderSchedules();
     updateStats();
+    return;
+  }
+
+  if (!sessionId) {
+    ensureSessionReady().then((ok) => {
+      if (ok && getSelectedIds().length) schedulePreview();
+    });
     return;
   }
 
@@ -1246,7 +1282,14 @@ function schedulePreview() {
 }
 
 async function fetchPreview() {
-  if (!sessionId || getSelectedIds().length === 0) return;
+  if (getSelectedIds().length === 0) return;
+  if (!(await ensureSessionReady())) {
+    isMatching = false;
+    showToast('会话未就绪，请稍候或刷新页面');
+    renderBoard();
+    updateStats();
+    return;
+  }
   try {
     const data = await callSelectApi();
     applyDispatchResult(data);
@@ -1275,12 +1318,9 @@ async function callSelectApi(opts = {}) {
     matchOnlyCustomerIds: matchOnlyCustomerIds?.length ? matchOnlyCustomerIds : undefined,
   };
 
-  const res = await fetch('/api/dispatch/select', {
+  return fetchJsonWithTimeout('/api/dispatch/select', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error);
-  return data;
+  }, 90000);
 }

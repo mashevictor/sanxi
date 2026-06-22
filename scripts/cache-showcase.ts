@@ -8,6 +8,7 @@ import path from 'path';
 import { buildIntegratedData, buildShowcaseSnapshot } from '../src/data/integrated-data';
 import { buildSampleDataPayload } from '../src/services/parse-metadata';
 import { dispatchSelectedCompanies } from '../src/services/select-dispatch';
+import { getIntegratedDataVersion } from '../src/services/integrated-cache';
 
 const DATA_DIR = path.join(__dirname, '..');
 
@@ -35,6 +36,7 @@ async function main() {
 
   const showcaseCache = {
     version: 1,
+    dataVersion: getIntegratedDataVersion(),
     generatedAt: new Date().toISOString(),
     showcaseCustomerIds: showcaseSnapshot.showcaseCustomerIds,
     showcaseEmployeeIds: showcaseSnapshot.showcaseEmployeeIds,
@@ -49,6 +51,7 @@ async function main() {
 
   const fullCache = {
     version: 1,
+    dataVersion: getIntegratedDataVersion(),
     generatedAt: new Date().toISOString(),
     fullMatchCustomerIds: integrated.fullMatchCustomerIds,
     maxCommuteMinutes: 60,

@@ -4,9 +4,11 @@ const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
 const SAMPLE_DATA_CACHE_URL = '/cache/sample-data.json';
+const FULL_MATCH_CACHE_URL = '/cache/full-match.json';
 
 let _sampleDataPrefetch = null;
 let _bootstrapPrefetch = null;
+let _fullMatchPrefetch = null;
 
 function prefetchSampleData() {
   if (!_sampleDataPrefetch) {
@@ -17,27 +19,34 @@ function prefetchSampleData() {
   return _sampleDataPrefetch;
 }
 
+function prefetchFullMatchCache() {
+  if (!_fullMatchPrefetch) {
+    _fullMatchPrefetch = fetch(FULL_MATCH_CACHE_URL)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+  }
+  return _fullMatchPrefetch;
+}
+
 function prefetchBootstrap() {
   if (!_bootstrapPrefetch) {
-    _bootstrapPrefetch = fetch('/api/bootstrap')
-      .then((r) => (r.ok ? r.json() : null))
+    _bootstrapPrefetch = fetchJsonWithTimeout('/api/bootstrap', {}, 12000)
       .catch(() => null);
   }
   return _bootstrapPrefetch;
 }
 
-/** 脚本加载时立即预取静态数据与会话 */
+/** 脚本加载时立即预取静态数据 */
 prefetchSampleData();
-prefetchBootstrap();
 
-function showPageLoader(message) {
+function showPageLoader(message, subMessage) {
   const loader = document.getElementById('page-loader');
   if (!loader) return;
   loader.classList.remove('hide');
   const text = loader.querySelector('.loader-text');
   if (text && message) text.textContent = message;
   const sub = loader.querySelector('.loader-sub');
-  if (sub) sub.textContent = '正在读取缓存数据';
+  if (sub) sub.textContent = subMessage || '正在读取缓存数据';
 }
 
 function hidePageLoader() {
@@ -368,27 +377,38 @@ function showEmployeeModal(employeeId, allEmployees) {
 }
 
 /**
- * 首屏加速：静态 JSON 立即渲染 + 并行获取 sessionId
- * @param {{ onCacheReady?: (data: object) => void }} [options]
+ * 首屏加速：静态 JSON 立即渲染 + 轻量 bootstrap 仅取 sessionId
+ * @param {{ onCacheReady?: (data: object) => void, prefetchFullMatch?: boolean }} [options]
  */
 async function bootstrapIntegratedData(options = {}) {
-  const cachedPromise = prefetchSampleData();
-  const bootPromise = prefetchBootstrap();
+  if (options.prefetchFullMatch !== false) {
+    prefetchFullMatchCache();
+  }
 
-  const cached = await cachedPromise;
+  const cached = await prefetchSampleData();
   if (cached && typeof options.onCacheReady === 'function') {
     options.onCacheReady(cached);
   }
 
-  const boot = await bootPromise;
-  if (cached && boot?.sessionId) {
-    return { ...cached, sessionId: boot.sessionId };
+  let boot = await prefetchBootstrap();
+  if (!boot?.sessionId) {
+    try {
+      boot = await fetchJsonWithTimeout('/api/bootstrap', {}, 15000);
+    } catch {
+      boot = null;
+    }
   }
 
-  const res = await fetch('/api/sample-data');
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || '加载失败');
-  return data;
+  if (cached && boot?.sessionId) {
+    return {
+      ...cached,
+      sessionId: boot.sessionId,
+      dataVersion: boot.dataVersion || cached.dataVersion,
+    };
+  }
+
+  const res = await fetchJsonWithTimeout('/api/sample-data', {}, 30000);
+  return res;
 }
 
 function scheduleRender(fn) {

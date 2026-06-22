@@ -19,7 +19,7 @@ import { buildDispatchResponse } from './services/dispatch-api';
 import { dispatchSelectedCompanies } from './services/select-dispatch';
 import { validatePair } from './services/validate-pair';
 import { loadEnvFile } from './services/distance-service';
-import { getIntegratedData, warmIntegratedCache } from './services/integrated-cache';
+import { getIntegratedData, warmIntegratedCache, getIntegratedDataVersion } from './services/integrated-cache';
 import { buildParseMetadata, buildSampleDataPayload } from './services/parse-metadata';
 import { buildMatchTestReport } from './services/match-test-report';
 import { lookupAdhocMatch } from './services/adhoc-match';
@@ -163,6 +163,7 @@ app.get('/api/bootstrap', (_req, res) => {
     const sessionId = createSession(data);
     res.json({
       sessionId,
+      dataVersion: getIntegratedDataVersion(),
       maxCommuteMinutes: MAX_ACCEPTABLE_COMMUTE_MINUTES,
     });
   } catch (err) {
