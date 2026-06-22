@@ -5,6 +5,7 @@
 import { CUSTOMER_TYPE_LABELS, TIME_SLOT_LABELS } from '../types';
 import { ImportResult } from './excel-importer';
 import { matchCustomerToEmployee } from './match-rules';
+import { getCommuteOriginForNextStop } from '../utils/commute';
 import { estimateRoute } from './distance-service';
 
 export interface PairValidationResponse {
@@ -50,8 +51,9 @@ export async function validatePair(
   const match = matchCustomerToEmployee(customer, employee, availableNames, assigned, {
     requirePlus: false,
   });
+  const fromAddress = getCommuteOriginForNextStop(employee, assigned, customer);
   const route = await estimateRoute(
-    employee.departureAddress,
+    fromAddress,
     customer.address,
     customer.parkName,
     customer.companyName

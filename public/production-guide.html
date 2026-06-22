@@ -90,6 +90,7 @@
       <a href="manual-match.html">手动派单</a>
       <a href="test-match.html">测试报告</a>
       <a href="compare-dispatch.html">Excel 对比</a>
+      <a href="match-logic-guide.html">完整匹配逻辑</a>
     </div>
 
   <section id="toc-sec">
@@ -272,7 +273,7 @@
     <p>全部硬约束通过 → <code>eligible = true</code>。得分用于在多个合规员工中选优（指定人加分、园区覆盖加分、已接单数减分）。</p>
 
     <h3>通勤（优化用，非硬失败）</h3>
-    <p>合规员工间优先选通勤更短者；超过 60 分为软提示，指定人等情况仍可匹配成功。</p>
+    <p>一人多单采用<strong>串联路程</strong>：首单 出发地→客户，后续单 上一单地址→本单；拜访顺序 上午→下午1→下午2。合规员工间按 <code>score − 本段通勤×0.2</code> 选优；超过 60 分为软提示。</p>
   </section>
 
   <section id="optimizer">

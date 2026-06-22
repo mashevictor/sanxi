@@ -3,7 +3,80 @@
  * 实际生产环境可对接高德/百度地图 API
  */
 
-import { Customer, Employee } from '../types';
+import { Customer, Employee, TimeSlot } from '../types';
+
+/** 拜访顺序：上午 → 下午1 → 下午2，同时段按预约时间 */
+const SLOT_VISIT_ORDER: Record<TimeSlot, number> = {
+  [TimeSlot.MORNING]: 0,
+  [TimeSlot.AFTERNOON_1]: 1,
+  [TimeSlot.AFTERNOON_2]: 2,
+};
+
+export function sortCustomersByVisitOrder(customers: Customer[]): Customer[] {
+  return [...customers].sort((a, b) => {
+    const slotDiff = SLOT_VISIT_ORDER[a.timeSlot] - SLOT_VISIT_ORDER[b.timeSlot];
+    if (slotDiff !== 0) return slotDiff;
+    return a.appointmentTime.getTime() - b.appointmentTime.getTime();
+  });
+}
+
+/** 下一单出发地：首单从员工出发地，其后从行程中上一站地址 */
+export function getCommuteOriginForNextStop(
+  employee: Employee,
+  assignedBefore: Customer[],
+  next: Customer
+): string {
+  const route = sortCustomersByVisitOrder([...assignedBefore, next]);
+  const nextIdx = route.findIndex((c) => c.id === next.id);
+  if (nextIdx <= 0) return employee.departureAddress;
+  return route[nextIdx - 1].address;
+}
+
+export interface ChainedRouteEstimate {
+  minutes: number;
+  pathSummary: string;
+  source: 'deepseek' | 'local';
+  fromAddress: string;
+}
+
+/** 串联本段通勤（分钟） */
+export function estimateChainedLegMinutes(
+  employee: Employee,
+  assignedBefore: Customer[],
+  next: Customer,
+  departureLegCell?: { minutes: number }
+): number {
+  const from = getCommuteOriginForNextStop(employee, assignedBefore, next);
+  if (from === employee.departureAddress && departureLegCell && departureLegCell.minutes > 0) {
+    return departureLegCell.minutes;
+  }
+  return estimateCommuteMinutes(from, next.address);
+}
+
+export function buildChainedRouteEstimate(
+  employee: Employee,
+  assignedBefore: Customer[],
+  next: Customer,
+  departureLegCell?: { minutes: number; pathSummary?: string; source?: 'deepseek' | 'local' }
+): ChainedRouteEstimate {
+  const from = getCommuteOriginForNextStop(employee, assignedBefore, next);
+  if (from === employee.departureAddress && departureLegCell && departureLegCell.minutes > 0) {
+    return {
+      minutes: departureLegCell.minutes,
+      pathSummary: departureLegCell.pathSummary || `${from} → ${next.address}`,
+      source: departureLegCell.source || 'local',
+      fromAddress: from,
+    };
+  }
+  const minutes = estimateCommuteMinutes(from, next.address);
+  const legLabel = from === employee.departureAddress ? '出发地' : '上一单';
+  return {
+    minutes,
+    pathSummary: `串联：${legLabel}（${from}）→ ${next.companyName}（${next.address}），约 ${minutes} 分钟`,
+    source: 'local',
+    fromAddress: from,
+  };
+}
 
 /** 简化的地址坐标（演示用，实际应通过地理编码获取） */
 const ADDRESS_COORDS: Record<string, [number, number]> = {};
@@ -108,9 +181,7 @@ export function calculateDailyCommute(
   const segments: { from: string; to: string; minutes: number }[] = [];
   let totalMinutes = 0;
 
-  const sorted = [...assignedCustomers].sort(
-    (a, b) => a.appointmentTime.getTime() - b.appointmentTime.getTime()
-  );
+  const sorted = sortCustomersByVisitOrder(assignedCustomers);
 
   if (sorted.length === 0) {
     return { totalMinutes: 0, segments: [] };

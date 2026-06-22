@@ -272,7 +272,7 @@
       <div class="example">
         <h4>配对得分</h4>
         <p><code>combinedPairScore = combinedScore(下午1) + combinedScore(下午2)</code></p>
-        <p><code>combinedScore = match.score − 通勤分钟 × 0.2</code></p>
+        <p><code>combinedScore = match.score − 本段串联通勤 × 0.2</code>（下午2 从下午1 地址出发）</p>
       </div>
     </section>
 
@@ -296,9 +296,11 @@
 
       <h3>通勤</h3>
       <ul>
-        <li>默认 <code>commuteMode: 'local'</code>：区县矩阵 + 地址差异因子估算</li>
-        <li>可选 <code>deepseek</code>：对合规候选构建通勤矩阵</li>
+        <li><strong>串联路程</strong>：一人多单时，本段通勤 = <strong>上一站地址 → 本单地址</strong>（首单仍为出发地 → 客户）；拜访顺序为 上午 → 下午1 → 下午2</li>
+        <li>匹配选优：<code>combinedScore = match.score − 本段通勤 × 0.2</code>（已按串联计算）</li>
+        <li>默认 <code>commuteMode: 'local'</code>：区县矩阵 + 地址差异因子；首段可走 DeepSeek 矩阵（若开启）</li>
         <li><strong>超过 60 分钟不导致匹配失败</strong>，只影响排序；UI 显示软提示</li>
+        <li>员工行程 <code>routeSegments</code> 与单条 <code>commuteMinutes</code> 均与串联逻辑一致</li>
       </ul>
     </section>
 

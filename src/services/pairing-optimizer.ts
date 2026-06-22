@@ -4,7 +4,7 @@
 
 import { Customer, Employee, MatchDetail, TimeSlot, CustomerType } from '../types';
 import { matchCustomerToEmployee, MatchResult, sortCustomersForDispatch } from './match-rules';
-import { estimateCommuteMinutes } from '../utils/commute';
+import { estimateChainedLegMinutes, buildChainedRouteEstimate } from '../utils/commute';
 import { buildCommuteMatrix, CommuteMatrix, CommuteMode, RouteEstimate } from './distance-service';
 import { buildAfternoonParkPairs, AfternoonParkPair } from './afternoon-park-pairs';
 
@@ -68,29 +68,33 @@ const SLOT_ORDER: Record<TimeSlot, number> = {
   [TimeSlot.AFTERNOON_2]: 2,
 };
 
-function getCommuteMinutes(customer: Customer, employee: Employee, commuteCell?: RouteEstimate): number {
-  if (commuteCell && commuteCell.minutes > 0) return commuteCell.minutes;
-  return estimateCommuteMinutes(employee.departureAddress, customer.address);
+function getChainedCommuteMinutes(
+  customer: Customer,
+  employee: Employee,
+  assignedBefore: Customer[],
+  commuteCell?: RouteEstimate
+): number {
+  return estimateChainedLegMinutes(employee, assignedBefore, customer, commuteCell);
 }
 
-function getRoute(customer: Customer, employee: Employee, commuteCell?: RouteEstimate): RouteEstimate {
-  if (commuteCell && commuteCell.minutes > 0) return commuteCell;
-  const minutes = estimateCommuteMinutes(employee.departureAddress, customer.address);
-  return {
-    minutes,
-    pathSummary: `本地估算：${employee.departureAddress} → ${customer.address}（园区 ${customer.parkName}），约 ${minutes} 分钟`,
-    source: 'local',
-  };
+function getChainedRoute(
+  customer: Customer,
+  employee: Employee,
+  assignedBefore: Customer[],
+  commuteCell?: RouteEstimate
+): RouteEstimate {
+  return buildChainedRouteEstimate(employee, assignedBefore, customer, commuteCell);
 }
 
 function buildPairing(
   customer: Customer,
   employee: Employee,
   match: MatchResult,
+  assignedBefore: Customer[],
   commuteCell?: RouteEstimate,
   locked = false
 ): CompanyEmployeePairing {
-  const route = getRoute(customer, employee, commuteCell);
+  const route = getChainedRoute(customer, employee, assignedBefore, commuteCell);
   return {
     customerId: customer.id,
     customerName: customer.companyName,
@@ -119,8 +123,14 @@ function findCommuteCell(
   return commuteMatrix[ci]?.[ei];
 }
 
-function combinedScore(customer: Customer, employee: Employee, match: MatchResult, commuteCell?: RouteEstimate): number {
-  const commute = getCommuteMinutes(customer, employee, commuteCell);
+function combinedScore(
+  customer: Customer,
+  employee: Employee,
+  match: MatchResult,
+  assignedBefore: Customer[],
+  commuteCell?: RouteEstimate
+): number {
+  const commute = getChainedCommuteMinutes(customer, employee, assignedBefore, commuteCell);
   return match.score - commute * 0.2;
 }
 
@@ -129,6 +139,7 @@ function combinedPairScore(
   employee: Employee,
   match1: MatchResult,
   match2: MatchResult,
+  assignedBefore: Customer[],
   customers: Customer[],
   employees: Employee[],
   commuteMatrix?: CommuteMatrix
@@ -136,8 +147,8 @@ function combinedPairScore(
   const cell1 = findCommuteCell(pair.afternoon1, employee, customers, employees, commuteMatrix);
   const cell2 = findCommuteCell(pair.afternoon2, employee, customers, employees, commuteMatrix);
   return (
-    combinedScore(pair.afternoon1, employee, match1, cell1) +
-    combinedScore(pair.afternoon2, employee, match2, cell2)
+    combinedScore(pair.afternoon1, employee, match1, assignedBefore, cell1) +
+    combinedScore(pair.afternoon2, employee, match2, [...assignedBefore, pair.afternoon1], cell2)
   );
 }
 
@@ -235,7 +246,16 @@ function matchAfternoonParkPairs(
       );
       if (!match2.eligible) continue;
 
-      const sc = combinedPairScore(pair, employee, match1, match2, customers, employees, commuteMatrix);
+      const sc = combinedPairScore(
+        pair,
+        employee,
+        match1,
+        match2,
+        assigned,
+        customers,
+        employees,
+        commuteMatrix
+      );
       if (sc > bestScore) {
         bestScore = sc;
         bestEmp = employee;
@@ -247,12 +267,20 @@ function matchAfternoonParkPairs(
     }
 
     if (bestEmp && bestMatch1 && bestMatch2) {
+      const assignedBefore = assignedPerEmp.get(bestEmp.id) || [];
       pairings.push({
-        ...buildPairing(pair.afternoon1, bestEmp, bestMatch1, bestCell1, false),
+        ...buildPairing(pair.afternoon1, bestEmp, bestMatch1, assignedBefore, bestCell1, false),
         details: appendAfternoonBindDetail(bestMatch1.details),
       });
       pairings.push({
-        ...buildPairing(pair.afternoon2, bestEmp, bestMatch2, bestCell2, false),
+        ...buildPairing(
+          pair.afternoon2,
+          bestEmp,
+          bestMatch2,
+          [...assignedBefore, pair.afternoon1],
+          bestCell2,
+          false
+        ),
         details: appendAfternoonBindDetail(bestMatch2.details),
       });
       const assigned = assignedPerEmp.get(bestEmp.id) || [];
@@ -310,11 +338,14 @@ function analyzeUnmatched(
         employeeName: employees[bestIdx].name,
         departureAddress: employees[bestIdx].departureAddress,
         failedRules,
-        route: {
-          minutes: estimateCommuteMinutes(employees[bestIdx].departureAddress, customer.address),
-          pathSummary: `${employees[bestIdx].departureAddress} → ${customer.address}`,
-          source: 'local',
-        },
+        route: (() => {
+          const leg = buildChainedRouteEstimate(employees[bestIdx], assigned, customer);
+          return {
+            minutes: leg.minutes,
+            pathSummary: leg.pathSummary,
+            source: leg.source,
+          };
+        })(),
       },
     };
   }
@@ -360,7 +391,7 @@ function findCapacitatedMatching(
     const match = matchCustomerToEmployee(customer, employee, availableNames, assigned, { requirePlus: false });
     if (!match.eligible) continue;
     const commuteCell = findCommuteCell(customer, employee, customers, employees, commuteMatrix);
-    pairings.push(buildPairing(customer, employee, match, commuteCell, true));
+    pairings.push(buildPairing(customer, employee, match, assigned, commuteCell, true));
     assigned.push(customer);
     assignedPerEmp.set(employee.id, assigned);
   }
@@ -399,7 +430,7 @@ function findCapacitatedMatching(
       const match = matchCustomerToEmployee(customer, employee, availableNames, assigned, { requirePlus: false });
       if (!match.eligible) continue;
       const commuteCell = findCommuteCell(customer, employee, customers, employees, commuteMatrix);
-      const sc = combinedScore(customer, employee, match, commuteCell);
+      const sc = combinedScore(customer, employee, match, assigned, commuteCell);
       if (sc > bestScore) {
         bestScore = sc;
         bestEmp = employee;
@@ -409,8 +440,8 @@ function findCapacitatedMatching(
     }
 
     if (bestEmp && bestMatch) {
-      pairings.push(buildPairing(customer, bestEmp, bestMatch, bestCommuteCell, false));
       const assigned = assignedPerEmp.get(bestEmp.id) || [];
+      pairings.push(buildPairing(customer, bestEmp, bestMatch, assigned, bestCommuteCell, false));
       assigned.push(customer);
       assignedPerEmp.set(bestEmp.id, assigned);
     }

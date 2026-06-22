@@ -11,7 +11,7 @@ import {
   TimeSlot,
 } from '../types';
 import { ImportResult } from './excel-importer';
-import { MAX_ACCEPTABLE_COMMUTE_MINUTES, calculateDailyCommute } from '../utils/commute';
+import { MAX_ACCEPTABLE_COMMUTE_MINUTES, calculateDailyCommute, sortCustomersByVisitOrder } from '../utils/commute';
 import {
   findOptimalPairing,
   findOptimalAutoPairingAsync,
@@ -236,7 +236,7 @@ function buildEmployeeSchedules(
       .map((p) => ({ p, c: customerMap.get(p.customerId)! }))
       .sort((a, b) => slotOrder(a.c.timeSlot) - slotOrder(b.c.timeSlot));
 
-    const customers = sorted.map((x) => x.c);
+    const customers = sortCustomersByVisitOrder(sorted.map((x) => x.c));
     const daily = calculateDailyCommute(emp, customers);
 
     return {

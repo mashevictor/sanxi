@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "dataVersion": "20260622-unique-names",
-  "generatedAt": "2026-06-22T03:26:09.080Z",
+  "dataVersion": "20260622-chained-commute",
+  "generatedAt": "2026-06-22T08:39:01.772Z",
   "ruleEngine": {
     "sameForAllScenarios": true,
     "functionName": "matchCustomerToEmployee",
@@ -1976,7 +1976,7 @@
         "selected": 55,
         "matched": 55,
         "unmatched": 0,
-        "avgCommute": 38,
+        "avgCommute": 37,
         "over60Commute": 1,
         "ruleViolations": 0
       },
@@ -4175,73 +4175,15 @@
           "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
           "customerType": "回访（后道）",
           "timeSlot": "下午1",
-          "employeeId": 9,
-          "employeeName": "傅丽",
-          "employeeRoles": "后道",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市徐汇区龙兰路",
-          "commuteMinutes": 30,
-          "commuteSource": "local",
-          "directCommuteMinutes": 30,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: BACK"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_1"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "上海界龙现代印刷纸品有限公司",
-          "parkName": "加盟-金山资本现代产业园",
-          "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
-          "customerType": "回访（后道）",
-          "timeSlot": "下午1",
           "employeeId": 10,
           "employeeName": "宋樑",
           "employeeRoles": "后道",
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市杨浦区佳木斯路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 25,
           "commuteSource": "local",
-          "directCommuteMinutes": 30,
+          "directCommuteMinutes": 25,
           "reasonable": true,
           "reasonableTags": [
             "规则合规",
@@ -4277,6 +4219,64 @@
               "rule": "园区匹配",
               "passed": true,
               "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区佳木斯路]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
+          "companyName": "上海界龙现代印刷纸品有限公司",
+          "parkName": "加盟-金山资本现代产业园",
+          "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
+          "customerType": "回访（后道）",
+          "timeSlot": "下午1",
+          "employeeId": 9,
+          "employeeName": "傅丽",
+          "employeeRoles": "后道",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "加盟-金山资本现代产业园",
+          "departureAddress": "上海市徐汇区龙兰路",
+          "commuteMinutes": 20,
+          "commuteSource": "local",
+          "directCommuteMinutes": 20,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规",
+            "通勤较近"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: BACK"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_1"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -4753,15 +4753,15 @@
           "address": "上海市静安区共和新路3699号A栋316室",
           "customerType": "回访（后道）",
           "timeSlot": "下午1",
-          "employeeId": 21,
-          "employeeName": "贾文霆",
+          "employeeId": 11,
+          "employeeName": "盛雅琴",
           "employeeRoles": "后道",
           "employeeCapacity": "上午、下午1",
           "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市静安区万荣路",
+          "departureAddress": "上海市杨浦区双阳支路",
           "commuteMinutes": 20,
           "commuteSource": "local",
-          "directCommuteMinutes": 20,
+          "directCommuteMinutes": 25,
           "reasonable": true,
           "reasonableTags": [
             "规则合规",
@@ -4796,12 +4796,12 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市静安区万荣路]可覆盖"
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区双阳支路]可覆盖"
             },
             {
               "rule": "Plus匹配",
-              "passed": false,
-              "message": "Plus不匹配: 需要PlusN, 员工能力[Plus0,Plus1]"
+              "passed": true,
+              "message": "Plus匹配: PlusN(3次)"
             }
           ]
         },
@@ -4817,7 +4817,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "宝山高新",
           "departureAddress": "上海市宝山区淞发路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 20,
           "commuteSource": "local",
           "directCommuteMinutes": 30,
           "reasonable": true,
@@ -4934,7 +4934,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区亭林镇",
-          "commuteMinutes": 60,
+          "commuteMinutes": 39,
           "commuteSource": "local",
           "directCommuteMinutes": 60,
           "reasonable": true,
@@ -4992,7 +4992,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区朱泾镇",
-          "commuteMinutes": 60,
+          "commuteMinutes": 35,
           "commuteSource": "local",
           "directCommuteMinutes": 60,
           "reasonable": true,
@@ -5043,64 +5043,6 @@
           "address": "上海市闵行区紫海路170号",
           "customerType": "回访（后道）",
           "timeSlot": "下午2",
-          "employeeId": 9,
-          "employeeName": "傅丽",
-          "employeeRoles": "后道",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市徐汇区龙兰路",
-          "commuteMinutes": 25,
-          "commuteSource": "local",
-          "directCommuteMinutes": 25,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: BACK"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_2"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "古疁（上海）文化发展有限公司",
-          "parkName": "加盟-金山资本现代产业园",
-          "address": "上海市嘉定区平城路855号704",
-          "customerType": "回访（后道）",
-          "timeSlot": "下午2",
           "employeeId": 10,
           "employeeName": "宋樑",
           "employeeRoles": "后道",
@@ -5109,7 +5051,7 @@
           "departureAddress": "上海市杨浦区佳木斯路",
           "commuteMinutes": 35,
           "commuteSource": "local",
-          "directCommuteMinutes": 35,
+          "directCommuteMinutes": 40,
           "reasonable": true,
           "reasonableTags": [
             "规则合规"
@@ -5153,6 +5095,63 @@
           ]
         },
         {
+          "companyName": "古疁（上海）文化发展有限公司",
+          "parkName": "加盟-金山资本现代产业园",
+          "address": "上海市嘉定区平城路855号704",
+          "customerType": "回访（后道）",
+          "timeSlot": "下午2",
+          "employeeId": 9,
+          "employeeName": "傅丽",
+          "employeeRoles": "后道",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "加盟-金山资本现代产业园",
+          "departureAddress": "上海市徐汇区龙兰路",
+          "commuteMinutes": 45,
+          "commuteSource": "local",
+          "directCommuteMinutes": 45,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: BACK"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_2"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
           "companyName": "上海华烁投资管理有限公司",
           "parkName": "加盟-金山资本现代产业园",
           "address": "上海市闵行区浦星公路699号（万国数据浦江数据中心）",
@@ -5164,7 +5163,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市长宁区宣化路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 25,
           "commuteSource": "local",
           "directCommuteMinutes": 30,
           "reasonable": true,
@@ -5280,7 +5279,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市浦东新区金桥路",
-          "commuteMinutes": 50,
+          "commuteMinutes": 45,
           "commuteSource": "local",
           "directCommuteMinutes": 50,
           "reasonable": true,
@@ -5338,12 +5337,13 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区亭林镇",
-          "commuteMinutes": 55,
+          "commuteMinutes": 25,
           "commuteSource": "local",
           "directCommuteMinutes": 55,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规"
+            "规则合规",
+            "通勤较近"
           ],
           "rules": [
             {
@@ -5447,20 +5447,19 @@
           "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
           "customerType": "首访（前道）",
           "timeSlot": "下午2",
-          "employeeId": 90220,
-          "employeeName": "补位-杨浦前",
-          "employeeRoles": "前道、项目",
-          "employeeCapacity": "上午、下午1、下午2",
+          "employeeId": 90209,
+          "employeeName": "补位-卫金山前",
+          "employeeRoles": "前道",
+          "employeeCapacity": "下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市杨浦区邯郸路",
+          "departureAddress": "上海市金山区亭林镇",
           "employeeRemark": "[补位]",
-          "commuteMinutes": 25,
+          "commuteMinutes": 55,
           "commuteSource": "local",
-          "directCommuteMinutes": 25,
+          "directCommuteMinutes": 55,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规",
-            "通勤较近"
+            "规则合规"
           ],
           "rules": [
             {
@@ -5491,7 +5490,7 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区邯郸路]可覆盖"
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市金山区亭林镇]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -5628,7 +5627,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 100,
+          "totalCommuteMinutes": 95,
           "orders": [
             {
               "companyName": "上海万沃建筑工程咨询有限公司",
@@ -5663,12 +5662,12 @@
             },
             {
               "from": "上海市浦东新区周泰路67弄7号楼303室",
-              "to": "上海市闵行区申长路588号",
-              "minutes": 35
+              "to": "上海市宝山区友谊路1818号",
+              "minutes": 30
             },
             {
-              "from": "上海市闵行区申长路588号",
-              "to": "上海市宝山区友谊路1818号",
+              "from": "上海市宝山区友谊路1818号",
+              "to": "上海市闵行区申长路588号",
               "minutes": 35
             }
           ],
@@ -5706,7 +5705,7 @@
               "customerType": "回访（后道）",
               "parkName": "宝山高新",
               "address": "上海市普陀区金沙江路1628弄5号楼618室",
-              "commuteMinutes": 30
+              "commuteMinutes": 20
             }
           ],
           "routeSegments": [
@@ -5760,7 +5759,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市普陀区长寿路1188号102",
-              "commuteMinutes": 55
+              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -5784,47 +5783,6 @@
           "issues": []
         },
         {
-          "employeeId": 90220,
-          "employeeName": "补位-杨浦前",
-          "departureAddress": "上海市杨浦区邯郸路",
-          "totalOrders": 2,
-          "morningOrders": 0,
-          "afternoonOrders": 2,
-          "totalCommuteMinutes": 90,
-          "orders": [
-            {
-              "companyName": "上海无忧供应链管理有限公司",
-              "timeSlot": "下午1",
-              "customerType": "首访（前道）",
-              "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市浦东新区五星路707弄御河企业公馆31号",
-              "commuteMinutes": 40
-            },
-            {
-              "companyName": "上海喜福来朝阳食品贸易行",
-              "timeSlot": "下午2",
-              "customerType": "首访（前道）",
-              "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
-              "commuteMinutes": 25
-            }
-          ],
-          "routeSegments": [
-            {
-              "from": "上海市杨浦区邯郸路",
-              "to": "上海市浦东新区五星路707弄御河企业公馆31号",
-              "minutes": 40
-            },
-            {
-              "from": "上海市浦东新区五星路707弄御河企业公馆31号",
-              "to": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
-              "minutes": 50
-            }
-          ],
-          "reasonable": true,
-          "issues": []
-        },
-        {
           "employeeId": 9,
           "employeeName": "傅丽",
           "departureAddress": "上海市徐汇区龙兰路",
@@ -5834,32 +5792,32 @@
           "totalCommuteMinutes": 65,
           "orders": [
             {
-              "companyName": "上海筱胜企业管理咨询有限公司",
+              "companyName": "上海界龙现代印刷纸品有限公司",
               "timeSlot": "下午1",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "commuteMinutes": 30
+              "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "commuteMinutes": 20
             },
             {
-              "companyName": "上海鸣旭电子科技有限公司",
+              "companyName": "古疁（上海）文化发展有限公司",
               "timeSlot": "下午2",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市闵行区紫海路170号",
-              "commuteMinutes": 25
+              "address": "上海市嘉定区平城路855号704",
+              "commuteMinutes": 45
             }
           ],
           "routeSegments": [
             {
               "from": "上海市徐汇区龙兰路",
-              "to": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "minutes": 30
+              "to": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "minutes": 20
             },
             {
-              "from": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "to": "上海市闵行区紫海路170号",
-              "minutes": 35
+              "from": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "to": "上海市嘉定区平城路855号704",
+              "minutes": 45
             }
           ],
           "reasonable": true,
@@ -5888,7 +5846,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市奉贤区远东路1899弄6号楼1803室",
-              "commuteMinutes": 50
+              "commuteMinutes": 45
             }
           ],
           "routeSegments": [
@@ -5907,21 +5865,21 @@
           "issues": []
         },
         {
-          "employeeId": 21,
-          "employeeName": "贾文霆",
-          "departureAddress": "上海市静安区万荣路",
+          "employeeId": 11,
+          "employeeName": "盛雅琴",
+          "departureAddress": "上海市杨浦区双阳支路",
           "totalOrders": 2,
           "morningOrders": 1,
           "afternoonOrders": 1,
-          "totalCommuteMinutes": 40,
+          "totalCommuteMinutes": 50,
           "orders": [
             {
-              "companyName": "上海京泉投资管理有限公司",
+              "companyName": "上海季龄网络科技有限公司",
               "timeSlot": "上午",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市虹口区东长治路866号友邦金融中心37楼",
-              "commuteMinutes": 20
+              "address": "上海市长宁区仙霞路8号1701-1702室",
+              "commuteMinutes": 30
             },
             {
               "companyName": "上海得韬会展服务有限公司",
@@ -5934,12 +5892,12 @@
           ],
           "routeSegments": [
             {
-              "from": "上海市静安区万荣路",
-              "to": "上海市虹口区东长治路866号友邦金融中心37楼",
-              "minutes": 20
+              "from": "上海市杨浦区双阳支路",
+              "to": "上海市长宁区仙霞路8号1701-1702室",
+              "minutes": 30
             },
             {
-              "from": "上海市虹口区东长治路866号友邦金融中心37楼",
+              "from": "上海市长宁区仙霞路8号1701-1702室",
               "to": "上海市静安区共和新路3699号A栋316室",
               "minutes": 20
             }
@@ -5970,7 +5928,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市闵行区浦星公路699号（万国数据浦江数据中心）",
-              "commuteMinutes": 30
+              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -5995,35 +5953,35 @@
           "totalOrders": 2,
           "morningOrders": 0,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 75,
+          "totalCommuteMinutes": 60,
           "orders": [
             {
-              "companyName": "上海界龙现代印刷纸品有限公司",
+              "companyName": "上海筱胜企业管理咨询有限公司",
               "timeSlot": "下午1",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "commuteMinutes": 30
+              "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "commuteMinutes": 25
             },
             {
-              "companyName": "古疁（上海）文化发展有限公司",
+              "companyName": "上海鸣旭电子科技有限公司",
               "timeSlot": "下午2",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市嘉定区平城路855号704",
+              "address": "上海市闵行区紫海路170号",
               "commuteMinutes": 35
             }
           ],
           "routeSegments": [
             {
               "from": "上海市杨浦区佳木斯路",
-              "to": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "minutes": 30
+              "to": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "minutes": 25
             },
             {
-              "from": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "to": "上海市嘉定区平城路855号704",
-              "minutes": 45
+              "from": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "to": "上海市闵行区紫海路170号",
+              "minutes": 35
             }
           ],
           "reasonable": true,
@@ -6052,7 +6010,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区周浦镇沪南公路2218号BHC中环中心东楼5楼511室",
-              "commuteMinutes": 60
+              "commuteMinutes": 35
             }
           ],
           "routeSegments": [
@@ -6077,7 +6035,7 @@
           "totalOrders": 2,
           "morningOrders": 0,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 120,
+          "totalCommuteMinutes": 86,
           "orders": [
             {
               "companyName": "上海无忧供应链管理有限公司",
@@ -6099,12 +6057,12 @@
           "routeSegments": [
             {
               "from": "上海市金山区亭林镇",
-              "to": "上海市徐汇区宜山路889号齐来大厦1601-2室",
-              "minutes": 60
+              "to": "上海市金山区朱泾镇金龙新街1688号",
+              "minutes": 26
             },
             {
-              "from": "上海市徐汇区宜山路889号齐来大厦1601-2室",
-              "to": "上海市金山区朱泾镇金龙新街1688号",
+              "from": "上海市金山区朱泾镇金龙新街1688号",
+              "to": "上海市徐汇区宜山路889号齐来大厦1601-2室",
               "minutes": 60
             }
           ],
@@ -6134,7 +6092,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区东方路3601号丰华园3号楼6楼",
-              "commuteMinutes": 60
+              "commuteMinutes": 39
             }
           ],
           "routeSegments": [
@@ -6287,6 +6245,62 @@
               "from": "上海市金山区亭林镇",
               "to": "上海市浦东新区龙东大道4288弄白金瀚宫88号别墅",
               "minutes": 60
+            }
+          ],
+          "reasonable": true,
+          "issues": []
+        },
+        {
+          "employeeId": 90209,
+          "employeeName": "补位-卫金山前",
+          "departureAddress": "上海市金山区亭林镇",
+          "totalOrders": 1,
+          "morningOrders": 0,
+          "afternoonOrders": 1,
+          "totalCommuteMinutes": 55,
+          "orders": [
+            {
+              "companyName": "上海喜福来朝阳食品贸易行",
+              "timeSlot": "下午2",
+              "customerType": "首访（前道）",
+              "parkName": "加盟-金山资本现代产业园",
+              "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
+              "commuteMinutes": 55
+            }
+          ],
+          "routeSegments": [
+            {
+              "from": "上海市金山区亭林镇",
+              "to": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
+              "minutes": 55
+            }
+          ],
+          "reasonable": true,
+          "issues": []
+        },
+        {
+          "employeeId": 90220,
+          "employeeName": "补位-杨浦前",
+          "departureAddress": "上海市杨浦区邯郸路",
+          "totalOrders": 1,
+          "morningOrders": 0,
+          "afternoonOrders": 1,
+          "totalCommuteMinutes": 40,
+          "orders": [
+            {
+              "companyName": "上海无忧供应链管理有限公司",
+              "timeSlot": "下午1",
+              "customerType": "首访（前道）",
+              "parkName": "加盟-金山资本现代产业园",
+              "address": "上海市浦东新区五星路707弄御河企业公馆31号",
+              "commuteMinutes": 40
+            }
+          ],
+          "routeSegments": [
+            {
+              "from": "上海市杨浦区邯郸路",
+              "to": "上海市浦东新区五星路707弄御河企业公馆31号",
+              "minutes": 40
             }
           ],
           "reasonable": true,
@@ -6461,6 +6475,34 @@
           "issues": []
         },
         {
+          "employeeId": 21,
+          "employeeName": "贾文霆",
+          "departureAddress": "上海市静安区万荣路",
+          "totalOrders": 1,
+          "morningOrders": 1,
+          "afternoonOrders": 0,
+          "totalCommuteMinutes": 20,
+          "orders": [
+            {
+              "companyName": "上海京泉投资管理有限公司",
+              "timeSlot": "上午",
+              "customerType": "回访（后道）",
+              "parkName": "加盟-金山资本现代产业园",
+              "address": "上海市虹口区东长治路866号友邦金融中心37楼",
+              "commuteMinutes": 20
+            }
+          ],
+          "routeSegments": [
+            {
+              "from": "上海市静安区万荣路",
+              "to": "上海市虹口区东长治路866号友邦金融中心37楼",
+              "minutes": 20
+            }
+          ],
+          "reasonable": true,
+          "issues": []
+        },
+        {
           "employeeId": 4,
           "employeeName": "梁素梅",
           "departureAddress": "上海市普陀区中山北路",
@@ -6567,34 +6609,6 @@
               "from": "上海市闵行区莘庄工业区春东路",
               "to": "上海市闵行区金都路588号",
               "minutes": 26
-            }
-          ],
-          "reasonable": true,
-          "issues": []
-        },
-        {
-          "employeeId": 11,
-          "employeeName": "盛雅琴",
-          "departureAddress": "上海市杨浦区双阳支路",
-          "totalOrders": 1,
-          "morningOrders": 1,
-          "afternoonOrders": 0,
-          "totalCommuteMinutes": 30,
-          "orders": [
-            {
-              "companyName": "上海季龄网络科技有限公司",
-              "timeSlot": "上午",
-              "customerType": "回访（后道）",
-              "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市长宁区仙霞路8号1701-1702室",
-              "commuteMinutes": 30
-            }
-          ],
-          "routeSegments": [
-            {
-              "from": "上海市杨浦区双阳支路",
-              "to": "上海市长宁区仙霞路8号1701-1702室",
-              "minutes": 30
             }
           ],
           "reasonable": true,
@@ -6938,7 +6952,7 @@
         }
       ],
       "multiOrderStats": {
-        "employeesWithMultipleOrders": 12,
+        "employeesWithMultipleOrders": 11,
         "employeesWithThreePlus": 3,
         "maxOrdersPerEmployee": 3,
         "scheduleViolations": 0
@@ -8652,7 +8666,7 @@
         "selected": 516,
         "matched": 516,
         "unmatched": 0,
-        "avgCommute": 45,
+        "avgCommute": 44,
         "over60Commute": 0,
         "ruleViolations": 0
       },
@@ -11028,19 +11042,20 @@
           "address": "上海市徐汇区企业大道100号",
           "customerType": "首访（前道）",
           "timeSlot": "上午",
-          "employeeId": 96211,
-          "employeeName": "模拟-上海-浦东-1",
+          "employeeId": 96216,
+          "employeeName": "模拟-上海-徐汇-2",
           "employeeRoles": "前道、后道、项目",
           "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-浦东",
-          "departureAddress": "上海市浦东新区服务路10号",
-          "employeeRemark": "[全国模拟] 上海市 上海-浦东 全能员工，可一人多单",
-          "commuteMinutes": 35,
+          "employeeServicePark": "上海-徐汇",
+          "departureAddress": "上海市徐汇区服务路11号",
+          "employeeRemark": "[全国模拟] 上海市 上海-徐汇 全能员工，可一人多单",
+          "commuteMinutes": 20,
           "commuteSource": "local",
-          "directCommuteMinutes": 35,
+          "directCommuteMinutes": 20,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规"
+            "规则合规",
+            "通勤较近"
           ],
           "rules": [
             {
@@ -11071,7 +11086,7 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市浦东新区服务路10号]可覆盖"
+              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市徐汇区服务路11号]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -11086,20 +11101,19 @@
           "address": "上海市徐汇区企业大道101号",
           "customerType": "回访（后道）",
           "timeSlot": "上午",
-          "employeeId": 96216,
-          "employeeName": "模拟-上海-徐汇-2",
+          "employeeId": 96211,
+          "employeeName": "模拟-上海-浦东-1",
           "employeeRoles": "前道、后道、项目",
           "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-徐汇",
-          "departureAddress": "上海市徐汇区服务路11号",
-          "employeeRemark": "[全国模拟] 上海市 上海-徐汇 全能员工，可一人多单",
-          "commuteMinutes": 20,
+          "employeeServicePark": "上海-浦东",
+          "departureAddress": "上海市浦东新区服务路10号",
+          "employeeRemark": "[全国模拟] 上海市 上海-浦东 全能员工，可一人多单",
+          "commuteMinutes": 35,
           "commuteSource": "local",
-          "directCommuteMinutes": 20,
+          "directCommuteMinutes": 35,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规",
-            "通勤较近"
+            "规则合规"
           ],
           "rules": [
             {
@@ -11130,7 +11144,7 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市徐汇区服务路11号]可覆盖"
+              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市浦东新区服务路10号]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -20889,16 +20903,16 @@
           "address": "上海市闵行区企业大道102号",
           "customerType": "项目",
           "timeSlot": "下午1",
-          "employeeId": 96213,
-          "employeeName": "模拟-上海-闵行-1",
+          "employeeId": 96212,
+          "employeeName": "模拟-上海-浦东-2",
           "employeeRoles": "前道、后道、项目",
           "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-闵行",
-          "departureAddress": "上海市闵行区服务路10号",
-          "employeeRemark": "[全国模拟] 上海市 上海-闵行 全能员工，可一人多单",
-          "commuteMinutes": 26,
+          "employeeServicePark": "上海-浦东",
+          "departureAddress": "上海市浦东新区服务路11号",
+          "employeeRemark": "[全国模拟] 上海市 上海-浦东 全能员工，可一人多单",
+          "commuteMinutes": 15,
           "commuteSource": "local",
-          "directCommuteMinutes": 26,
+          "directCommuteMinutes": 35,
           "reasonable": true,
           "reasonableTags": [
             "规则合规",
@@ -20933,7 +20947,7 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[上海-闵行] ↔ 员工出发地[上海市闵行区服务路10号]可覆盖"
+              "message": "园区匹配: 客户园区[上海-闵行] ↔ 员工出发地[上海市浦东新区服务路11号]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -20946,123 +20960,6 @@
           "companyName": "模拟-上海-闵行-客户4",
           "parkName": "上海-闵行",
           "address": "上海市闵行区企业大道103号",
-          "customerType": "首访（前道）",
-          "timeSlot": "下午1",
-          "employeeId": 96214,
-          "employeeName": "模拟-上海-闵行-2",
-          "employeeRoles": "前道、后道、项目",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-闵行",
-          "departureAddress": "上海市闵行区服务路11号",
-          "employeeRemark": "[全国模拟] 上海市 上海-闵行 全能员工，可一人多单",
-          "commuteMinutes": 26,
-          "commuteSource": "local",
-          "directCommuteMinutes": 26,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: FRONT"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_1"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[上海-闵行] ↔ 员工出发地[上海市闵行区服务路11号]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "模拟-上海-徐汇-客户3",
-          "parkName": "上海-徐汇",
-          "address": "上海市徐汇区企业大道102号",
-          "customerType": "项目",
-          "timeSlot": "下午1",
-          "employeeId": 96212,
-          "employeeName": "模拟-上海-浦东-2",
-          "employeeRoles": "前道、后道、项目",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-浦东",
-          "departureAddress": "上海市浦东新区服务路11号",
-          "employeeRemark": "[全国模拟] 上海市 上海-浦东 全能员工，可一人多单",
-          "commuteMinutes": 35,
-          "commuteSource": "local",
-          "directCommuteMinutes": 35,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: PROJECT"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_1"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市浦东新区服务路11号]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "模拟-上海-徐汇-客户4",
-          "parkName": "上海-徐汇",
-          "address": "上海市徐汇区企业大道103号",
           "customerType": "首访（前道）",
           "timeSlot": "下午1",
           "employeeId": 96211,
@@ -21108,7 +21005,123 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市浦东新区服务路10号]可覆盖"
+              "message": "园区匹配: 客户园区[上海-闵行] ↔ 员工出发地[上海市浦东新区服务路10号]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
+          "companyName": "模拟-上海-徐汇-客户3",
+          "parkName": "上海-徐汇",
+          "address": "上海市徐汇区企业大道102号",
+          "customerType": "项目",
+          "timeSlot": "下午1",
+          "employeeId": 96214,
+          "employeeName": "模拟-上海-闵行-2",
+          "employeeRoles": "前道、后道、项目",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "上海-闵行",
+          "departureAddress": "上海市闵行区服务路11号",
+          "employeeRemark": "[全国模拟] 上海市 上海-闵行 全能员工，可一人多单",
+          "commuteMinutes": 35,
+          "commuteSource": "local",
+          "directCommuteMinutes": 25,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: PROJECT"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_1"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市闵行区服务路11号]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
+          "companyName": "模拟-上海-徐汇-客户4",
+          "parkName": "上海-徐汇",
+          "address": "上海市徐汇区企业大道103号",
+          "customerType": "首访（前道）",
+          "timeSlot": "下午1",
+          "employeeId": 96213,
+          "employeeName": "模拟-上海-闵行-1",
+          "employeeRoles": "前道、后道、项目",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "上海-闵行",
+          "departureAddress": "上海市闵行区服务路10号",
+          "employeeRemark": "[全国模拟] 上海市 上海-闵行 全能员工，可一人多单",
+          "commuteMinutes": 35,
+          "commuteSource": "local",
+          "directCommuteMinutes": 25,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: FRONT"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_1"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市闵行区服务路10号]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -30519,14 +30532,72 @@
           "address": "上海市闵行区企业大道105号",
           "customerType": "项目",
           "timeSlot": "下午2",
-          "employeeId": 96216,
-          "employeeName": "模拟-上海-徐汇-2",
+          "employeeId": 96213,
+          "employeeName": "模拟-上海-闵行-1",
           "employeeRoles": "前道、后道、项目",
           "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-徐汇",
-          "departureAddress": "上海市徐汇区服务路11号",
-          "employeeRemark": "[全国模拟] 上海市 上海-徐汇 全能员工，可一人多单",
-          "commuteMinutes": 25,
+          "employeeServicePark": "上海-闵行",
+          "departureAddress": "上海市闵行区服务路10号",
+          "employeeRemark": "[全国模拟] 上海市 上海-闵行 全能员工，可一人多单",
+          "commuteMinutes": 35,
+          "commuteSource": "local",
+          "directCommuteMinutes": 26,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: PROJECT"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_2"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[上海-闵行] ↔ 员工出发地[上海市闵行区服务路10号]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
+          "companyName": "模拟-上海-徐汇-客户6",
+          "parkName": "上海-徐汇",
+          "address": "上海市徐汇区企业大道105号",
+          "customerType": "项目",
+          "timeSlot": "下午2",
+          "employeeId": 96214,
+          "employeeName": "模拟-上海-闵行-2",
+          "employeeRoles": "前道、后道、项目",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "上海-闵行",
+          "departureAddress": "上海市闵行区服务路11号",
+          "employeeRemark": "[全国模拟] 上海市 上海-闵行 全能员工，可一人多单",
+          "commuteMinutes": 11,
           "commuteSource": "local",
           "directCommuteMinutes": 25,
           "reasonable": true,
@@ -30563,66 +30634,7 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[上海-闵行] ↔ 员工出发地[上海市徐汇区服务路11号]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "模拟-上海-徐汇-客户6",
-          "parkName": "上海-徐汇",
-          "address": "上海市徐汇区企业大道105号",
-          "customerType": "项目",
-          "timeSlot": "下午2",
-          "employeeId": 96215,
-          "employeeName": "模拟-上海-徐汇-1",
-          "employeeRoles": "前道、后道、项目",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-徐汇",
-          "departureAddress": "上海市徐汇区服务路10号",
-          "employeeRemark": "[全国模拟] 上海市 上海-徐汇 全能员工，可一人多单",
-          "commuteMinutes": 20,
-          "commuteSource": "local",
-          "directCommuteMinutes": 20,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: PROJECT"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_2"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市徐汇区服务路10号]可覆盖"
+              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市闵行区服务路11号]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -35451,74 +35463,16 @@
           "address": "上海市浦东新区企业大道104号",
           "customerType": "回访（后道）",
           "timeSlot": "下午2",
-          "employeeId": 96213,
-          "employeeName": "模拟-上海-闵行-1",
+          "employeeId": 96215,
+          "employeeName": "模拟-上海-徐汇-1",
           "employeeRoles": "前道、后道、项目",
           "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-闵行",
-          "departureAddress": "上海市闵行区服务路10号",
-          "employeeRemark": "[全国模拟] 上海市 上海-闵行 全能员工，可一人多单",
-          "commuteMinutes": 35,
+          "employeeServicePark": "上海-徐汇",
+          "departureAddress": "上海市徐汇区服务路10号",
+          "employeeRemark": "[全国模拟] 上海市 上海-徐汇 全能员工，可一人多单",
+          "commuteMinutes": 22,
           "commuteSource": "local",
           "directCommuteMinutes": 35,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: BACK"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_2"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[上海-浦东] ↔ 员工出发地[上海市闵行区服务路10号]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "模拟-上海-闵行-客户5",
-          "parkName": "上海-闵行",
-          "address": "上海市闵行区企业大道104号",
-          "customerType": "回访（后道）",
-          "timeSlot": "下午2",
-          "employeeId": 96214,
-          "employeeName": "模拟-上海-闵行-2",
-          "employeeRoles": "前道、后道、项目",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-闵行",
-          "departureAddress": "上海市闵行区服务路11号",
-          "employeeRemark": "[全国模拟] 上海市 上海-闵行 全能员工，可一人多单",
-          "commuteMinutes": 26,
-          "commuteSource": "local",
-          "directCommuteMinutes": 26,
           "reasonable": true,
           "reasonableTags": [
             "规则合规",
@@ -35553,7 +35507,66 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[上海-闵行] ↔ 员工出发地[上海市闵行区服务路11号]可覆盖"
+              "message": "园区匹配: 客户园区[上海-浦东] ↔ 员工出发地[上海市徐汇区服务路10号]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
+          "companyName": "模拟-上海-闵行-客户5",
+          "parkName": "上海-闵行",
+          "address": "上海市闵行区企业大道104号",
+          "customerType": "回访（后道）",
+          "timeSlot": "下午2",
+          "employeeId": 96212,
+          "employeeName": "模拟-上海-浦东-2",
+          "employeeRoles": "前道、后道、项目",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "上海-浦东",
+          "departureAddress": "上海市浦东新区服务路11号",
+          "employeeRemark": "[全国模拟] 上海市 上海-浦东 全能员工，可一人多单",
+          "commuteMinutes": 15,
+          "commuteSource": "local",
+          "directCommuteMinutes": 35,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规",
+            "通勤较近"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: BACK"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_2"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[上海-闵行] ↔ 员工出发地[上海市浦东新区服务路11号]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -35568,16 +35581,16 @@
           "address": "上海市徐汇区企业大道104号",
           "customerType": "回访（后道）",
           "timeSlot": "下午2",
-          "employeeId": 96212,
-          "employeeName": "模拟-上海-浦东-2",
+          "employeeId": 96216,
+          "employeeName": "模拟-上海-徐汇-2",
           "employeeRoles": "前道、后道、项目",
           "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "上海-浦东",
-          "departureAddress": "上海市浦东新区服务路11号",
-          "employeeRemark": "[全国模拟] 上海市 上海-浦东 全能员工，可一人多单",
+          "employeeServicePark": "上海-徐汇",
+          "departureAddress": "上海市徐汇区服务路11号",
+          "employeeRemark": "[全国模拟] 上海市 上海-徐汇 全能员工，可一人多单",
           "commuteMinutes": 35,
           "commuteSource": "local",
-          "directCommuteMinutes": 35,
+          "directCommuteMinutes": 20,
           "reasonable": true,
           "reasonableTags": [
             "规则合规"
@@ -35611,7 +35624,7 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市浦东新区服务路11号]可覆盖"
+              "message": "园区匹配: 客户园区[上海-徐汇] ↔ 员工出发地[上海市徐汇区服务路11号]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -45446,7 +45459,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 105,
+          "totalCommuteMinutes": 95,
           "orders": [
             {
               "companyName": "模拟-上海-浦东-客户1",
@@ -45457,19 +45470,19 @@
               "commuteMinutes": 35
             },
             {
-              "companyName": "模拟-上海-闵行-客户3",
+              "companyName": "模拟-上海-徐汇-客户4",
               "timeSlot": "下午1",
-              "customerType": "项目",
-              "parkName": "上海-闵行",
-              "address": "上海市闵行区企业大道102号",
-              "commuteMinutes": 26
+              "customerType": "首访（前道）",
+              "parkName": "上海-徐汇",
+              "address": "上海市徐汇区企业大道103号",
+              "commuteMinutes": 35
             },
             {
-              "companyName": "模拟-上海-浦东-客户5",
+              "companyName": "模拟-上海-闵行-客户6",
               "timeSlot": "下午2",
-              "customerType": "回访（后道）",
-              "parkName": "上海-浦东",
-              "address": "上海市浦东新区企业大道104号",
+              "customerType": "项目",
+              "parkName": "上海-闵行",
+              "address": "上海市闵行区企业大道105号",
               "commuteMinutes": 35
             }
           ],
@@ -45481,13 +45494,13 @@
             },
             {
               "from": "上海市浦东新区企业大道100号",
-              "to": "上海市闵行区企业大道102号",
+              "to": "上海市徐汇区企业大道103号",
               "minutes": 35
             },
             {
-              "from": "上海市闵行区企业大道102号",
-              "to": "上海市浦东新区企业大道104号",
-              "minutes": 35
+              "from": "上海市徐汇区企业大道103号",
+              "to": "上海市闵行区企业大道105号",
+              "minutes": 25
             }
           ],
           "reasonable": true,
@@ -45500,7 +45513,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 85,
+          "totalCommuteMinutes": 81,
           "orders": [
             {
               "companyName": "模拟-上海-浦东-客户2",
@@ -45511,20 +45524,20 @@
               "commuteMinutes": 35
             },
             {
-              "companyName": "模拟-上海-闵行-客户4",
+              "companyName": "模拟-上海-徐汇-客户3",
               "timeSlot": "下午1",
-              "customerType": "首访（前道）",
-              "parkName": "上海-闵行",
-              "address": "上海市闵行区企业大道103号",
-              "commuteMinutes": 26
+              "customerType": "项目",
+              "parkName": "上海-徐汇",
+              "address": "上海市徐汇区企业大道102号",
+              "commuteMinutes": 35
             },
             {
-              "companyName": "模拟-上海-闵行-客户5",
+              "companyName": "模拟-上海-徐汇-客户6",
               "timeSlot": "下午2",
-              "customerType": "回访（后道）",
-              "parkName": "上海-闵行",
-              "address": "上海市闵行区企业大道104号",
-              "commuteMinutes": 26
+              "customerType": "项目",
+              "parkName": "上海-徐汇",
+              "address": "上海市徐汇区企业大道105号",
+              "commuteMinutes": 11
             }
           ],
           "routeSegments": [
@@ -45535,13 +45548,13 @@
             },
             {
               "from": "上海市浦东新区企业大道101号",
-              "to": "上海市闵行区企业大道103号",
+              "to": "上海市徐汇区企业大道102号",
               "minutes": 35
             },
             {
-              "from": "上海市闵行区企业大道103号",
-              "to": "上海市闵行区企业大道104号",
-              "minutes": 15
+              "from": "上海市徐汇区企业大道102号",
+              "to": "上海市徐汇区企业大道105号",
+              "minutes": 11
             }
           ],
           "reasonable": true,
@@ -45554,22 +45567,22 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 81,
+          "totalCommuteMinutes": 95,
           "orders": [
             {
-              "companyName": "模拟-上海-徐汇-客户1",
+              "companyName": "模拟-上海-徐汇-客户2",
               "timeSlot": "上午",
-              "customerType": "首访（前道）",
+              "customerType": "回访（后道）",
               "parkName": "上海-徐汇",
-              "address": "上海市徐汇区企业大道100号",
+              "address": "上海市徐汇区企业大道101号",
               "commuteMinutes": 35
             },
             {
-              "companyName": "模拟-上海-徐汇-客户4",
+              "companyName": "模拟-上海-闵行-客户4",
               "timeSlot": "下午1",
               "customerType": "首访（前道）",
-              "parkName": "上海-徐汇",
-              "address": "上海市徐汇区企业大道103号",
+              "parkName": "上海-闵行",
+              "address": "上海市闵行区企业大道103号",
               "commuteMinutes": 35
             },
             {
@@ -45584,16 +45597,16 @@
           "routeSegments": [
             {
               "from": "上海市浦东新区服务路10号",
-              "to": "上海市徐汇区企业大道100号",
+              "to": "上海市徐汇区企业大道101号",
               "minutes": 35
             },
             {
-              "from": "上海市徐汇区企业大道100号",
-              "to": "上海市徐汇区企业大道103号",
-              "minutes": 11
+              "from": "上海市徐汇区企业大道101号",
+              "to": "上海市闵行区企业大道103号",
+              "minutes": 25
             },
             {
-              "from": "上海市徐汇区企业大道103号",
+              "from": "上海市闵行区企业大道103号",
               "to": "上海市浦东新区企业大道105号",
               "minutes": 35
             }
@@ -45608,7 +45621,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 71,
+          "totalCommuteMinutes": 65,
           "orders": [
             {
               "companyName": "模拟-上海-闵行-客户1",
@@ -45619,20 +45632,20 @@
               "commuteMinutes": 35
             },
             {
-              "companyName": "模拟-上海-徐汇-客户3",
+              "companyName": "模拟-上海-闵行-客户3",
               "timeSlot": "下午1",
               "customerType": "项目",
-              "parkName": "上海-徐汇",
-              "address": "上海市徐汇区企业大道102号",
-              "commuteMinutes": 35
+              "parkName": "上海-闵行",
+              "address": "上海市闵行区企业大道102号",
+              "commuteMinutes": 15
             },
             {
-              "companyName": "模拟-上海-徐汇-客户5",
+              "companyName": "模拟-上海-闵行-客户5",
               "timeSlot": "下午2",
               "customerType": "回访（后道）",
-              "parkName": "上海-徐汇",
-              "address": "上海市徐汇区企业大道104号",
-              "commuteMinutes": 35
+              "parkName": "上海-闵行",
+              "address": "上海市闵行区企业大道104号",
+              "commuteMinutes": 15
             }
           ],
           "routeSegments": [
@@ -45643,13 +45656,13 @@
             },
             {
               "from": "上海市闵行区企业大道100号",
-              "to": "上海市徐汇区企业大道102号",
-              "minutes": 25
+              "to": "上海市闵行区企业大道102号",
+              "minutes": 15
             },
             {
-              "from": "上海市徐汇区企业大道102号",
-              "to": "上海市徐汇区企业大道104号",
-              "minutes": 11
+              "from": "上海市闵行区企业大道102号",
+              "to": "上海市闵行区企业大道104号",
+              "minutes": 15
             }
           ],
           "reasonable": true,
@@ -45662,7 +45675,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 95,
+          "totalCommuteMinutes": 82,
           "orders": [
             {
               "companyName": "模拟-上海-闵行-客户2",
@@ -45681,12 +45694,12 @@
               "commuteMinutes": 35
             },
             {
-              "companyName": "模拟-上海-徐汇-客户6",
+              "companyName": "模拟-上海-浦东-客户5",
               "timeSlot": "下午2",
-              "customerType": "项目",
-              "parkName": "上海-徐汇",
-              "address": "上海市徐汇区企业大道105号",
-              "commuteMinutes": 20
+              "customerType": "回访（后道）",
+              "parkName": "上海-浦东",
+              "address": "上海市浦东新区企业大道104号",
+              "commuteMinutes": 22
             }
           ],
           "routeSegments": [
@@ -45702,8 +45715,8 @@
             },
             {
               "from": "上海市浦东新区企业大道102号",
-              "to": "上海市徐汇区企业大道105号",
-              "minutes": 35
+              "to": "上海市浦东新区企业大道104号",
+              "minutes": 22
             }
           ],
           "reasonable": true,
@@ -45719,11 +45732,11 @@
           "totalCommuteMinutes": 90,
           "orders": [
             {
-              "companyName": "模拟-上海-徐汇-客户2",
+              "companyName": "模拟-上海-徐汇-客户1",
               "timeSlot": "上午",
-              "customerType": "回访（后道）",
+              "customerType": "首访（前道）",
               "parkName": "上海-徐汇",
-              "address": "上海市徐汇区企业大道101号",
+              "address": "上海市徐汇区企业大道100号",
               "commuteMinutes": 20
             },
             {
@@ -45735,28 +45748,28 @@
               "commuteMinutes": 35
             },
             {
-              "companyName": "模拟-上海-闵行-客户6",
+              "companyName": "模拟-上海-徐汇-客户5",
               "timeSlot": "下午2",
-              "customerType": "项目",
-              "parkName": "上海-闵行",
-              "address": "上海市闵行区企业大道105号",
-              "commuteMinutes": 25
+              "customerType": "回访（后道）",
+              "parkName": "上海-徐汇",
+              "address": "上海市徐汇区企业大道104号",
+              "commuteMinutes": 35
             }
           ],
           "routeSegments": [
             {
               "from": "上海市徐汇区服务路11号",
-              "to": "上海市徐汇区企业大道101号",
+              "to": "上海市徐汇区企业大道100号",
               "minutes": 20
             },
             {
-              "from": "上海市徐汇区企业大道101号",
+              "from": "上海市徐汇区企业大道100号",
               "to": "上海市浦东新区企业大道103号",
               "minutes": 35
             },
             {
               "from": "上海市浦东新区企业大道103号",
-              "to": "上海市闵行区企业大道105号",
+              "to": "上海市徐汇区企业大道104号",
               "minutes": 35
             }
           ],
@@ -49460,7 +49473,7 @@
         "selected": 4,
         "matched": 4,
         "unmatched": 0,
-        "avgCommute": 28,
+        "avgCommute": 35,
         "over60Commute": 0,
         "ruleViolations": 0
       },
@@ -50091,20 +50104,19 @@
           "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
           "customerType": "首访（前道）",
           "timeSlot": "下午2",
-          "employeeId": 90220,
-          "employeeName": "补位-杨浦前",
-          "employeeRoles": "前道、项目",
-          "employeeCapacity": "上午、下午1、下午2",
+          "employeeId": 90209,
+          "employeeName": "补位-卫金山前",
+          "employeeRoles": "前道",
+          "employeeCapacity": "下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市杨浦区邯郸路",
+          "departureAddress": "上海市金山区亭林镇",
           "employeeRemark": "[补位]",
-          "commuteMinutes": 25,
+          "commuteMinutes": 55,
           "commuteSource": "local",
-          "directCommuteMinutes": 25,
+          "directCommuteMinutes": 55,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规",
-            "通勤较近"
+            "规则合规"
           ],
           "rules": [
             {
@@ -50135,7 +50147,7 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区邯郸路]可覆盖"
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市金山区亭林镇]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -50148,13 +50160,41 @@
       "unmatched": [],
       "schedules": [
         {
+          "employeeId": 90209,
+          "employeeName": "补位-卫金山前",
+          "departureAddress": "上海市金山区亭林镇",
+          "totalOrders": 1,
+          "morningOrders": 0,
+          "afternoonOrders": 1,
+          "totalCommuteMinutes": 55,
+          "orders": [
+            {
+              "companyName": "上海喜福来朝阳食品贸易行",
+              "timeSlot": "下午2",
+              "customerType": "首访（前道）",
+              "parkName": "加盟-金山资本现代产业园",
+              "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
+              "commuteMinutes": 55
+            }
+          ],
+          "routeSegments": [
+            {
+              "from": "上海市金山区亭林镇",
+              "to": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
+              "minutes": 55
+            }
+          ],
+          "reasonable": true,
+          "issues": []
+        },
+        {
           "employeeId": 90220,
           "employeeName": "补位-杨浦前",
           "departureAddress": "上海市杨浦区邯郸路",
-          "totalOrders": 2,
+          "totalOrders": 1,
           "morningOrders": 0,
-          "afternoonOrders": 2,
-          "totalCommuteMinutes": 90,
+          "afternoonOrders": 1,
+          "totalCommuteMinutes": 40,
           "orders": [
             {
               "companyName": "上海无忧供应链管理有限公司",
@@ -50163,14 +50203,6 @@
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区五星路707弄御河企业公馆31号",
               "commuteMinutes": 40
-            },
-            {
-              "companyName": "上海喜福来朝阳食品贸易行",
-              "timeSlot": "下午2",
-              "customerType": "首访（前道）",
-              "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
-              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -50178,11 +50210,6 @@
               "from": "上海市杨浦区邯郸路",
               "to": "上海市浦东新区五星路707弄御河企业公馆31号",
               "minutes": 40
-            },
-            {
-              "from": "上海市浦东新区五星路707弄御河企业公馆31号",
-              "to": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
-              "minutes": 50
             }
           ],
           "reasonable": true,
@@ -50246,9 +50273,9 @@
         }
       ],
       "multiOrderStats": {
-        "employeesWithMultipleOrders": 1,
+        "employeesWithMultipleOrders": 0,
         "employeesWithThreePlus": 0,
-        "maxOrdersPerEmployee": 2,
+        "maxOrdersPerEmployee": 1,
         "scheduleViolations": 0
       }
     },
@@ -50269,7 +50296,7 @@
         "selected": 3,
         "matched": 3,
         "unmatched": 0,
-        "avgCommute": 30,
+        "avgCommute": 40,
         "over60Commute": 0,
         "ruleViolations": 0
       },
@@ -50842,20 +50869,19 @@
           "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
           "customerType": "首访（前道）",
           "timeSlot": "下午2",
-          "employeeId": 90220,
-          "employeeName": "补位-杨浦前",
-          "employeeRoles": "前道、项目",
-          "employeeCapacity": "上午、下午1、下午2",
+          "employeeId": 90209,
+          "employeeName": "补位-卫金山前",
+          "employeeRoles": "前道",
+          "employeeCapacity": "下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市杨浦区邯郸路",
+          "departureAddress": "上海市金山区亭林镇",
           "employeeRemark": "[补位]",
-          "commuteMinutes": 25,
+          "commuteMinutes": 55,
           "commuteSource": "local",
-          "directCommuteMinutes": 25,
+          "directCommuteMinutes": 55,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规",
-            "通勤较近"
+            "规则合规"
           ],
           "rules": [
             {
@@ -50886,7 +50912,7 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区邯郸路]可覆盖"
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市金山区亭林镇]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -50899,13 +50925,41 @@
       "unmatched": [],
       "schedules": [
         {
+          "employeeId": 90209,
+          "employeeName": "补位-卫金山前",
+          "departureAddress": "上海市金山区亭林镇",
+          "totalOrders": 1,
+          "morningOrders": 0,
+          "afternoonOrders": 1,
+          "totalCommuteMinutes": 55,
+          "orders": [
+            {
+              "companyName": "上海喜福来朝阳食品贸易行",
+              "timeSlot": "下午2",
+              "customerType": "首访（前道）",
+              "parkName": "加盟-金山资本现代产业园",
+              "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
+              "commuteMinutes": 55
+            }
+          ],
+          "routeSegments": [
+            {
+              "from": "上海市金山区亭林镇",
+              "to": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
+              "minutes": 55
+            }
+          ],
+          "reasonable": true,
+          "issues": []
+        },
+        {
           "employeeId": 90220,
           "employeeName": "补位-杨浦前",
           "departureAddress": "上海市杨浦区邯郸路",
-          "totalOrders": 2,
+          "totalOrders": 1,
           "morningOrders": 0,
-          "afternoonOrders": 2,
-          "totalCommuteMinutes": 90,
+          "afternoonOrders": 1,
+          "totalCommuteMinutes": 40,
           "orders": [
             {
               "companyName": "上海无忧供应链管理有限公司",
@@ -50914,14 +50968,6 @@
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区五星路707弄御河企业公馆31号",
               "commuteMinutes": 40
-            },
-            {
-              "companyName": "上海喜福来朝阳食品贸易行",
-              "timeSlot": "下午2",
-              "customerType": "首访（前道）",
-              "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
-              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -50929,11 +50975,6 @@
               "from": "上海市杨浦区邯郸路",
               "to": "上海市浦东新区五星路707弄御河企业公馆31号",
               "minutes": 40
-            },
-            {
-              "from": "上海市浦东新区五星路707弄御河企业公馆31号",
-              "to": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
-              "minutes": 50
             }
           ],
           "reasonable": true,
@@ -50969,9 +51010,9 @@
         }
       ],
       "multiOrderStats": {
-        "employeesWithMultipleOrders": 1,
+        "employeesWithMultipleOrders": 0,
         "employeesWithThreePlus": 0,
-        "maxOrdersPerEmployee": 2,
+        "maxOrdersPerEmployee": 1,
         "scheduleViolations": 0
       }
     },
@@ -52207,7 +52248,7 @@
         "selected": 6,
         "matched": 6,
         "unmatched": 0,
-        "avgCommute": 33,
+        "avgCommute": 38,
         "over60Commute": 0,
         "ruleViolations": 0
       },
@@ -52952,20 +52993,19 @@
           "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
           "customerType": "首访（前道）",
           "timeSlot": "下午2",
-          "employeeId": 90220,
-          "employeeName": "补位-杨浦前",
-          "employeeRoles": "前道、项目",
-          "employeeCapacity": "上午、下午1、下午2",
+          "employeeId": 90209,
+          "employeeName": "补位-卫金山前",
+          "employeeRoles": "前道",
+          "employeeCapacity": "下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市杨浦区邯郸路",
+          "departureAddress": "上海市金山区亭林镇",
           "employeeRemark": "[补位]",
-          "commuteMinutes": 25,
+          "commuteMinutes": 55,
           "commuteSource": "local",
-          "directCommuteMinutes": 25,
+          "directCommuteMinutes": 55,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规",
-            "通勤较近"
+            "规则合规"
           ],
           "rules": [
             {
@@ -52996,7 +53036,7 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区邯郸路]可覆盖"
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市金山区亭林镇]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -53009,13 +53049,41 @@
       "unmatched": [],
       "schedules": [
         {
+          "employeeId": 90209,
+          "employeeName": "补位-卫金山前",
+          "departureAddress": "上海市金山区亭林镇",
+          "totalOrders": 1,
+          "morningOrders": 0,
+          "afternoonOrders": 1,
+          "totalCommuteMinutes": 55,
+          "orders": [
+            {
+              "companyName": "上海喜福来朝阳食品贸易行",
+              "timeSlot": "下午2",
+              "customerType": "首访（前道）",
+              "parkName": "加盟-金山资本现代产业园",
+              "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
+              "commuteMinutes": 55
+            }
+          ],
+          "routeSegments": [
+            {
+              "from": "上海市金山区亭林镇",
+              "to": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
+              "minutes": 55
+            }
+          ],
+          "reasonable": true,
+          "issues": []
+        },
+        {
           "employeeId": 90220,
           "employeeName": "补位-杨浦前",
           "departureAddress": "上海市杨浦区邯郸路",
-          "totalOrders": 2,
+          "totalOrders": 1,
           "morningOrders": 0,
-          "afternoonOrders": 2,
-          "totalCommuteMinutes": 90,
+          "afternoonOrders": 1,
+          "totalCommuteMinutes": 40,
           "orders": [
             {
               "companyName": "上海无忧供应链管理有限公司",
@@ -53024,14 +53092,6 @@
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区五星路707弄御河企业公馆31号",
               "commuteMinutes": 40
-            },
-            {
-              "companyName": "上海喜福来朝阳食品贸易行",
-              "timeSlot": "下午2",
-              "customerType": "首访（前道）",
-              "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
-              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -53039,11 +53099,6 @@
               "from": "上海市杨浦区邯郸路",
               "to": "上海市浦东新区五星路707弄御河企业公馆31号",
               "minutes": 40
-            },
-            {
-              "from": "上海市浦东新区五星路707弄御河企业公馆31号",
-              "to": "上海市普陀区曹杨路2009弄天汇广场68号楼1203室",
-              "minutes": 50
             }
           ],
           "reasonable": true,
@@ -53163,9 +53218,9 @@
         }
       ],
       "multiOrderStats": {
-        "employeesWithMultipleOrders": 1,
+        "employeesWithMultipleOrders": 0,
         "employeesWithThreePlus": 0,
-        "maxOrdersPerEmployee": 2,
+        "maxOrdersPerEmployee": 1,
         "scheduleViolations": 0
       }
     },
@@ -53186,7 +53241,7 @@
         "selected": 32,
         "matched": 32,
         "unmatched": 0,
-        "avgCommute": 41,
+        "avgCommute": 39,
         "over60Commute": 1,
         "ruleViolations": 0
       },
@@ -54624,73 +54679,15 @@
           "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
           "customerType": "回访（后道）",
           "timeSlot": "下午1",
-          "employeeId": 9,
-          "employeeName": "傅丽",
-          "employeeRoles": "后道",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市徐汇区龙兰路",
-          "commuteMinutes": 30,
-          "commuteSource": "local",
-          "directCommuteMinutes": 30,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: BACK"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_1"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "上海界龙现代印刷纸品有限公司",
-          "parkName": "加盟-金山资本现代产业园",
-          "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
-          "customerType": "回访（后道）",
-          "timeSlot": "下午1",
           "employeeId": 10,
           "employeeName": "宋樑",
           "employeeRoles": "后道",
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市杨浦区佳木斯路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 25,
           "commuteSource": "local",
-          "directCommuteMinutes": 30,
+          "directCommuteMinutes": 25,
           "reasonable": true,
           "reasonableTags": [
             "规则合规",
@@ -54726,6 +54723,64 @@
               "rule": "园区匹配",
               "passed": true,
               "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区佳木斯路]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
+          "companyName": "上海界龙现代印刷纸品有限公司",
+          "parkName": "加盟-金山资本现代产业园",
+          "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
+          "customerType": "回访（后道）",
+          "timeSlot": "下午1",
+          "employeeId": 9,
+          "employeeName": "傅丽",
+          "employeeRoles": "后道",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "加盟-金山资本现代产业园",
+          "departureAddress": "上海市徐汇区龙兰路",
+          "commuteMinutes": 20,
+          "commuteSource": "local",
+          "directCommuteMinutes": 20,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规",
+            "通勤较近"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: BACK"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_1"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -54971,15 +55026,15 @@
           "address": "上海市静安区共和新路3699号A栋316室",
           "customerType": "回访（后道）",
           "timeSlot": "下午1",
-          "employeeId": 11,
-          "employeeName": "盛雅琴",
+          "employeeId": 22,
+          "employeeName": "吴佳键",
           "employeeRoles": "后道",
           "employeeCapacity": "上午、下午1",
           "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市杨浦区双阳支路",
-          "commuteMinutes": 25,
+          "departureAddress": "上海市宝山区大场镇南大路",
+          "commuteMinutes": 20,
           "commuteSource": "local",
-          "directCommuteMinutes": 25,
+          "directCommuteMinutes": 35,
           "reasonable": true,
           "reasonableTags": [
             "规则合规",
@@ -55014,12 +55069,12 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区双阳支路]可覆盖"
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市宝山区大场镇南大路]可覆盖"
             },
             {
               "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: PlusN(3次)"
+              "passed": false,
+              "message": "Plus不匹配: 需要PlusN, 员工能力[Plus0,Plus1]"
             }
           ]
         },
@@ -55035,7 +55090,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区亭林镇",
-          "commuteMinutes": 60,
+          "commuteMinutes": 39,
           "commuteSource": "local",
           "directCommuteMinutes": 60,
           "reasonable": true,
@@ -55093,7 +55148,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区朱泾镇",
-          "commuteMinutes": 60,
+          "commuteMinutes": 35,
           "commuteSource": "local",
           "directCommuteMinutes": 60,
           "reasonable": true,
@@ -55144,64 +55199,6 @@
           "address": "上海市闵行区紫海路170号",
           "customerType": "回访（后道）",
           "timeSlot": "下午2",
-          "employeeId": 9,
-          "employeeName": "傅丽",
-          "employeeRoles": "后道",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市徐汇区龙兰路",
-          "commuteMinutes": 25,
-          "commuteSource": "local",
-          "directCommuteMinutes": 25,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: BACK"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_2"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "古疁（上海）文化发展有限公司",
-          "parkName": "加盟-金山资本现代产业园",
-          "address": "上海市嘉定区平城路855号704",
-          "customerType": "回访（后道）",
-          "timeSlot": "下午2",
           "employeeId": 10,
           "employeeName": "宋樑",
           "employeeRoles": "后道",
@@ -55210,7 +55207,7 @@
           "departureAddress": "上海市杨浦区佳木斯路",
           "commuteMinutes": 35,
           "commuteSource": "local",
-          "directCommuteMinutes": 35,
+          "directCommuteMinutes": 40,
           "reasonable": true,
           "reasonableTags": [
             "规则合规"
@@ -55254,6 +55251,63 @@
           ]
         },
         {
+          "companyName": "古疁（上海）文化发展有限公司",
+          "parkName": "加盟-金山资本现代产业园",
+          "address": "上海市嘉定区平城路855号704",
+          "customerType": "回访（后道）",
+          "timeSlot": "下午2",
+          "employeeId": 9,
+          "employeeName": "傅丽",
+          "employeeRoles": "后道",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "加盟-金山资本现代产业园",
+          "departureAddress": "上海市徐汇区龙兰路",
+          "commuteMinutes": 45,
+          "commuteSource": "local",
+          "directCommuteMinutes": 45,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: BACK"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_2"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
           "companyName": "上海华烁投资管理有限公司",
           "parkName": "加盟-金山资本现代产业园",
           "address": "上海市闵行区浦星公路699号（万国数据浦江数据中心）",
@@ -55265,7 +55319,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市长宁区宣化路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 25,
           "commuteSource": "local",
           "directCommuteMinutes": 30,
           "reasonable": true,
@@ -55381,7 +55435,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市浦东新区金桥路",
-          "commuteMinutes": 50,
+          "commuteMinutes": 45,
           "commuteSource": "local",
           "directCommuteMinutes": 50,
           "reasonable": true,
@@ -55439,12 +55493,13 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区亭林镇",
-          "commuteMinutes": 55,
+          "commuteMinutes": 25,
           "commuteSource": "local",
           "directCommuteMinutes": 55,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规"
+            "规则合规",
+            "通勤较近"
           ],
           "rules": [
             {
@@ -55494,7 +55549,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 80,
+          "totalCommuteMinutes": 85,
           "orders": [
             {
               "companyName": "上海季龄网络科技有限公司",
@@ -55505,20 +55560,20 @@
               "commuteMinutes": 20
             },
             {
-              "companyName": "上海筱胜企业管理咨询有限公司",
+              "companyName": "上海界龙现代印刷纸品有限公司",
               "timeSlot": "下午1",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "commuteMinutes": 30
+              "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "commuteMinutes": 20
             },
             {
-              "companyName": "上海鸣旭电子科技有限公司",
+              "companyName": "古疁（上海）文化发展有限公司",
               "timeSlot": "下午2",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市闵行区紫海路170号",
-              "commuteMinutes": 25
+              "address": "上海市嘉定区平城路855号704",
+              "commuteMinutes": 45
             }
           ],
           "routeSegments": [
@@ -55529,13 +55584,13 @@
             },
             {
               "from": "上海市长宁区仙霞路8号1701-1702室",
-              "to": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "minutes": 25
+              "to": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "minutes": 20
             },
             {
-              "from": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "to": "上海市闵行区紫海路170号",
-              "minutes": 35
+              "from": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "to": "上海市嘉定区平城路855号704",
+              "minutes": 45
             }
           ],
           "reasonable": true,
@@ -55572,7 +55627,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市奉贤区远东路1899弄6号楼1803室",
-              "commuteMinutes": 50
+              "commuteMinutes": 45
             }
           ],
           "routeSegments": [
@@ -55626,7 +55681,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市普陀区长寿路1188号102",
-              "commuteMinutes": 55
+              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -55680,7 +55735,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市闵行区浦星公路699号（万国数据浦江数据中心）",
-              "commuteMinutes": 30
+              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -55710,7 +55765,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 130,
+          "totalCommuteMinutes": 125,
           "orders": [
             {
               "companyName": "上海鑫邦旅游发展有限公司",
@@ -55721,19 +55776,19 @@
               "commuteMinutes": 40
             },
             {
-              "companyName": "上海界龙现代印刷纸品有限公司",
+              "companyName": "上海筱胜企业管理咨询有限公司",
               "timeSlot": "下午1",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "commuteMinutes": 30
+              "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "commuteMinutes": 25
             },
             {
-              "companyName": "古疁（上海）文化发展有限公司",
+              "companyName": "上海鸣旭电子科技有限公司",
               "timeSlot": "下午2",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市嘉定区平城路855号704",
+              "address": "上海市闵行区紫海路170号",
               "commuteMinutes": 35
             }
           ],
@@ -55745,13 +55800,13 @@
             },
             {
               "from": "上海市浦东新区东方路1217号陆家嘴金融服务广场21楼",
-              "to": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "minutes": 45
+              "to": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "minutes": 50
             },
             {
-              "from": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "to": "上海市嘉定区平城路855号704",
-              "minutes": 45
+              "from": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "to": "上海市闵行区紫海路170号",
+              "minutes": 35
             }
           ],
           "reasonable": true,
@@ -55788,7 +55843,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区周浦镇沪南公路2218号BHC中环中心东楼5楼511室",
-              "commuteMinutes": 60
+              "commuteMinutes": 35
             }
           ],
           "routeSegments": [
@@ -55818,7 +55873,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 135,
+          "totalCommuteMinutes": 160,
           "orders": [
             {
               "companyName": "上海多隆信息科技有限公司",
@@ -55853,12 +55908,12 @@
             },
             {
               "from": "上海市闵行区红星国际广场1818弄红星国际广场11号楼1楼",
-              "to": "上海市徐汇区宜山路889号齐来大厦1601-2室",
-              "minutes": 25
+              "to": "上海市金山区朱泾镇金龙新街1688号",
+              "minutes": 50
             },
             {
-              "from": "上海市徐汇区宜山路889号齐来大厦1601-2室",
-              "to": "上海市金山区朱泾镇金龙新街1688号",
+              "from": "上海市金山区朱泾镇金龙新街1688号",
+              "to": "上海市徐汇区宜山路889号齐来大厦1601-2室",
               "minutes": 60
             }
           ],
@@ -55896,7 +55951,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区东方路3601号丰华园3号楼6楼",
-              "commuteMinutes": 60
+              "commuteMinutes": 39
             }
           ],
           "routeSegments": [
@@ -55920,21 +55975,21 @@
           "issues": []
         },
         {
-          "employeeId": 11,
-          "employeeName": "盛雅琴",
-          "departureAddress": "上海市杨浦区双阳支路",
+          "employeeId": 22,
+          "employeeName": "吴佳键",
+          "departureAddress": "上海市宝山区大场镇南大路",
           "totalOrders": 2,
           "morningOrders": 1,
           "afternoonOrders": 1,
-          "totalCommuteMinutes": 80,
+          "totalCommuteMinutes": 55,
           "orders": [
             {
-              "companyName": "爱豆科技（上海）有限公司",
+              "companyName": "上海京泉投资管理有限公司",
               "timeSlot": "上午",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市浦东新区滨江大道399弄5-5号",
-              "commuteMinutes": 40
+              "address": "上海市虹口区东长治路866号友邦金融中心37楼",
+              "commuteMinutes": 35
             },
             {
               "companyName": "上海得韬会展服务有限公司",
@@ -55942,19 +55997,19 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市静安区共和新路3699号A栋316室",
-              "commuteMinutes": 25
+              "commuteMinutes": 20
             }
           ],
           "routeSegments": [
             {
-              "from": "上海市杨浦区双阳支路",
-              "to": "上海市浦东新区滨江大道399弄5-5号",
-              "minutes": 40
+              "from": "上海市宝山区大场镇南大路",
+              "to": "上海市虹口区东长治路866号友邦金融中心37楼",
+              "minutes": 35
             },
             {
-              "from": "上海市浦东新区滨江大道399弄5-5号",
+              "from": "上海市虹口区东长治路866号友邦金融中心37楼",
               "to": "上海市静安区共和新路3699号A栋316室",
-              "minutes": 40
+              "minutes": 20
             }
           ],
           "reasonable": true,
@@ -56045,6 +56100,34 @@
           "issues": []
         },
         {
+          "employeeId": 11,
+          "employeeName": "盛雅琴",
+          "departureAddress": "上海市杨浦区双阳支路",
+          "totalOrders": 1,
+          "morningOrders": 1,
+          "afternoonOrders": 0,
+          "totalCommuteMinutes": 40,
+          "orders": [
+            {
+              "companyName": "爱豆科技（上海）有限公司",
+              "timeSlot": "上午",
+              "customerType": "回访（后道）",
+              "parkName": "加盟-金山资本现代产业园",
+              "address": "上海市浦东新区滨江大道399弄5-5号",
+              "commuteMinutes": 40
+            }
+          ],
+          "routeSegments": [
+            {
+              "from": "上海市杨浦区双阳支路",
+              "to": "上海市浦东新区滨江大道399弄5-5号",
+              "minutes": 40
+            }
+          ],
+          "reasonable": true,
+          "issues": []
+        },
+        {
           "employeeId": 20,
           "employeeName": "宋亚军",
           "departureAddress": "上海市浦东新区金京路",
@@ -56067,34 +56150,6 @@
               "from": "上海市浦东新区金京路",
               "to": "上海市宝山区淞宝路155弄新月国际商务广场1号楼1007室",
               "minutes": 30
-            }
-          ],
-          "reasonable": true,
-          "issues": []
-        },
-        {
-          "employeeId": 22,
-          "employeeName": "吴佳键",
-          "departureAddress": "上海市宝山区大场镇南大路",
-          "totalOrders": 1,
-          "morningOrders": 1,
-          "afternoonOrders": 0,
-          "totalCommuteMinutes": 35,
-          "orders": [
-            {
-              "companyName": "上海京泉投资管理有限公司",
-              "timeSlot": "上午",
-              "customerType": "回访（后道）",
-              "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市虹口区东长治路866号友邦金融中心37楼",
-              "commuteMinutes": 35
-            }
-          ],
-          "routeSegments": [
-            {
-              "from": "上海市宝山区大场镇南大路",
-              "to": "上海市虹口区东长治路866号友邦金融中心37楼",
-              "minutes": 35
             }
           ],
           "reasonable": true,
@@ -57918,7 +57973,7 @@
         "selected": 17,
         "matched": 17,
         "unmatched": 0,
-        "avgCommute": 42,
+        "avgCommute": 37,
         "over60Commute": 0,
         "ruleViolations": 0
       },
@@ -58490,73 +58545,15 @@
           "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
           "customerType": "回访（后道）",
           "timeSlot": "下午1",
-          "employeeId": 9,
-          "employeeName": "傅丽",
-          "employeeRoles": "后道",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市徐汇区龙兰路",
-          "commuteMinutes": 30,
-          "commuteSource": "local",
-          "directCommuteMinutes": 30,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: BACK"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_1"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "上海界龙现代印刷纸品有限公司",
-          "parkName": "加盟-金山资本现代产业园",
-          "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
-          "customerType": "回访（后道）",
-          "timeSlot": "下午1",
           "employeeId": 10,
           "employeeName": "宋樑",
           "employeeRoles": "后道",
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市杨浦区佳木斯路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 25,
           "commuteSource": "local",
-          "directCommuteMinutes": 30,
+          "directCommuteMinutes": 25,
           "reasonable": true,
           "reasonableTags": [
             "规则合规",
@@ -58592,6 +58589,64 @@
               "rule": "园区匹配",
               "passed": true,
               "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区佳木斯路]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
+          "companyName": "上海界龙现代印刷纸品有限公司",
+          "parkName": "加盟-金山资本现代产业园",
+          "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
+          "customerType": "回访（后道）",
+          "timeSlot": "下午1",
+          "employeeId": 9,
+          "employeeName": "傅丽",
+          "employeeRoles": "后道",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "加盟-金山资本现代产业园",
+          "departureAddress": "上海市徐汇区龙兰路",
+          "commuteMinutes": 20,
+          "commuteSource": "local",
+          "directCommuteMinutes": 20,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规",
+            "通勤较近"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: BACK"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_1"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -58901,7 +58956,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区亭林镇",
-          "commuteMinutes": 60,
+          "commuteMinutes": 39,
           "commuteSource": "local",
           "directCommuteMinutes": 60,
           "reasonable": true,
@@ -58959,7 +59014,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区朱泾镇",
-          "commuteMinutes": 60,
+          "commuteMinutes": 35,
           "commuteSource": "local",
           "directCommuteMinutes": 60,
           "reasonable": true,
@@ -59010,64 +59065,6 @@
           "address": "上海市闵行区紫海路170号",
           "customerType": "回访（后道）",
           "timeSlot": "下午2",
-          "employeeId": 9,
-          "employeeName": "傅丽",
-          "employeeRoles": "后道",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市徐汇区龙兰路",
-          "commuteMinutes": 25,
-          "commuteSource": "local",
-          "directCommuteMinutes": 25,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: BACK"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_2"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "古疁（上海）文化发展有限公司",
-          "parkName": "加盟-金山资本现代产业园",
-          "address": "上海市嘉定区平城路855号704",
-          "customerType": "回访（后道）",
-          "timeSlot": "下午2",
           "employeeId": 10,
           "employeeName": "宋樑",
           "employeeRoles": "后道",
@@ -59076,7 +59073,7 @@
           "departureAddress": "上海市杨浦区佳木斯路",
           "commuteMinutes": 35,
           "commuteSource": "local",
-          "directCommuteMinutes": 35,
+          "directCommuteMinutes": 40,
           "reasonable": true,
           "reasonableTags": [
             "规则合规"
@@ -59120,6 +59117,63 @@
           ]
         },
         {
+          "companyName": "古疁（上海）文化发展有限公司",
+          "parkName": "加盟-金山资本现代产业园",
+          "address": "上海市嘉定区平城路855号704",
+          "customerType": "回访（后道）",
+          "timeSlot": "下午2",
+          "employeeId": 9,
+          "employeeName": "傅丽",
+          "employeeRoles": "后道",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "加盟-金山资本现代产业园",
+          "departureAddress": "上海市徐汇区龙兰路",
+          "commuteMinutes": 45,
+          "commuteSource": "local",
+          "directCommuteMinutes": 45,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: BACK"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_2"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
           "companyName": "上海华烁投资管理有限公司",
           "parkName": "加盟-金山资本现代产业园",
           "address": "上海市闵行区浦星公路699号（万国数据浦江数据中心）",
@@ -59131,7 +59185,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市长宁区宣化路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 25,
           "commuteSource": "local",
           "directCommuteMinutes": 30,
           "reasonable": true,
@@ -59247,7 +59301,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市浦东新区金桥路",
-          "commuteMinutes": 50,
+          "commuteMinutes": 45,
           "commuteSource": "local",
           "directCommuteMinutes": 50,
           "reasonable": true,
@@ -59305,12 +59359,13 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区亭林镇",
-          "commuteMinutes": 55,
+          "commuteMinutes": 25,
           "commuteSource": "local",
           "directCommuteMinutes": 55,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规"
+            "规则合规",
+            "通勤较近"
           ],
           "rules": [
             {
@@ -59363,32 +59418,32 @@
           "totalCommuteMinutes": 65,
           "orders": [
             {
-              "companyName": "上海筱胜企业管理咨询有限公司",
+              "companyName": "上海界龙现代印刷纸品有限公司",
               "timeSlot": "下午1",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "commuteMinutes": 30
+              "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "commuteMinutes": 20
             },
             {
-              "companyName": "上海鸣旭电子科技有限公司",
+              "companyName": "古疁（上海）文化发展有限公司",
               "timeSlot": "下午2",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市闵行区紫海路170号",
-              "commuteMinutes": 25
+              "address": "上海市嘉定区平城路855号704",
+              "commuteMinutes": 45
             }
           ],
           "routeSegments": [
             {
               "from": "上海市徐汇区龙兰路",
-              "to": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "minutes": 30
+              "to": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "minutes": 20
             },
             {
-              "from": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "to": "上海市闵行区紫海路170号",
-              "minutes": 35
+              "from": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "to": "上海市嘉定区平城路855号704",
+              "minutes": 45
             }
           ],
           "reasonable": true,
@@ -59417,7 +59472,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市奉贤区远东路1899弄6号楼1803室",
-              "commuteMinutes": 50
+              "commuteMinutes": 45
             }
           ],
           "routeSegments": [
@@ -59458,7 +59513,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市普陀区长寿路1188号102",
-              "commuteMinutes": 55
+              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -59499,7 +59554,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市闵行区浦星公路699号（万国数据浦江数据中心）",
-              "commuteMinutes": 30
+              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -59524,35 +59579,35 @@
           "totalOrders": 2,
           "morningOrders": 0,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 75,
+          "totalCommuteMinutes": 60,
           "orders": [
             {
-              "companyName": "上海界龙现代印刷纸品有限公司",
+              "companyName": "上海筱胜企业管理咨询有限公司",
               "timeSlot": "下午1",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "commuteMinutes": 30
+              "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "commuteMinutes": 25
             },
             {
-              "companyName": "古疁（上海）文化发展有限公司",
+              "companyName": "上海鸣旭电子科技有限公司",
               "timeSlot": "下午2",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市嘉定区平城路855号704",
+              "address": "上海市闵行区紫海路170号",
               "commuteMinutes": 35
             }
           ],
           "routeSegments": [
             {
               "from": "上海市杨浦区佳木斯路",
-              "to": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "minutes": 30
+              "to": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "minutes": 25
             },
             {
-              "from": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "to": "上海市嘉定区平城路855号704",
-              "minutes": 45
+              "from": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "to": "上海市闵行区紫海路170号",
+              "minutes": 35
             }
           ],
           "reasonable": true,
@@ -59581,7 +59636,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区周浦镇沪南公路2218号BHC中环中心东楼5楼511室",
-              "commuteMinutes": 60
+              "commuteMinutes": 35
             }
           ],
           "routeSegments": [
@@ -59606,7 +59661,7 @@
           "totalOrders": 2,
           "morningOrders": 0,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 120,
+          "totalCommuteMinutes": 86,
           "orders": [
             {
               "companyName": "上海无忧供应链管理有限公司",
@@ -59628,12 +59683,12 @@
           "routeSegments": [
             {
               "from": "上海市金山区亭林镇",
-              "to": "上海市徐汇区宜山路889号齐来大厦1601-2室",
-              "minutes": 60
+              "to": "上海市金山区朱泾镇金龙新街1688号",
+              "minutes": 26
             },
             {
-              "from": "上海市徐汇区宜山路889号齐来大厦1601-2室",
-              "to": "上海市金山区朱泾镇金龙新街1688号",
+              "from": "上海市金山区朱泾镇金龙新街1688号",
+              "to": "上海市徐汇区宜山路889号齐来大厦1601-2室",
               "minutes": 60
             }
           ],
@@ -59663,7 +59718,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区东方路3601号丰华园3号楼6楼",
-              "commuteMinutes": 60
+              "commuteMinutes": 39
             }
           ],
           "routeSegments": [
@@ -59734,7 +59789,7 @@
         "selected": 9,
         "matched": 9,
         "unmatched": 0,
-        "avgCommute": 31,
+        "avgCommute": 30,
         "over60Commute": 0,
         "ruleViolations": 0
       },
@@ -60545,7 +60600,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "宝山高新",
           "departureAddress": "上海市宝山区淞发路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 20,
           "commuteSource": "local",
           "directCommuteMinutes": 30,
           "reasonable": true,
@@ -60743,7 +60798,7 @@
               "customerType": "回访（后道）",
               "parkName": "宝山高新",
               "address": "上海市普陀区金沙江路1628弄5号楼618室",
-              "commuteMinutes": 30
+              "commuteMinutes": 20
             }
           ],
           "routeSegments": [
@@ -60773,7 +60828,7 @@
           "totalOrders": 2,
           "morningOrders": 0,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 70,
+          "totalCommuteMinutes": 61,
           "orders": [
             {
               "companyName": "上海宝冶工程技术有限公司",
@@ -60795,12 +60850,12 @@
           "routeSegments": [
             {
               "from": "上海市宝山区淞发路",
-              "to": "上海市闵行区申长路588号",
-              "minutes": 35
+              "to": "上海市宝山区友谊路1818号",
+              "minutes": 26
             },
             {
-              "from": "上海市闵行区申长路588号",
-              "to": "上海市宝山区友谊路1818号",
+              "from": "上海市宝山区友谊路1818号",
+              "to": "上海市闵行区申长路588号",
               "minutes": 35
             }
           ],
@@ -60944,7 +60999,7 @@
         "selected": 32,
         "matched": 32,
         "unmatched": 0,
-        "avgCommute": 41,
+        "avgCommute": 39,
         "over60Commute": 1,
         "ruleViolations": 0
       },
@@ -62382,73 +62437,15 @@
           "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
           "customerType": "回访（后道）",
           "timeSlot": "下午1",
-          "employeeId": 9,
-          "employeeName": "傅丽",
-          "employeeRoles": "后道",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市徐汇区龙兰路",
-          "commuteMinutes": 30,
-          "commuteSource": "local",
-          "directCommuteMinutes": 30,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: BACK"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_1"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "上海界龙现代印刷纸品有限公司",
-          "parkName": "加盟-金山资本现代产业园",
-          "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
-          "customerType": "回访（后道）",
-          "timeSlot": "下午1",
           "employeeId": 10,
           "employeeName": "宋樑",
           "employeeRoles": "后道",
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市杨浦区佳木斯路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 25,
           "commuteSource": "local",
-          "directCommuteMinutes": 30,
+          "directCommuteMinutes": 25,
           "reasonable": true,
           "reasonableTags": [
             "规则合规",
@@ -62484,6 +62481,64 @@
               "rule": "园区匹配",
               "passed": true,
               "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区佳木斯路]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
+          "companyName": "上海界龙现代印刷纸品有限公司",
+          "parkName": "加盟-金山资本现代产业园",
+          "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
+          "customerType": "回访（后道）",
+          "timeSlot": "下午1",
+          "employeeId": 9,
+          "employeeName": "傅丽",
+          "employeeRoles": "后道",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "加盟-金山资本现代产业园",
+          "departureAddress": "上海市徐汇区龙兰路",
+          "commuteMinutes": 20,
+          "commuteSource": "local",
+          "directCommuteMinutes": 20,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规",
+            "通勤较近"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: BACK"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_1"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
             },
             {
               "rule": "Plus匹配",
@@ -62729,15 +62784,15 @@
           "address": "上海市静安区共和新路3699号A栋316室",
           "customerType": "回访（后道）",
           "timeSlot": "下午1",
-          "employeeId": 11,
-          "employeeName": "盛雅琴",
+          "employeeId": 22,
+          "employeeName": "吴佳键",
           "employeeRoles": "后道",
           "employeeCapacity": "上午、下午1",
           "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市杨浦区双阳支路",
-          "commuteMinutes": 25,
+          "departureAddress": "上海市宝山区大场镇南大路",
+          "commuteMinutes": 20,
           "commuteSource": "local",
-          "directCommuteMinutes": 25,
+          "directCommuteMinutes": 35,
           "reasonable": true,
           "reasonableTags": [
             "规则合规",
@@ -62772,12 +62827,12 @@
             {
               "rule": "园区匹配",
               "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市杨浦区双阳支路]可覆盖"
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市宝山区大场镇南大路]可覆盖"
             },
             {
               "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: PlusN(3次)"
+              "passed": false,
+              "message": "Plus不匹配: 需要PlusN, 员工能力[Plus0,Plus1]"
             }
           ]
         },
@@ -62793,7 +62848,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区亭林镇",
-          "commuteMinutes": 60,
+          "commuteMinutes": 39,
           "commuteSource": "local",
           "directCommuteMinutes": 60,
           "reasonable": true,
@@ -62851,7 +62906,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区朱泾镇",
-          "commuteMinutes": 60,
+          "commuteMinutes": 35,
           "commuteSource": "local",
           "directCommuteMinutes": 60,
           "reasonable": true,
@@ -62902,64 +62957,6 @@
           "address": "上海市闵行区紫海路170号",
           "customerType": "回访（后道）",
           "timeSlot": "下午2",
-          "employeeId": 9,
-          "employeeName": "傅丽",
-          "employeeRoles": "后道",
-          "employeeCapacity": "上午、下午1、下午2",
-          "employeeServicePark": "加盟-金山资本现代产业园",
-          "departureAddress": "上海市徐汇区龙兰路",
-          "commuteMinutes": 25,
-          "commuteSource": "local",
-          "directCommuteMinutes": 25,
-          "reasonable": true,
-          "reasonableTags": [
-            "规则合规",
-            "通勤较近"
-          ],
-          "rules": [
-            {
-              "rule": "城市匹配",
-              "passed": true,
-              "message": "城市匹配: 上海市"
-            },
-            {
-              "rule": "职责匹配",
-              "passed": true,
-              "message": "职责匹配: BACK"
-            },
-            {
-              "rule": "时段匹配",
-              "passed": true,
-              "message": "时段匹配: AFTERNOON_2"
-            },
-            {
-              "rule": "指定人",
-              "passed": true,
-              "message": "无指定人要求"
-            },
-            {
-              "rule": "放弃人",
-              "passed": true,
-              "message": "无放弃人限制"
-            },
-            {
-              "rule": "园区匹配",
-              "passed": true,
-              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
-            },
-            {
-              "rule": "Plus匹配",
-              "passed": true,
-              "message": "Plus匹配: Plus0(0次)"
-            }
-          ]
-        },
-        {
-          "companyName": "古疁（上海）文化发展有限公司",
-          "parkName": "加盟-金山资本现代产业园",
-          "address": "上海市嘉定区平城路855号704",
-          "customerType": "回访（后道）",
-          "timeSlot": "下午2",
           "employeeId": 10,
           "employeeName": "宋樑",
           "employeeRoles": "后道",
@@ -62968,7 +62965,7 @@
           "departureAddress": "上海市杨浦区佳木斯路",
           "commuteMinutes": 35,
           "commuteSource": "local",
-          "directCommuteMinutes": 35,
+          "directCommuteMinutes": 40,
           "reasonable": true,
           "reasonableTags": [
             "规则合规"
@@ -63012,6 +63009,63 @@
           ]
         },
         {
+          "companyName": "古疁（上海）文化发展有限公司",
+          "parkName": "加盟-金山资本现代产业园",
+          "address": "上海市嘉定区平城路855号704",
+          "customerType": "回访（后道）",
+          "timeSlot": "下午2",
+          "employeeId": 9,
+          "employeeName": "傅丽",
+          "employeeRoles": "后道",
+          "employeeCapacity": "上午、下午1、下午2",
+          "employeeServicePark": "加盟-金山资本现代产业园",
+          "departureAddress": "上海市徐汇区龙兰路",
+          "commuteMinutes": 45,
+          "commuteSource": "local",
+          "directCommuteMinutes": 45,
+          "reasonable": true,
+          "reasonableTags": [
+            "规则合规"
+          ],
+          "rules": [
+            {
+              "rule": "城市匹配",
+              "passed": true,
+              "message": "城市匹配: 上海市"
+            },
+            {
+              "rule": "职责匹配",
+              "passed": true,
+              "message": "职责匹配: BACK"
+            },
+            {
+              "rule": "时段匹配",
+              "passed": true,
+              "message": "时段匹配: AFTERNOON_2"
+            },
+            {
+              "rule": "指定人",
+              "passed": true,
+              "message": "无指定人要求"
+            },
+            {
+              "rule": "放弃人",
+              "passed": true,
+              "message": "无放弃人限制"
+            },
+            {
+              "rule": "园区匹配",
+              "passed": true,
+              "message": "园区匹配: 客户园区[加盟-金山资本现代产业园] ↔ 员工出发地[上海市徐汇区龙兰路]可覆盖"
+            },
+            {
+              "rule": "Plus匹配",
+              "passed": true,
+              "message": "Plus匹配: Plus0(0次)"
+            }
+          ]
+        },
+        {
           "companyName": "上海华烁投资管理有限公司",
           "parkName": "加盟-金山资本现代产业园",
           "address": "上海市闵行区浦星公路699号（万国数据浦江数据中心）",
@@ -63023,7 +63077,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市长宁区宣化路",
-          "commuteMinutes": 30,
+          "commuteMinutes": 25,
           "commuteSource": "local",
           "directCommuteMinutes": 30,
           "reasonable": true,
@@ -63139,7 +63193,7 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市浦东新区金桥路",
-          "commuteMinutes": 50,
+          "commuteMinutes": 45,
           "commuteSource": "local",
           "directCommuteMinutes": 50,
           "reasonable": true,
@@ -63197,12 +63251,13 @@
           "employeeCapacity": "上午、下午1、下午2",
           "employeeServicePark": "加盟-金山资本现代产业园",
           "departureAddress": "上海市金山区亭林镇",
-          "commuteMinutes": 55,
+          "commuteMinutes": 25,
           "commuteSource": "local",
           "directCommuteMinutes": 55,
           "reasonable": true,
           "reasonableTags": [
-            "规则合规"
+            "规则合规",
+            "通勤较近"
           ],
           "rules": [
             {
@@ -63252,7 +63307,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 80,
+          "totalCommuteMinutes": 85,
           "orders": [
             {
               "companyName": "上海季龄网络科技有限公司",
@@ -63263,20 +63318,20 @@
               "commuteMinutes": 20
             },
             {
-              "companyName": "上海筱胜企业管理咨询有限公司",
+              "companyName": "上海界龙现代印刷纸品有限公司",
               "timeSlot": "下午1",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "commuteMinutes": 30
+              "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "commuteMinutes": 20
             },
             {
-              "companyName": "上海鸣旭电子科技有限公司",
+              "companyName": "古疁（上海）文化发展有限公司",
               "timeSlot": "下午2",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市闵行区紫海路170号",
-              "commuteMinutes": 25
+              "address": "上海市嘉定区平城路855号704",
+              "commuteMinutes": 45
             }
           ],
           "routeSegments": [
@@ -63287,13 +63342,13 @@
             },
             {
               "from": "上海市长宁区仙霞路8号1701-1702室",
-              "to": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "minutes": 25
+              "to": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "minutes": 20
             },
             {
-              "from": "上海市普陀区中江路388弄国盛中心1号楼1707室",
-              "to": "上海市闵行区紫海路170号",
-              "minutes": 35
+              "from": "上海市长宁区延安西路1566号龙峰大厦22楼",
+              "to": "上海市嘉定区平城路855号704",
+              "minutes": 45
             }
           ],
           "reasonable": true,
@@ -63330,7 +63385,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市奉贤区远东路1899弄6号楼1803室",
-              "commuteMinutes": 50
+              "commuteMinutes": 45
             }
           ],
           "routeSegments": [
@@ -63384,7 +63439,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市普陀区长寿路1188号102",
-              "commuteMinutes": 55
+              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -63438,7 +63493,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市闵行区浦星公路699号（万国数据浦江数据中心）",
-              "commuteMinutes": 30
+              "commuteMinutes": 25
             }
           ],
           "routeSegments": [
@@ -63468,7 +63523,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 130,
+          "totalCommuteMinutes": 125,
           "orders": [
             {
               "companyName": "上海鑫邦旅游发展有限公司",
@@ -63479,19 +63534,19 @@
               "commuteMinutes": 40
             },
             {
-              "companyName": "上海界龙现代印刷纸品有限公司",
+              "companyName": "上海筱胜企业管理咨询有限公司",
               "timeSlot": "下午1",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "commuteMinutes": 30
+              "address": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "commuteMinutes": 25
             },
             {
-              "companyName": "古疁（上海）文化发展有限公司",
+              "companyName": "上海鸣旭电子科技有限公司",
               "timeSlot": "下午2",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市嘉定区平城路855号704",
+              "address": "上海市闵行区紫海路170号",
               "commuteMinutes": 35
             }
           ],
@@ -63503,13 +63558,13 @@
             },
             {
               "from": "上海市浦东新区东方路1217号陆家嘴金融服务广场21楼",
-              "to": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "minutes": 45
+              "to": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "minutes": 50
             },
             {
-              "from": "上海市长宁区延安西路1566号龙峰大厦22楼",
-              "to": "上海市嘉定区平城路855号704",
-              "minutes": 45
+              "from": "上海市普陀区中江路388弄国盛中心1号楼1707室",
+              "to": "上海市闵行区紫海路170号",
+              "minutes": 35
             }
           ],
           "reasonable": true,
@@ -63546,7 +63601,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区周浦镇沪南公路2218号BHC中环中心东楼5楼511室",
-              "commuteMinutes": 60
+              "commuteMinutes": 35
             }
           ],
           "routeSegments": [
@@ -63576,7 +63631,7 @@
           "totalOrders": 3,
           "morningOrders": 1,
           "afternoonOrders": 2,
-          "totalCommuteMinutes": 135,
+          "totalCommuteMinutes": 160,
           "orders": [
             {
               "companyName": "上海多隆信息科技有限公司",
@@ -63611,12 +63666,12 @@
             },
             {
               "from": "上海市闵行区红星国际广场1818弄红星国际广场11号楼1楼",
-              "to": "上海市徐汇区宜山路889号齐来大厦1601-2室",
-              "minutes": 25
+              "to": "上海市金山区朱泾镇金龙新街1688号",
+              "minutes": 50
             },
             {
-              "from": "上海市徐汇区宜山路889号齐来大厦1601-2室",
-              "to": "上海市金山区朱泾镇金龙新街1688号",
+              "from": "上海市金山区朱泾镇金龙新街1688号",
+              "to": "上海市徐汇区宜山路889号齐来大厦1601-2室",
               "minutes": 60
             }
           ],
@@ -63654,7 +63709,7 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市浦东新区东方路3601号丰华园3号楼6楼",
-              "commuteMinutes": 60
+              "commuteMinutes": 39
             }
           ],
           "routeSegments": [
@@ -63678,21 +63733,21 @@
           "issues": []
         },
         {
-          "employeeId": 11,
-          "employeeName": "盛雅琴",
-          "departureAddress": "上海市杨浦区双阳支路",
+          "employeeId": 22,
+          "employeeName": "吴佳键",
+          "departureAddress": "上海市宝山区大场镇南大路",
           "totalOrders": 2,
           "morningOrders": 1,
           "afternoonOrders": 1,
-          "totalCommuteMinutes": 80,
+          "totalCommuteMinutes": 55,
           "orders": [
             {
-              "companyName": "爱豆科技（上海）有限公司",
+              "companyName": "上海京泉投资管理有限公司",
               "timeSlot": "上午",
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市浦东新区滨江大道399弄5-5号",
-              "commuteMinutes": 40
+              "address": "上海市虹口区东长治路866号友邦金融中心37楼",
+              "commuteMinutes": 35
             },
             {
               "companyName": "上海得韬会展服务有限公司",
@@ -63700,19 +63755,19 @@
               "customerType": "回访（后道）",
               "parkName": "加盟-金山资本现代产业园",
               "address": "上海市静安区共和新路3699号A栋316室",
-              "commuteMinutes": 25
+              "commuteMinutes": 20
             }
           ],
           "routeSegments": [
             {
-              "from": "上海市杨浦区双阳支路",
-              "to": "上海市浦东新区滨江大道399弄5-5号",
-              "minutes": 40
+              "from": "上海市宝山区大场镇南大路",
+              "to": "上海市虹口区东长治路866号友邦金融中心37楼",
+              "minutes": 35
             },
             {
-              "from": "上海市浦东新区滨江大道399弄5-5号",
+              "from": "上海市虹口区东长治路866号友邦金融中心37楼",
               "to": "上海市静安区共和新路3699号A栋316室",
-              "minutes": 40
+              "minutes": 20
             }
           ],
           "reasonable": true,
@@ -63803,6 +63858,34 @@
           "issues": []
         },
         {
+          "employeeId": 11,
+          "employeeName": "盛雅琴",
+          "departureAddress": "上海市杨浦区双阳支路",
+          "totalOrders": 1,
+          "morningOrders": 1,
+          "afternoonOrders": 0,
+          "totalCommuteMinutes": 40,
+          "orders": [
+            {
+              "companyName": "爱豆科技（上海）有限公司",
+              "timeSlot": "上午",
+              "customerType": "回访（后道）",
+              "parkName": "加盟-金山资本现代产业园",
+              "address": "上海市浦东新区滨江大道399弄5-5号",
+              "commuteMinutes": 40
+            }
+          ],
+          "routeSegments": [
+            {
+              "from": "上海市杨浦区双阳支路",
+              "to": "上海市浦东新区滨江大道399弄5-5号",
+              "minutes": 40
+            }
+          ],
+          "reasonable": true,
+          "issues": []
+        },
+        {
           "employeeId": 20,
           "employeeName": "宋亚军",
           "departureAddress": "上海市浦东新区金京路",
@@ -63825,34 +63908,6 @@
               "from": "上海市浦东新区金京路",
               "to": "上海市宝山区淞宝路155弄新月国际商务广场1号楼1007室",
               "minutes": 30
-            }
-          ],
-          "reasonable": true,
-          "issues": []
-        },
-        {
-          "employeeId": 22,
-          "employeeName": "吴佳键",
-          "departureAddress": "上海市宝山区大场镇南大路",
-          "totalOrders": 1,
-          "morningOrders": 1,
-          "afternoonOrders": 0,
-          "totalCommuteMinutes": 35,
-          "orders": [
-            {
-              "companyName": "上海京泉投资管理有限公司",
-              "timeSlot": "上午",
-              "customerType": "回访（后道）",
-              "parkName": "加盟-金山资本现代产业园",
-              "address": "上海市虹口区东长治路866号友邦金融中心37楼",
-              "commuteMinutes": 35
-            }
-          ],
-          "routeSegments": [
-            {
-              "from": "上海市宝山区大场镇南大路",
-              "to": "上海市虹口区东长治路866号友邦金融中心37楼",
-              "minutes": 35
             }
           ],
           "reasonable": true,
