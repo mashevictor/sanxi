@@ -11,7 +11,7 @@ import {
   TimeSlot,
 } from '../types';
 import { ImportResult } from './excel-importer';
-import { MAX_ACCEPTABLE_COMMUTE_MINUTES, calculateDailyCommute, sortCustomersByVisitOrder } from '../utils/commute';
+import { MAX_ACCEPTABLE_COMMUTE_MINUTES, sortCustomersByVisitOrder } from '../utils/commute';
 import {
   findOptimalPairing,
   findOptimalAutoPairingAsync,
@@ -19,7 +19,7 @@ import {
   LockedPairing,
   PairingOptions,
 } from './pairing-optimizer';
-import { CommuteMode } from './distance-service';
+import { CommuteMode, getDefaultCommuteMode } from './distance-service';
 import { validateEmployeePoolNames } from '../utils/employee-names';
 
 export interface EmployeeSchedule {
@@ -55,7 +55,7 @@ export interface SelectDispatchPairing {
   score: number;
   commuteMinutes: number;
   locked?: boolean;
-  route?: { minutes: number; distanceKm?: number; pathSummary: string; source: 'deepseek' | 'local' };
+  route?: { minutes: number; distanceKm?: number; pathSummary: string; source: 'deepseek' | 'local' | 'transit' };
   rules: { rule: string; passed: boolean; message: string }[];
 }
 
@@ -63,7 +63,7 @@ export interface SelectDispatchResponse {
   success: boolean;
   message: string;
   maxCommuteMinutes: number;
-  distanceSource?: 'deepseek' | 'local' | 'mixed';
+  distanceSource?: 'deepseek' | 'local' | 'transit' | 'mixed';
   stats: {
     selected: number;
     matched: number;
@@ -84,12 +84,12 @@ export interface SelectDispatchResponse {
       employeeName: string;
       departureAddress: string;
       failedRules: { rule: string; message: string }[];
-      route?: { minutes: number; distanceKm?: number; pathSummary: string; source: 'deepseek' | 'local' };
+      route?: { minutes: number; distanceKm?: number; pathSummary: string; source: 'deepseek' | 'local' | 'transit' };
     };
     conflictWith?: {
       employeeName: string;
       takenByCompany: string;
-      route?: { minutes: number; distanceKm?: number; pathSummary: string; source: 'deepseek' | 'local' };
+      route?: { minutes: number; distanceKm?: number; pathSummary: string; source: 'deepseek' | 'local' | 'transit' };
     };
   }[];
   employeeSchedules: EmployeeSchedule[];
@@ -118,7 +118,7 @@ export async function dispatchSelectedCompanies(
   const pairingOptions: PairingOptions = {
     lockedPairings: options.lockedPairings,
     matchOnlyCustomerIds: options.matchOnlyCustomerIds,
-    commuteMode: options.commuteMode ?? 'local',
+    commuteMode: options.commuteMode ?? getDefaultCommuteMode(),
   };
 
   let result;
@@ -237,7 +237,16 @@ function buildEmployeeSchedules(
       .sort((a, b) => slotOrder(a.c.timeSlot) - slotOrder(b.c.timeSlot));
 
     const customers = sortCustomersByVisitOrder(sorted.map((x) => x.c));
-    const daily = calculateDailyCommute(emp, customers);
+    const routeSegments: { from: string; to: string; minutes: number }[] = [];
+    let from = emp.departureAddress;
+    let totalCommuteMinutes = 0;
+
+    for (const c of customers) {
+      const p = sorted.find((x) => x.c.id === c.id)!.p;
+      routeSegments.push({ from, to: c.address, minutes: p.commuteMinutes });
+      totalCommuteMinutes += p.commuteMinutes;
+      from = c.address;
+    }
 
     return {
       employeeId: empId,
@@ -246,7 +255,7 @@ function buildEmployeeSchedules(
       totalOrders: orders.length,
       morningOrders: customers.filter((c) => c.timeSlot === TimeSlot.MORNING).length,
       afternoonOrders: customers.filter((c) => c.timeSlot !== TimeSlot.MORNING).length,
-      totalCommuteMinutes: daily.totalMinutes,
+      totalCommuteMinutes,
       orders: customers.map((c, idx) => {
         const p = sorted.find((x) => x.c.id === c.id)!.p;
         return {
@@ -256,10 +265,10 @@ function buildEmployeeSchedules(
           customerType: CUSTOMER_TYPE_LABELS[c.customerType],
           address: c.address,
           parkName: c.parkName,
-          commuteMinutes: daily.segments[idx]?.minutes ?? p.commuteMinutes,
+          commuteMinutes: routeSegments[idx]?.minutes ?? p.commuteMinutes,
         };
       }),
-      routeSegments: daily.segments,
+      routeSegments,
     };
   });
 }

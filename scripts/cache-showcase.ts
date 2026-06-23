@@ -9,6 +9,8 @@ import { buildIntegratedData, buildShowcaseSnapshot } from '../src/data/integrat
 import { buildSampleDataPayload } from '../src/services/parse-metadata';
 import { dispatchSelectedCompanies } from '../src/services/select-dispatch';
 import { getIntegratedDataVersion } from '../src/services/integrated-cache';
+import { getDefaultCommuteMode, loadEnvFile } from '../src/services/distance-service';
+import { flushTransitDiskCache } from '../src/services/transit-disk-cache';
 
 const DATA_DIR = path.join(__dirname, '..');
 
@@ -19,15 +21,29 @@ async function writeCache(filename: string, payload: object) {
 }
 
 async function main() {
+  loadEnvFile();
+  const commuteMode = getDefaultCommuteMode();
+  console.log(`通勤模式: ${commuteMode}${commuteMode === 'transit' ? '（高德公交/地铁）' : ''}`);
+
   const integrated = buildIntegratedData(DATA_DIR);
+  const dispatchOpts = { commuteMode } as const;
 
   const showcaseSnapshot = buildShowcaseSnapshot();
   const showcaseDispatch = await dispatchSelectedCompanies(
     integrated,
-    showcaseSnapshot.showcaseCustomerIds
+    showcaseSnapshot.showcaseCustomerIds,
+    undefined,
+    dispatchOpts
   );
 
-  const fullDispatch = await dispatchSelectedCompanies(integrated, integrated.fullMatchCustomerIds);
+  const fullDispatch = await dispatchSelectedCompanies(
+    integrated,
+    integrated.fullMatchCustomerIds,
+    undefined,
+    dispatchOpts
+  );
+
+  flushTransitDiskCache();
 
   if (fullDispatch.unmatchedCompanies.length) {
     fullDispatch.unmatchedCompanies.forEach((u) => console.log('  未匹配:', u.companyName, u.reason));
@@ -70,6 +86,8 @@ async function main() {
   console.log(`✓ showcase-match.json (${showcaseDispatch.stats.matched}/${showcaseDispatch.stats.selected})`);
   console.log(`✓ full-match.json (${fullDispatch.stats.matched}/${fullDispatch.stats.selected})`);
   console.log(`✓ sample-data.json (${integrated.customers.length} 家公司、${integrated.employees.length} 名员工)`);
+  console.log(`  均通勤: 演示 ${showcaseDispatch.stats.avgCommute} 分 / 全量 ${fullDispatch.stats.avgCommute} 分`);
+  console.log(`  来源: ${fullDispatch.distanceSource || commuteMode}`);
   console.log('全量 55 家匹配 100% 成功');
 
   const { execSync } = await import('child_process');

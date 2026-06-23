@@ -768,7 +768,7 @@ async function onManualMatch() {
   btn.textContent = '匹配中...';
   showMatchProgress(customerIds.length);
 
-  const body = { sessionId, customerIds, commuteMode: 'local' };
+  const body = { sessionId, customerIds, commuteMode: 'transit' };
   if (employeePoolIds.length) body.employeePoolIds = employeePoolIds;
 
   try {

@@ -4,7 +4,7 @@ const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
 /** 与 integrated-cache.ts INTEGRATED_DATA_VERSION 保持一致，用于静态 JSON 缓存穿透 */
-const STATIC_CACHE_BUST = '20260622-cache-ui';
+const STATIC_CACHE_BUST = '20260622-transit';
 
 function getSampleDataCacheUrl() {
   return `/cache/sample-data.json?v=${STATIC_CACHE_BUST}`;

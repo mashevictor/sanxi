@@ -35,7 +35,7 @@ export function getCommuteOriginForNextStop(
 export interface ChainedRouteEstimate {
   minutes: number;
   pathSummary: string;
-  source: 'deepseek' | 'local';
+  source: 'deepseek' | 'local' | 'transit';
   fromAddress: string;
 }
 
@@ -57,7 +57,7 @@ export function buildChainedRouteEstimate(
   employee: Employee,
   assignedBefore: Customer[],
   next: Customer,
-  departureLegCell?: { minutes: number; pathSummary?: string; source?: 'deepseek' | 'local' }
+  departureLegCell?: { minutes: number; pathSummary?: string; source?: 'deepseek' | 'local' | 'transit' }
 ): ChainedRouteEstimate {
   const from = getCommuteOriginForNextStop(employee, assignedBefore, next);
   if (from === employee.departureAddress && departureLegCell && departureLegCell.minutes > 0) {

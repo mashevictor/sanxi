@@ -8,8 +8,20 @@ import {
   estimateChainedLegMinutes,
   buildChainedRouteEstimate,
   sortCustomersByVisitOrder,
+  getCommuteOriginForNextStop,
 } from '../utils/commute';
-import { buildCommuteMatrix, CommuteMatrix, CommuteMode, RouteEstimate } from './distance-service';
+import {
+  buildCommuteMatrix,
+  CommuteMatrix,
+  CommuteMode,
+  DistanceSource,
+  estimateRouteWithMode,
+  getLegFromCache,
+  LegCache,
+  resolveDistanceSource,
+  RouteEstimate,
+  warmChainedTransitLegs,
+} from './distance-service';
 import { buildAfternoonParkPairs, AfternoonParkPair } from './afternoon-park-pairs';
 
 export interface LockedPairing {
@@ -21,6 +33,7 @@ export interface PairingOptions {
   lockedPairings?: LockedPairing[];
   matchOnlyCustomerIds?: number[];
   commuteMode?: CommuteMode;
+  legCache?: LegCache;
 }
 
 export interface CompanyEmployeePairing {
@@ -63,7 +76,7 @@ export interface PairingOptimizationResult {
   totalScore: number;
   allEligible: boolean;
   message: string;
-  distanceSource?: 'deepseek' | 'local' | 'mixed';
+  distanceSource?: DistanceSource;
 }
 
 const SLOT_ORDER: Record<TimeSlot, number> = {
@@ -76,8 +89,15 @@ function getChainedCommuteMinutes(
   customer: Customer,
   employee: Employee,
   assignedBefore: Customer[],
-  commuteCell?: RouteEstimate
+  commuteCell?: RouteEstimate,
+  legCache?: LegCache
 ): number {
+  const from = getCommuteOriginForNextStop(employee, assignedBefore, customer);
+  if (from === employee.departureAddress && commuteCell && commuteCell.minutes > 0) {
+    return commuteCell.minutes;
+  }
+  const leg = getLegFromCache(from, customer.address, legCache);
+  if (leg) return leg.minutes;
   return estimateChainedLegMinutes(employee, assignedBefore, customer, commuteCell);
 }
 
@@ -85,8 +105,19 @@ function getChainedRoute(
   customer: Customer,
   employee: Employee,
   assignedBefore: Customer[],
-  commuteCell?: RouteEstimate
+  commuteCell?: RouteEstimate,
+  legCache?: LegCache
 ): RouteEstimate {
+  const from = getCommuteOriginForNextStop(employee, assignedBefore, customer);
+  if (from === employee.departureAddress && commuteCell && commuteCell.minutes > 0) {
+    return {
+      minutes: commuteCell.minutes,
+      pathSummary: commuteCell.pathSummary || `${from} → ${customer.address}`,
+      source: commuteCell.source,
+    };
+  }
+  const leg = getLegFromCache(from, customer.address, legCache);
+  if (leg) return leg;
   return buildChainedRouteEstimate(employee, assignedBefore, customer, commuteCell);
 }
 
@@ -96,9 +127,10 @@ function buildPairing(
   match: MatchResult,
   assignedBefore: Customer[],
   commuteCell?: RouteEstimate,
-  locked = false
+  locked = false,
+  legCache?: LegCache
 ): CompanyEmployeePairing {
-  const route = getChainedRoute(customer, employee, assignedBefore, commuteCell);
+  const route = getChainedRoute(customer, employee, assignedBefore, commuteCell, legCache);
   return {
     customerId: customer.id,
     customerName: customer.companyName,
@@ -127,14 +159,29 @@ function findCommuteCell(
   return commuteMatrix[ci]?.[ei];
 }
 
+function isBetterEmployeePick(
+  commuteMode: CommuteMode | undefined,
+  newCommute: number,
+  newScore: number,
+  bestCommute: number,
+  bestScore: number
+): boolean {
+  if (commuteMode === 'transit') {
+    if (newCommute !== bestCommute) return newCommute < bestCommute;
+    return newScore > bestScore;
+  }
+  return newScore - newCommute * 0.2 > bestScore - bestCommute * 0.2;
+}
+
 function combinedScore(
   customer: Customer,
   employee: Employee,
   match: MatchResult,
   assignedBefore: Customer[],
-  commuteCell?: RouteEstimate
+  commuteCell?: RouteEstimate,
+  legCache?: LegCache
 ): number {
-  const commute = getChainedCommuteMinutes(customer, employee, assignedBefore, commuteCell);
+  const commute = getChainedCommuteMinutes(customer, employee, assignedBefore, commuteCell, legCache);
   return match.score - commute * 0.2;
 }
 
@@ -146,13 +193,14 @@ function combinedPairScore(
   assignedBefore: Customer[],
   customers: Customer[],
   employees: Employee[],
-  commuteMatrix?: CommuteMatrix
+  commuteMatrix?: CommuteMatrix,
+  legCache?: LegCache
 ): number {
   const cell1 = findCommuteCell(pair.afternoon1, employee, customers, employees, commuteMatrix);
   const cell2 = findCommuteCell(pair.afternoon2, employee, customers, employees, commuteMatrix);
   return (
-    combinedScore(pair.afternoon1, employee, match1, assignedBefore, cell1) +
-    combinedScore(pair.afternoon2, employee, match2, [...assignedBefore, pair.afternoon1], cell2)
+    combinedScore(pair.afternoon1, employee, match1, assignedBefore, cell1, legCache) +
+    combinedScore(pair.afternoon2, employee, match2, [...assignedBefore, pair.afternoon1], cell2, legCache)
   );
 }
 
@@ -223,7 +271,9 @@ function matchAfternoonParkPairs(
   commuteMatrix: CommuteMatrix | undefined,
   availableNames: Set<string>,
   assignedPerEmp: Map<number, Customer[]>,
-  pairings: CompanyEmployeePairing[]
+  pairings: CompanyEmployeePairing[],
+  legCache?: LegCache,
+  commuteMode?: CommuteMode
 ): AfternoonParkPair[] {
   const failed: AfternoonParkPair[] = [];
 
@@ -232,6 +282,7 @@ function matchAfternoonParkPairs(
     let bestMatch1: MatchResult | null = null;
     let bestMatch2: MatchResult | null = null;
     let bestScore = -Infinity;
+    let bestCommute = Infinity;
     let bestCell1: RouteEstimate | undefined;
     let bestCell2: RouteEstimate | undefined;
 
@@ -250,30 +301,47 @@ function matchAfternoonParkPairs(
       );
       if (!match2.eligible) continue;
 
-      const sc = combinedPairScore(
-        pair,
+      const cell1 = findCommuteCell(pair.afternoon1, employee, customers, employees, commuteMatrix);
+      const cell2 = findCommuteCell(pair.afternoon2, employee, customers, employees, commuteMatrix);
+      const c1 = getChainedCommuteMinutes(pair.afternoon1, employee, assigned, cell1, legCache);
+      const c2 = getChainedCommuteMinutes(
+        pair.afternoon2,
         employee,
-        match1,
-        match2,
-        assigned,
-        customers,
-        employees,
-        commuteMatrix
+        [...assigned, pair.afternoon1],
+        cell2,
+        legCache
       );
-      if (sc > bestScore) {
+      const totalCommute = c1 + c2;
+      const sc =
+        commuteMode === 'transit'
+          ? match1.score + match2.score
+          : combinedPairScore(
+              pair,
+              employee,
+              match1,
+              match2,
+              assigned,
+              customers,
+              employees,
+              commuteMatrix,
+              legCache
+            );
+
+      if (isBetterEmployeePick(commuteMode, totalCommute, sc, bestCommute, bestScore)) {
         bestScore = sc;
+        bestCommute = totalCommute;
         bestEmp = employee;
         bestMatch1 = match1;
         bestMatch2 = match2;
-        bestCell1 = findCommuteCell(pair.afternoon1, employee, customers, employees, commuteMatrix);
-        bestCell2 = findCommuteCell(pair.afternoon2, employee, customers, employees, commuteMatrix);
+        bestCell1 = cell1;
+        bestCell2 = cell2;
       }
     }
 
     if (bestEmp && bestMatch1 && bestMatch2) {
       const assignedBefore = assignedPerEmp.get(bestEmp.id) || [];
       pairings.push({
-        ...buildPairing(pair.afternoon1, bestEmp, bestMatch1, assignedBefore, bestCell1, false),
+        ...buildPairing(pair.afternoon1, bestEmp, bestMatch1, assignedBefore, bestCell1, false, legCache),
         details: appendAfternoonBindDetail(bestMatch1.details),
       });
       pairings.push({
@@ -283,7 +351,8 @@ function matchAfternoonParkPairs(
           bestMatch2,
           [...assignedBefore, pair.afternoon1],
           bestCell2,
-          false
+          false,
+          legCache
         ),
         details: appendAfternoonBindDetail(bestMatch2.details),
       });
@@ -395,7 +464,7 @@ function findCapacitatedMatching(
     const match = matchCustomerToEmployee(customer, employee, availableNames, assigned, { requirePlus: false });
     if (!match.eligible) continue;
     const commuteCell = findCommuteCell(customer, employee, customers, employees, commuteMatrix);
-    pairings.push(buildPairing(customer, employee, match, assigned, commuteCell, true));
+    pairings.push(buildPairing(customer, employee, match, assigned, commuteCell, true, options.legCache));
     assigned.push(customer);
     assignedPerEmp.set(employee.id, assigned);
   }
@@ -414,7 +483,9 @@ function findCapacitatedMatching(
     commuteMatrix,
     availableNames,
     assignedPerEmp,
-    pairings
+    pairings,
+    options.legCache,
+    options.commuteMode
   );
 
   const pairedIds = new Set(pairings.map((p) => p.customerId));
@@ -427,6 +498,7 @@ function findCapacitatedMatching(
     let bestEmp: Employee | null = null;
     let bestMatch: MatchResult | null = null;
     let bestScore = -Infinity;
+    let bestCommute = Infinity;
     let bestCommuteCell: RouteEstimate | undefined;
 
     for (const employee of employees) {
@@ -434,9 +506,21 @@ function findCapacitatedMatching(
       const match = matchCustomerToEmployee(customer, employee, availableNames, assigned, { requirePlus: false });
       if (!match.eligible) continue;
       const commuteCell = findCommuteCell(customer, employee, customers, employees, commuteMatrix);
-      const sc = combinedScore(customer, employee, match, assigned, commuteCell);
-      if (sc > bestScore) {
+      const commute = getChainedCommuteMinutes(
+        customer,
+        employee,
+        assigned,
+        commuteCell,
+        options.legCache
+      );
+      const sc =
+        options.commuteMode === 'transit'
+          ? match.score
+          : combinedScore(customer, employee, match, assigned, commuteCell, options.legCache);
+
+      if (isBetterEmployeePick(options.commuteMode, commute, sc, bestCommute, bestScore)) {
         bestScore = sc;
+        bestCommute = commute;
         bestEmp = employee;
         bestMatch = match;
         bestCommuteCell = commuteCell;
@@ -445,7 +529,7 @@ function findCapacitatedMatching(
 
     if (bestEmp && bestMatch) {
       const assigned = assignedPerEmp.get(bestEmp.id) || [];
-      pairings.push(buildPairing(customer, bestEmp, bestMatch, assigned, bestCommuteCell, false));
+      pairings.push(buildPairing(customer, bestEmp, bestMatch, assigned, bestCommuteCell, false, options.legCache));
       assigned.push(customer);
       assignedPerEmp.set(bestEmp.id, assigned);
     }
@@ -472,15 +556,69 @@ function findCapacitatedMatching(
     return (SLOT_ORDER[ca.timeSlot] ?? 0) - (SLOT_ORDER[cb.timeSlot] ?? 0);
   });
 
-  const recalculated = recalculateChainedPairings(pairings, customers, employees);
+  const recalculated = recalculateChainedPairings(pairings, customers, employees, options.legCache);
   return { pairings: recalculated, unmatched };
 }
 
-/** 按最终全天行程重算每单串联通勤（修正下午捆绑先于上午匹配时的本段分钟数） */
+/** 按最终全天行程重算每单串联通勤（公交/地铁或本地） */
+async function recalculateChainedPairingsAsync(
+  pairings: CompanyEmployeePairing[],
+  customers: Customer[],
+  employees: Employee[],
+  options: PairingOptions = {}
+): Promise<CompanyEmployeePairing[]> {
+  const mode = options.commuteMode ?? 'local';
+  const customerMap = new Map(customers.map((c) => [c.id, c]));
+  const employeeMap = new Map(employees.map((e) => [e.id, e]));
+  const byEmp = new Map<number, CompanyEmployeePairing[]>();
+  for (const p of pairings) {
+    if (!byEmp.has(p.employeeId)) byEmp.set(p.employeeId, []);
+    byEmp.get(p.employeeId)!.push(p);
+  }
+
+  const updated = new Map<number, CompanyEmployeePairing>();
+  for (const [empId, orders] of byEmp) {
+    const emp = employeeMap.get(empId);
+    if (!emp) continue;
+    const customersForEmp = sortCustomersByVisitOrder(
+      orders.map((p) => customerMap.get(p.customerId)!).filter(Boolean)
+    );
+    const assigned: Customer[] = [];
+    for (const customer of customersForEmp) {
+      const pairing = orders.find((p) => p.customerId === customer.id);
+      if (!pairing) continue;
+      const from = getCommuteOriginForNextStop(emp, assigned, customer);
+      let route: RouteEstimate;
+      if (mode === 'transit') {
+        route =
+          getLegFromCache(from, customer.address, options.legCache) ||
+          (await estimateRouteWithMode(
+            from,
+            customer.address,
+            customer.parkName,
+            customer.companyName,
+            'transit'
+          ));
+      } else {
+        route = getChainedRoute(customer, emp, assigned, pairing.route, options.legCache);
+      }
+      updated.set(pairing.customerId, {
+        ...pairing,
+        commuteMinutes: route.minutes,
+        route,
+      });
+      assigned.push(customer);
+    }
+  }
+
+  return pairings.map((p) => updated.get(p.customerId) || p);
+}
+
 function recalculateChainedPairings(
   pairings: CompanyEmployeePairing[],
   customers: Customer[],
-  employees: Employee[]
+  employees: Employee[],
+  legCache?: LegCache
 ): CompanyEmployeePairing[] {
   const customerMap = new Map(customers.map((c) => [c.id, c]));
   const employeeMap = new Map(employees.map((e) => [e.id, e]));
@@ -501,36 +639,17 @@ function recalculateChainedPairings(
     for (const customer of customersForEmp) {
       const pairing = orders.find((p) => p.customerId === customer.id);
       if (!pairing) continue;
-      const route = buildChainedRouteEstimate(emp, assigned, customer);
+      const route = getChainedRoute(customer, emp, assigned, pairing.route, legCache);
       updated.set(pairing.customerId, {
         ...pairing,
         commuteMinutes: route.minutes,
-        route: {
-          minutes: route.minutes,
-          pathSummary: route.pathSummary,
-          source: route.source,
-        },
+        route,
       });
       assigned.push(customer);
     }
   }
 
   return pairings.map((p) => updated.get(p.customerId) || p);
-}
-
-function resolveDistanceSource(commuteMatrix?: CommuteMatrix): PairingOptimizationResult['distanceSource'] {
-  if (!commuteMatrix) return 'local';
-  let hasDeepseek = false;
-  let hasLocal = false;
-  for (const row of commuteMatrix) {
-    for (const cell of row) {
-      if (cell.source === 'deepseek') hasDeepseek = true;
-      if (cell.source === 'local') hasLocal = true;
-    }
-  }
-  if (hasDeepseek && hasLocal) return 'mixed';
-  if (hasDeepseek) return 'deepseek';
-  return 'local';
 }
 
 async function runCompliantPairingAsync(
@@ -540,6 +659,9 @@ async function runCompliantPairingAsync(
   options: PairingOptions = {}
 ): Promise<PairingOptimizationResult> {
   if (customers.length === 0) throw new Error('请至少选择一家公司');
+
+  const mode = options.commuteMode ?? 'local';
+  let pairingOptions = options;
 
   const availableNames = new Set(employees.map((e) => e.name));
   const eligibleMask = customers.map((c) =>
@@ -555,31 +677,57 @@ async function runCompliantPairingAsync(
     })
   );
 
+  if (mode === 'transit') {
+    const legCache = new Map<string, RouteEstimate>();
+    pairingOptions = { ...options, legCache };
+  }
+
   const commuteMatrix = await buildCommuteMatrix(
     customers.map((c) => ({ address: c.address, parkName: c.parkName, companyName: c.companyName })),
     employees,
     eligibleMask,
-    options.commuteMode ?? 'local'
+    mode,
+    pairingOptions.legCache
   );
 
-  const { pairings, unmatched } = findCapacitatedMatching(customers, employees, commuteMatrix, options);
+  if (mode === 'transit' && pairingOptions.legCache) {
+    const maxWarm =
+      customers.length <= 12 ? 800 : customers.length <= 25 ? 400 : 150;
+    await warmChainedTransitLegs(
+      customers.map((c) => c.address),
+      pairingOptions.legCache,
+      maxWarm
+    );
+  }
+
+  const { pairings, unmatched } = findCapacitatedMatching(
+    customers,
+    employees,
+    commuteMatrix,
+    pairingOptions
+  );
   const n = customers.length;
+
+  const finalPairings =
+    mode === 'transit'
+      ? await recalculateChainedPairingsAsync(pairings, customers, employees, pairingOptions)
+      : pairings;
 
   let message: string;
   if (unmatched.length === 0) {
     message = autoSelected
-      ? `已为 ${n} 家公司匹配 ${pairings.length} 单，全部合规（支持员工一天多单）`
-      : `${pairings.length} 组配对全部合规`;
-  } else if (pairings.length === 0) {
+      ? `已为 ${n} 家公司匹配 ${finalPairings.length} 单，全部合规（支持员工一天多单）`
+      : `${finalPairings.length} 组配对全部合规`;
+  } else if (finalPairings.length === 0) {
     message = `${n} 家公司均无法合规匹配`;
   } else {
-    message = `${pairings.length} 单已合规匹配，${unmatched.length} 家未匹配`;
+    message = `${finalPairings.length} 单已合规匹配，${unmatched.length} 家未匹配`;
   }
 
   return {
-    pairings,
+    pairings: finalPairings,
     unmatched,
-    totalScore: pairings.reduce((s, p) => s + p.score, 0),
+    totalScore: finalPairings.reduce((s, p) => s + p.score, 0),
     allEligible: unmatched.length === 0,
     message,
     distanceSource: resolveDistanceSource(commuteMatrix),

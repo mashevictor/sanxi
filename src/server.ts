@@ -20,6 +20,7 @@ import { dispatchSelectedCompanies } from './services/select-dispatch';
 import { validatePair } from './services/validate-pair';
 import { loadEnvFile } from './services/distance-service';
 import { getIntegratedData, warmIntegratedCache, getIntegratedDataVersion } from './services/integrated-cache';
+import { resolveCommuteMode } from './services/distance-service';
 import { buildParseMetadata, buildSampleDataPayload } from './services/parse-metadata';
 import { buildMatchTestReport } from './services/match-test-report';
 import { lookupAdhocMatch } from './services/adhoc-match';
@@ -265,7 +266,7 @@ app.get('/api/showcase-data', (_req, res) => {
   }
 });
 
-/** 选择公司派单（员工自动最优匹配 + 规则明细 + DeepSeek 通勤） */
+/** 选择公司派单（员工自动最优匹配 + 规则明细 + 高德公交/地铁通勤） */
 app.post('/api/dispatch/select', async (req, res) => {
   try {
     const {
@@ -304,6 +305,7 @@ app.post('/api/dispatch/select', async (req, res) => {
     }
 
     const t0 = Date.now();
+    const mode = resolveCommuteMode(commuteMode);
     const response = await dispatchSelectedCompanies(
       data,
       selectedCustomerIds,
@@ -312,12 +314,12 @@ app.post('/api/dispatch/select', async (req, res) => {
         lockedPairings: Array.isArray(lockedPairings) ? lockedPairings : undefined,
         matchOnlyCustomerIds: Array.isArray(matchOnlyCustomerIds) ? matchOnlyCustomerIds : undefined,
         employeePoolIds: Array.isArray(employeePoolIds) ? employeePoolIds : undefined,
-        commuteMode: commuteMode === 'deepseek' ? 'deepseek' : 'local',
+        commuteMode: mode,
       }
     );
     const elapsed = Date.now() - t0;
     console.log(
-      `[dispatch/select] ${response.stats.matched}/${response.stats.selected} matched in ${elapsed}ms mode=${commuteMode === 'deepseek' ? 'deepseek' : 'local'}`
+      `[dispatch/select] ${response.stats.matched}/${response.stats.selected} matched in ${elapsed}ms mode=${mode}`
     );
     res.json(response);
   } catch (err) {

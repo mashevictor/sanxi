@@ -20,6 +20,7 @@
     "test:match-report": "tsx scripts/generate-match-test-report.ts",
     "validate:matches": "tsx scripts/validate-all-matches.ts",
     "validate:scenarios": "tsx scripts/scan-match-scenarios.ts",
+    "test:transit-scenarios": "tsx scripts/test-transit-scenarios.ts",
     "compare:dispatch": "tsx scripts/compare-dispatch-results.ts",
     "compare:employee": "tsx scripts/compare-employee-roster.ts",
     "compare:rationale": "tsx scripts/compare-roster-rationale.ts",

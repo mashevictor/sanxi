@@ -729,7 +729,7 @@ function renderCommuteCell(minutes, route) {
   if (!minutes && minutes !== 0) {
     return `<div class="cell-commute"><span class="commute-none">—</span></div>`;
   }
-  const src = route?.source === 'deepseek' ? 'AI' : '本地';
+  const src = route?.source === 'transit' ? '公交' : route?.source === 'deepseek' ? 'AI' : '本地';
   const km = route?.distanceKm ? `<div class="commute-src">${route.distanceKm} km</div>` : '';
   const within = minutes <= maxCommuteMinutes;
   const cls = within ? 'commute-ok' : 'commute-warn';
@@ -1222,7 +1222,14 @@ function updateStats() {
 
   const tag = document.getElementById('distance-tag');
   if (distanceSource) {
-    const label = distanceSource === 'deepseek' ? 'DeepSeek' : distanceSource === 'mixed' ? 'AI+本地' : '本地估算';
+    const label =
+      distanceSource === 'transit'
+        ? '高德公交/地铁'
+        : distanceSource === 'deepseek'
+          ? 'DeepSeek'
+          : distanceSource === 'mixed'
+            ? '混合估算'
+            : '本地估算';
     tag.textContent = `通勤来源: ${label}`;
   }
 }
@@ -1311,7 +1318,7 @@ async function callSelectApi(opts = {}) {
   const body = {
     sessionId,
     customerIds: selectedIds,
-    commuteMode: 'local',
+    commuteMode: 'transit',
     lockedPairings: lockedPairings.length ? lockedPairings : undefined,
     matchOnlyCustomerIds: matchOnlyCustomerIds?.length ? matchOnlyCustomerIds : undefined,
   };

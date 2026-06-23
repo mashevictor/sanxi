@@ -9,6 +9,8 @@ import { buildIntegratedData } from '../src/data/integrated-data';
 import { dispatchSelectedCompanies } from '../src/services/select-dispatch';
 import { matchCustomerToEmployee } from '../src/services/match-rules';
 import { CUSTOMER_TYPE_LABELS, TIME_SLOT_LABELS } from '../src/types';
+import { getGaodeCommuteStats, loadEnvFile } from '../src/services/distance-service';
+import { flushTransitDiskCache } from '../src/services/transit-disk-cache';
 
 const DATA_DIR = path.join(__dirname, '..');
 const CORE_RULES = ['城市匹配', '职责匹配', '时段匹配', '指定人', '放弃人', '园区匹配'];
@@ -22,6 +24,7 @@ interface Issue {
 }
 
 async function main() {
+  loadEnvFile();
   const data = buildIntegratedData(DATA_DIR);
   const ids = data.fullMatchCustomerIds;
   const result = await dispatchSelectedCompanies(data, ids);
@@ -172,6 +175,12 @@ async function main() {
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, JSON.stringify(report, null, 2), 'utf-8');
   console.log(`\n报告已写入 public/cache/validate-report.json`);
+
+  flushTransitDiskCache();
+  const gaode = getGaodeCommuteStats();
+  console.log(
+    `\n[transit] 内存${gaode.memoryHits} 磁盘${gaode.diskHits} API${gaode.apiCalls} 降级${gaode.localFallbacks} 重试${gaode.limiter.retries}`
+  );
 
   if (errors.length || result.unmatchedCompanies.length) {
     console.log('\n✗ 存在不合理匹配，需补充模拟员工或修正数据');

@@ -25,7 +25,7 @@ export interface PairValidationResponse {
     minutes: number;
     distanceKm?: number;
     pathSummary: string;
-    source: 'deepseek' | 'local';
+    source: 'deepseek' | 'local' | 'transit';
   };
   rules: { rule: string; passed: boolean; message: string }[];
   failedRules: { rule: string; message: string }[];
