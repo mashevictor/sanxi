@@ -27,6 +27,7 @@ import {
 import { SelectDispatchResponse } from './select-dispatch';
 import { buildRoleScenarioDefs } from './role-match-scenarios';
 import { getIntegratedDataVersion } from './integrated-cache';
+import type { LegCache } from './distance-service';
 
 function formatEmployeeRoles(emp: Employee): string {
   return emp.roles.map((r) => EMPLOYEE_ROLE_LABELS[r] || r).join('、');
@@ -609,9 +610,6 @@ interface ScenarioExpectations {
   expectMatched?: number;
   expectUnmatched?: number;
 }
-
-import { getIntegratedDataVersion } from './integrated-cache';
-import type { LegCache } from './distance-service';
 
 function dispatchOptionsForScenario(
   meta: { dataSource?: MatchTestScenario['dataSource'] } | undefined,

@@ -111,7 +111,7 @@ export function hydrateLegCacheFromDisk(legCache: Map<string, {
   minutes: number;
   distanceKm?: number;
   pathSummary: string;
-  source: 'transit';
+  source: 'deepseek' | 'local' | 'transit';
 }>): number {
   loadTransitDiskCache();
   let added = 0;
