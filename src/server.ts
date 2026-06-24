@@ -24,6 +24,7 @@ import { resolveCommuteMode } from './services/distance-service';
 import { buildParseMetadata, buildSampleDataPayload } from './services/parse-metadata';
 import { buildMatchTestReport } from './services/match-test-report';
 import { lookupAdhocMatch } from './services/adhoc-match';
+import { getManualPoolMeta, tryGetManualPoolDispatch } from './services/manual-pool-cache';
 import { CustomerType, TimeSlot } from './types';
 
 loadEnvFile();
@@ -166,6 +167,7 @@ app.get('/api/bootstrap', (_req, res) => {
       sessionId,
       dataVersion: getIntegratedDataVersion(),
       maxCommuteMinutes: MAX_ACCEPTABLE_COMMUTE_MINUTES,
+      manualPoolMeta: getManualPoolMeta(data),
     });
   } catch (err) {
     res.status(500).json({ error: '创建会话失败' });
@@ -301,6 +303,16 @@ app.post('/api/dispatch/select', async (req, res) => {
 
     if (selectedCustomerIds.length === 0) {
       res.status(400).json({ error: '请至少选择一家公司' });
+      return;
+    }
+
+    const poolIds = Array.isArray(employeePoolIds) ? employeePoolIds : undefined;
+    const poolHit = tryGetManualPoolDispatch(DATA_DIR, selectedCustomerIds, poolIds);
+    if (poolHit) {
+      console.log(
+        `[dispatch/select] manual-pool cache hit (${poolHit.poolKind}) ${poolHit.dispatch.stats.matched}/${poolHit.dispatch.stats.selected}`
+      );
+      res.json(poolHit.dispatch);
       return;
     }
 

@@ -16,6 +16,7 @@
     "dispatch": "tsx src/index.ts",
     "import": "tsx src/scripts/import-data.ts",
     "cache:showcase": "tsx scripts/cache-showcase.ts",
+    "cache:manual-pools": "tsx scripts/cache-manual-pools.ts",
     "cache:sample-data": "tsx scripts/cache-sample-data.ts",
     "test:match-report": "tsx scripts/generate-match-test-report.ts",
     "validate:matches": "tsx scripts/validate-all-matches.ts",

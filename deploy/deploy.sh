@@ -50,6 +50,9 @@ npm run build
 echo "==> 生成首屏与全量匹配缓存（含串联通勤）..."
 npm run cache:showcase
 
+echo "==> 生成手动派单池缓存（后道全量 + 前道全量）..."
+npm run cache:manual-pools
+
 if [ ! -f dist/server.js ]; then
   echo "错误: dist/server.js 未生成，构建失败"
   exit 1

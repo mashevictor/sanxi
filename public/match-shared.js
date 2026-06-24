@@ -4,7 +4,7 @@ const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
 /** 与 integrated-cache.ts INTEGRATED_DATA_VERSION 保持一致，用于静态 JSON 缓存穿透 */
-const STATIC_CACHE_BUST = '20260624-transit-sane-69';
+const STATIC_CACHE_BUST = '20260624-manual-pool-70';
 
 function getSampleDataCacheUrl() {
   return `/cache/sample-data.json?v=${STATIC_CACHE_BUST}`;
@@ -29,10 +29,13 @@ function isWalkingRoute(route) {
 let _sampleDataPrefetch = null;
 let _bootstrapPrefetch = null;
 let _fullMatchPrefetch = null;
+const _manualPoolPrefetch = { back: null, front: null };
 
 function resetStaticCachePrefetch() {
   _sampleDataPrefetch = null;
   _fullMatchPrefetch = null;
+  _manualPoolPrefetch.back = null;
+  _manualPoolPrefetch.front = null;
 }
 
 function prefetchSampleData(force = false) {
@@ -64,9 +67,31 @@ function prefetchBootstrap() {
   return _bootstrapPrefetch;
 }
 
+function prefetchManualPoolCache(kind, force = false) {
+  if (force) _manualPoolPrefetch[kind] = null;
+  if (!_manualPoolPrefetch[kind]) {
+    _manualPoolPrefetch[kind] = fetch(getManualPoolCacheUrl(kind))
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+  }
+  return _manualPoolPrefetch[kind];
+}
+
+function prefetchAllManualPoolCaches() {
+  return Promise.all([prefetchManualPoolCache('back'), prefetchManualPoolCache('front')]);
+}
+
+function sameIdSet(a, b) {
+  const sa = [...a].sort((x, y) => x - y);
+  const sb = [...b].sort((x, y) => x - y);
+  if (sa.length !== sb.length) return false;
+  return sa.every((v, i) => v === sb[i]);
+}
+
 /** 脚本加载时立即预取静态数据与会话 */
 prefetchSampleData();
 prefetchBootstrap();
+prefetchAllManualPoolCaches();
 
 function showPageLoader(message, subMessage) {
   const loader = document.getElementById('page-loader');

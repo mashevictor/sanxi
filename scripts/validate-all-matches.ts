@@ -13,6 +13,7 @@ import { getGaodeCommuteStats, loadEnvFile } from '../src/services/distance-serv
 import { flushTransitDiskCache } from '../src/services/transit-disk-cache';
 import { preloadTransitLegCache, useDiskTransitOnly } from './transit-leg-cache';
 import { MAX_REALISTIC_COMMUTE_MINUTES } from '../src/utils/commute';
+import { auditAllPairingRoutes, summarizeRouteAudit } from '../src/services/route-reasonableness';
 
 const DATA_DIR = path.join(__dirname, '..');
 const CORE_RULES = ['城市匹配', '职责匹配', '时段匹配', '指定人', '放弃人', '园区匹配'];
@@ -144,6 +145,29 @@ async function main() {
     }
   }
 
+  const routeIssues = auditAllPairingRoutes(result.pairings, data.customers, data.employees, legCache);
+  const routeAudit = summarizeRouteAudit(routeIssues);
+
+  console.log(`\n--- 路线内容与串联段审计 ---`);
+  console.log(`逐段检查: ${result.pairings.length} 单 + 串联段`);
+  console.log(`路线错误: ${routeAudit.errorCount}  警告: ${routeAudit.warningCount}  说明: ${routeAudit.infoCount}`);
+
+  if (routeAudit.errors.length) {
+    console.log('\n--- 路线错误（绕远/超现实上限等）---');
+    routeAudit.errors.slice(0, 20).forEach((e, i) => {
+      console.log(`${i + 1}. [${e.type}] ${e.company} → ${e.employee}: ${e.message}`);
+      if (e.pathSummary) console.log(`   ${e.pathSummary}`);
+    });
+    if (routeAudit.errors.length > 20) console.log(`... 另有 ${routeAudit.errors.length - 20} 条`);
+  }
+  if (routeAudit.warnings.length) {
+    console.log('\n--- 路线警告（偏长/串联偏差等）---');
+    routeAudit.warnings.slice(0, 15).forEach((w, i) => {
+      console.log(`${i + 1}. [${w.type}] ${w.company} → ${w.employee}: ${w.message}`);
+    });
+    if (routeAudit.warnings.length > 15) console.log(`... 另有 ${routeAudit.warnings.length - 15} 条`);
+  }
+
   const errors = issues.filter((i) => i.level === 'error');
   const warns = issues.filter((i) => i.level === 'warn');
   const infos = issues.filter((i) => i.level === 'info');
@@ -172,7 +196,17 @@ async function main() {
     unmatched: result.unmatchedCompanies.length,
     errors: errors.length,
     warnings: warns.length,
-    allReasonable: errors.length === 0 && result.unmatchedCompanies.length === 0,
+    routeAudit: {
+      errors: routeAudit.errors,
+      warnings: routeAudit.warnings,
+      infos: routeAudit.infos,
+      allRoutesReasonable: routeAudit.allRoutesReasonable,
+      issues: routeIssues,
+    },
+    allReasonable:
+      errors.length === 0 &&
+      result.unmatchedCompanies.length === 0 &&
+      routeAudit.allRoutesReasonable,
     issues,
     pairings: result.pairings.map((p) => ({
       company: p.companyName,
@@ -180,6 +214,8 @@ async function main() {
       type: p.customerType,
       slot: p.timeSlot,
       commute: p.commuteMinutes,
+      source: p.route?.source,
+      pathSummary: p.route?.pathSummary?.slice(0, 160),
       corePass: (p.rules || []).filter((r) => CORE_RULES.includes(r.rule) && r.passed).length,
     })),
   };
@@ -195,14 +231,14 @@ async function main() {
     `\n[transit] 内存${gaode.memoryHits} 磁盘${gaode.diskHits} API${gaode.apiCalls} 降级${gaode.localFallbacks} 重试${gaode.limiter.retries}`
   );
 
-  if (errors.length || result.unmatchedCompanies.length) {
-    console.log('\n✗ 存在不合理匹配，需补充模拟员工或修正数据');
+  if (errors.length || result.unmatchedCompanies.length || !routeAudit.allRoutesReasonable) {
+    console.log('\n✗ 存在不合理匹配或路线，需补充模拟员工或修正数据/缓存');
     process.exit(1);
   }
   const over90 = issues.filter(
     (i) => i.level === 'warn' && i.message.includes(`${MAX_REALISTIC_COMMUTE_MINUTES} 分现实上限`)
   ).length;
-  console.log(`\n✓ 全部 55 条匹配合规（核心规则 + 时段无冲突）`);
+  console.log(`\n✓ 全部 ${result.pairings.length} 条匹配合规（规则 + 路线内容 + 串联段）`);
   if (over90) console.log(`  其中 ${over90} 条仍超过 ${MAX_REALISTIC_COMMUTE_MINUTES} 分，建议人工复核或增派就近补位员工`);
 }
 

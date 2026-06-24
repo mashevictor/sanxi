@@ -17,6 +17,8 @@ let manualCompanySort = 'slot';
 let renderTablesPending = false;
 let sessionLoadError = '';
 let pageLoaderHidden = false;
+let manualPoolMeta = null;
+let dataVersion = STATIC_CACHE_BUST;
 
 function hidePageLoaderOnce() {
   if (pageLoaderHidden) return;
@@ -50,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('manual-history-btn').addEventListener('click', openManualMatchHistory);
   document.getElementById('manual-match-btn').addEventListener('click', onManualMatch);
   document.getElementById('manual-clear-btn').addEventListener('click', clearManualSelection);
+  document.getElementById('manual-pool-back-btn')?.addEventListener('click', () => selectManualPool('back'));
+  document.getElementById('manual-pool-front-btn')?.addEventListener('click', () => selectManualPool('front'));
   document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
     const ids = Array.from(manualSelectedEmployees);
     if (ids.length === 1) showEmployeeModal(ids[0], allEmployees);
@@ -127,8 +131,73 @@ function trySelectManualEmployee(id, on) {
   return true;
 }
 
+function isBackCompany(c) {
+  const t = c.customerType || '';
+  return t.includes('回访') || t.includes('后道');
+}
+
+function isFrontCompany(c) {
+  const t = c.customerType || '';
+  return t.includes('首访') || t.includes('前道');
+}
+
+function isBackEmployee(e) {
+  const tags = (e.tags || e.roles || []).join(' ');
+  return tags.includes('后道');
+}
+
+function isFrontEmployee(e) {
+  const tags = (e.tags || e.roles || []).join(' ');
+  return tags.includes('前道');
+}
+
+function dedupeEmployeeIdsByName(employees) {
+  const seen = new Set();
+  const ids = [];
+  for (const e of employees) {
+    const name = (e.name || '').trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    ids.push(e.id);
+  }
+  return ids;
+}
+
+function selectManualPool(kind) {
+  manualSelectedCompanies.clear();
+  manualSelectedEmployees.clear();
+  if (kind === 'back') {
+    allCompanies.filter(isBackCompany).forEach((c) => manualSelectedCompanies.add(c.id));
+    dedupeEmployeeIdsByName(allEmployees.filter(isBackEmployee)).forEach((id) => manualSelectedEmployees.add(id));
+    showToast(`已选后道全量：${manualSelectedCompanies.size} 家公司 · ${manualSelectedEmployees.size} 名员工`);
+  } else {
+    allCompanies.filter(isFrontCompany).forEach((c) => manualSelectedCompanies.add(c.id));
+    dedupeEmployeeIdsByName(allEmployees.filter(isFrontEmployee)).forEach((id) => manualSelectedEmployees.add(id));
+    showToast(`已选前道全量：${manualSelectedCompanies.size} 家公司 · ${manualSelectedEmployees.size} 名员工`);
+  }
+  renderManualTables();
+}
+
+async function tryManualPoolCacheHit(customerIds, employeePoolIds) {
+  if (!employeePoolIds.length || !manualPoolMeta) return null;
+  for (const kind of ['back', 'front']) {
+    const pool = manualPoolMeta[kind];
+    if (!pool) continue;
+    if (!sameIdSet(customerIds, pool.customerIds)) continue;
+    if (!sameIdSet(employeePoolIds, pool.employeePoolIds)) continue;
+    const cached = await prefetchManualPoolCache(kind);
+    if (cached?.dispatch && cached.dataVersion === dataVersion) {
+      return { ...cached.dispatch, _cached: true, _poolKind: kind };
+    }
+  }
+  return null;
+}
+
 async function loadData() {
   sessionLoadError = '';
+  prefetchBootstrap().then((boot) => {
+    if (boot?.manualPoolMeta) manualPoolMeta = boot.manualPoolMeta;
+  });
   try {
     const stored = loadDispatchState('manual');
     const data = await bootstrapIntegratedData({
@@ -160,8 +229,11 @@ async function loadData() {
       throw new Error('服务器未返回会话（请检查 pm2 是否运行）');
     }
     sessionId = data.sessionId;
+    dataVersion = data.dataVersion || STATIC_CACHE_BUST;
     allCompanies = data.companies;
     allEmployees = data.employees;
+    const boot = await prefetchBootstrap();
+    if (boot?.manualPoolMeta) manualPoolMeta = boot.manualPoolMeta;
     if (stored?.selectedCompanies?.length) {
       stored.selectedCompanies.forEach((id) => manualSelectedCompanies.add(Number(id)));
     }
@@ -767,6 +839,25 @@ async function onManualMatch() {
   btn.classList.add('loading');
   btn.textContent = '匹配中...';
   showMatchProgress(customerIds.length);
+
+  const cachedHit = await tryManualPoolCacheHit(customerIds, employeePoolIds);
+  if (cachedHit) {
+    applyMatchResult(cachedHit);
+    completeMatchProgress(cachedHit.stats?.matched ?? lastMatchPairings.length, customerIds.length);
+    showMatchSuccessBanner(cachedHit, customerIds);
+    saveManualMatchHistory(cachedHit, customerIds, employeePoolIds);
+    renderManualResults();
+    updateManualStats();
+    persistState();
+    scrollToManualResults();
+    showToast(`${cachedHit.message || '匹配完成'} · 缓存秒开`);
+    isMatching = false;
+    btn.classList.remove('loading');
+    btn.textContent = '确认匹配';
+    updateMatchButton();
+    hideMatchProgress();
+    return;
+  }
 
   const body = { sessionId, customerIds, commuteMode: 'transit' };
   if (employeePoolIds.length) body.employeePoolIds = employeePoolIds;

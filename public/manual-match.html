@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>手动派单</title>
-  <link rel="preload" href="/cache/sample-data.json?v=20260624-transit-sane-69" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="/cache/sample-data.json?v=20260624-manual-pool-70" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="/cache/manual-pool-back.json?v=20260624-manual-pool-70" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="/cache/manual-pool-front.json?v=20260624-manual-pool-70" as="fetch" crossorigin="anonymous">
   <link rel="preload" href="/api/bootstrap" as="fetch" crossorigin="anonymous">
-  <script src="/match-shared.js?v=20260624-transit-sane-69"></script>
+  <script src="/match-shared.js?v=20260624-manual-pool-70"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -785,7 +787,9 @@
     <div class="panel">
       <div class="panel-head">
         <span>手动派单 · 表格多选</span>
-        <div class="manual-actions" style="display:flex;gap:6px">
+        <div class="manual-actions" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="btn-sm" id="manual-pool-back-btn" title="全部回访公司 + 后道员工">后道全选</button>
+          <button type="button" class="btn-sm" id="manual-pool-front-btn" title="全部首访公司 + 前道员工">前道全选</button>
           <button type="button" class="btn-sm" id="manual-clear-btn">清空选择</button>
           <button type="button" class="btn-sm" id="manual-emp-info-btn">查看员工</button>
           <button type="button" class="btn-sm primary" id="manual-match-btn">确认匹配</button>
@@ -873,6 +877,6 @@
       <button type="button" class="close-btn" id="emp-modal-close">关闭</button>
     </div>
   </div>
-  <script src="/manual-match.js?v=20260624-transit-sane-69"></script>
+  <script src="/manual-match.js?v=20260624-manual-pool-70"></script>
 </body>
 </html>
