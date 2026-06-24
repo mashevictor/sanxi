@@ -4,7 +4,7 @@ const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
 /** 与 integrated-cache.ts INTEGRATED_DATA_VERSION 保持一致，用于静态 JSON 缓存穿透 */
-const STATIC_CACHE_BUST = '20260624-manual-pool-72';
+const STATIC_CACHE_BUST = '20260624-ai-cache-73';
 
 function getSampleDataCacheUrl() {
   return `/cache/sample-data.json?v=${STATIC_CACHE_BUST}`;
@@ -162,6 +162,87 @@ function sliceManualPoolFromCache(fullDispatch, customerIds, employeePoolIds) {
   }
 
   return { complete: false, lockedPairings, rematchCustomerIds };
+}
+
+function isCacheVersionOk(cache, dataVersion) {
+  if (!cache?.dataVersion) return false;
+  if (dataVersion && cache.dataVersion === dataVersion) return true;
+  if (cache.dataVersion === STATIC_CACHE_BUST) return true;
+  return false;
+}
+
+/** AI 匹配：从 full-match.json 切出选中公司（无需 session / API） */
+function sliceFullMatchCacheForAi(cache, customerIds, lockedPairings, matchOnlyCustomerIds) {
+  if (!cache?.pairings?.length) return null;
+  const pool = cache.fullMatchCustomerIds || [];
+  if (!isIdSubset(customerIds, pool)) return null;
+
+  const lockedSet = new Set((lockedPairings || []).map((p) => p.customerId));
+  const customerSet = new Set(customerIds);
+  const resolveIds = (matchOnlyCustomerIds?.length ? matchOnlyCustomerIds : customerIds).filter(
+    (id) => customerSet.has(id) && !lockedSet.has(id)
+  );
+
+  const byCid = new Map(cache.pairings.map((p) => [p.customerId, p]));
+  const rematchCustomerIds = [];
+  const newLocks = [];
+
+  for (const id of resolveIds) {
+    const p = byCid.get(id);
+    if (p) newLocks.push({ customerId: id, employeeId: p.employeeId });
+    else rematchCustomerIds.push(id);
+  }
+
+  if (rematchCustomerIds.length) {
+    return {
+      partial: true,
+      lockedPairings: [...(lockedPairings || []), ...newLocks],
+      rematchCustomerIds,
+    };
+  }
+
+  const pairings = cache.pairings
+    .filter((p) => customerSet.has(p.customerId))
+    .map((p) => ({ ...p, locked: true }));
+  const unmatched = (cache.unmatchedCompanies || []).filter((u) => customerSet.has(u.customerId));
+  const empIds = new Set(pairings.map((p) => p.employeeId));
+  const employeeSchedules = (cache.employeeSchedules || [])
+    .filter((s) => empIds.has(s.employeeId))
+    .map((s) => {
+      const orders = s.orders.filter((o) => customerSet.has(o.customerId));
+      return {
+        ...s,
+        orders,
+        totalOrders: orders.length,
+        morningOrders: orders.filter((o) => o.timeSlot === '上午').length,
+        afternoonOrders: orders.filter((o) => o.timeSlot !== '上午').length,
+        totalCommuteMinutes: orders.reduce((sum, o) => sum + (o.commuteMinutes || 0), 0),
+      };
+    })
+    .filter((s) => s.orders.length > 0);
+
+  const matched = pairings.length;
+  const failed = unmatched.length;
+  return {
+    complete: true,
+    success: failed === 0,
+    pairings,
+    unmatchedCompanies: unmatched,
+    employeeSchedules,
+    message:
+      failed === 0
+        ? `已为 ${customerIds.length} 家公司匹配 ${matched} 单，全部合规（全量缓存）`
+        : `已为 ${customerIds.length} 家公司匹配 ${matched} 单（全量缓存）`,
+    distanceSource: cache.distanceSource,
+    maxCommuteMinutes: cache.maxCommuteMinutes || 60,
+    stats: {
+      selected: customerIds.length,
+      matched,
+      unmatched: failed,
+      totalScore: pairings.reduce((s, p) => s + p.score, 0),
+      avgCommute: calcAvgCommute(pairings),
+    },
+  };
 }
 
 /** 脚本加载时立即预取静态数据与会话 */

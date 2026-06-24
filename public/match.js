@@ -173,10 +173,15 @@ function applySessionMeta(data) {
 
 function isFullMatchCacheUsable(cache) {
   if (!cache?.pairings?.length) return false;
-  if (integratedDataVersion && cache.dataVersion && cache.dataVersion !== integratedDataVersion) {
-    return false;
-  }
-  return true;
+  return isCacheVersionOk(cache, integratedDataVersion);
+}
+
+async function tryPreviewFromFullMatchCache() {
+  const cache = await resolveFullMatchCache();
+  if (!cache) return null;
+  const selectedIds = getSelectedIds();
+  if (!selectedIds.length) return null;
+  return sliceFullMatchCacheForAi(cache, selectedIds, getLockedPairings(), getMatchOnlyIds());
 }
 
 async function ensureSessionReady() {
@@ -236,21 +241,25 @@ async function loadFullMatchAndMatch() {
 
     const cache = await resolveFullMatchCache();
     if (cache) {
-      const remapped = remapCacheResult(cache, { preferDemo: false });
-      const missing = getRemapMissingIds(remapped, ids);
-      const cacheOk = missing.length === 0 && !(remapped.unmatchedCompanies || []).length;
-
-      if (cacheOk) {
-        resultPayload = {
-          pairings: remapped.pairings || [],
-          unmatchedCompanies: remapped.unmatchedCompanies || [],
-          employeeSchedules: remapped.employeeSchedules || [],
-          message: remapped.message || `已为 ${ids.length} 家公司完成全量匹配（缓存）`,
-          distanceSource: remapped.distanceSource || 'local',
-          maxCommuteMinutes: remapped.maxCommuteMinutes || 60,
-        };
-      } else if (missing.length) {
-        console.warn('[全量匹配] 缓存映射缺', missing.length, '家，改用实时匹配');
+      const sliced = sliceFullMatchCacheForAi(cache, ids, [], undefined);
+      if (sliced?.complete) {
+        resultPayload = sliced;
+      } else {
+        const remapped = remapCacheResult(cache, { preferDemo: false });
+        const missing = getRemapMissingIds(remapped, ids);
+        const cacheOk = missing.length === 0 && !(remapped.unmatchedCompanies || []).length;
+        if (cacheOk) {
+          resultPayload = {
+            pairings: remapped.pairings || [],
+            unmatchedCompanies: remapped.unmatchedCompanies || [],
+            employeeSchedules: remapped.employeeSchedules || [],
+            message: remapped.message || `已为 ${ids.length} 家公司完成全量匹配（缓存）`,
+            distanceSource: remapped.distanceSource || 'local',
+            maxCommuteMinutes: remapped.maxCommuteMinutes || 60,
+          };
+        } else if (missing.length) {
+          console.warn('[全量匹配] 缓存映射缺', missing.length, '家，改用实时匹配');
+        }
       }
     } else {
       console.warn('[全量匹配] 缓存不可用（未部署或版本不一致），改用实时匹配');
@@ -1266,29 +1275,72 @@ function schedulePreview() {
     return;
   }
 
-  if (!sessionId) {
-    ensureSessionReady().then((ok) => {
-      if (ok && getSelectedIds().length) schedulePreview();
-    });
-    return;
-  }
+  const runCachePreview = async () => {
+    const hit = await tryPreviewFromFullMatchCache();
+    if (hit?.complete) {
+      isMatching = false;
+      applyDispatchResult(hit);
+      renderBoard();
+      renderSchedules();
+      updateStats();
+      return true;
+    }
+    if (hit?.partial && sessionId) {
+      isMatching = true;
+      renderBoard();
+      updateStats();
+      previewTimer = setTimeout(fetchPreview, 100);
+      return true;
+    }
+    return false;
+  };
 
-  const matchOnly = getMatchOnlyIds();
-  if (matchOnly.length === 0 && getLockedPairings().length > 0) {
-    syncPreviewFromAssignment();
+  runCachePreview().then((handled) => {
+    if (handled) return;
+
+    if (!sessionId) {
+      isMatching = true;
+      renderBoard();
+      updateStats();
+      ensureSessionReady().then((ok) => {
+        if (ok && getSelectedIds().length) schedulePreview();
+        else if (!ok) {
+          isMatching = false;
+          renderBoard();
+          updateStats();
+        }
+      });
+      return;
+    }
+
+    const matchOnly = getMatchOnlyIds();
+    if (matchOnly.length === 0 && getLockedPairings().length > 0) {
+      syncPreviewFromAssignment();
+      renderBoard();
+      updateStats();
+      return;
+    }
+
+    isMatching = true;
     renderBoard();
     updateStats();
-    return;
-  }
-
-  isMatching = true;
-  renderBoard();
-  updateStats();
-  previewTimer = setTimeout(fetchPreview, 400);
+    previewTimer = setTimeout(fetchPreview, 400);
+  });
 }
 
 async function fetchPreview() {
   if (getSelectedIds().length === 0) return;
+
+  const cacheHit = await tryPreviewFromFullMatchCache();
+  if (cacheHit?.complete) {
+    applyDispatchResult(cacheHit);
+    isMatching = false;
+    renderBoard();
+    renderSchedules();
+    updateStats();
+    return;
+  }
+
   if (!(await ensureSessionReady())) {
     isMatching = false;
     showToast('会话未就绪，请稍候或刷新页面');
@@ -1297,7 +1349,12 @@ async function fetchPreview() {
     return;
   }
   try {
-    const data = await callSelectApi();
+    const bodyExtra = {};
+    if (cacheHit?.partial) {
+      bodyExtra.lockedPairings = cacheHit.lockedPairings;
+      bodyExtra.matchOnlyCustomerIds = cacheHit.rematchCustomerIds;
+    }
+    const data = await callSelectApi(bodyExtra);
     applyDispatchResult(data);
     isMatching = false;
     renderBoard();
@@ -1313,8 +1370,10 @@ async function fetchPreview() {
 
 async function callSelectApi(opts = {}) {
   const selectedIds = getSelectedIds();
-  const lockedPairings = opts.fullMatch ? [] : getLockedPairings();
-  const matchOnlyCustomerIds = opts.fullMatch ? undefined : getMatchOnlyIds();
+  const lockedPairings = opts.fullMatch ? [] : (opts.lockedPairings || getLockedPairings());
+  const matchOnlyCustomerIds = opts.fullMatch
+    ? undefined
+    : (opts.matchOnlyCustomerIds || getMatchOnlyIds());
 
   const body = {
     sessionId,

@@ -25,6 +25,7 @@ import { buildParseMetadata, buildSampleDataPayload } from './services/parse-met
 import { buildMatchTestReport } from './services/match-test-report';
 import { lookupAdhocMatch } from './services/adhoc-match';
 import { getManualPoolMeta, tryGetManualPoolDispatch } from './services/manual-pool-cache';
+import { tryGetFullMatchDispatch } from './services/full-match-cache';
 import { getServerLegCache } from './services/server-leg-cache';
 import { CustomerType, TimeSlot } from './types';
 
@@ -308,9 +309,51 @@ app.post('/api/dispatch/select', async (req, res) => {
     }
 
     const poolIds = Array.isArray(employeePoolIds) ? employeePoolIds : undefined;
-    const poolHit = tryGetManualPoolDispatch(DATA_DIR, selectedCustomerIds, poolIds);
     const legCache = getServerLegCache();
     const mode = resolveCommuteMode(commuteMode);
+    const locked = Array.isArray(lockedPairings)
+      ? lockedPairings.map((p: { customerId: number; employeeId: number }) => ({
+          customerId: Number(p.customerId),
+          employeeId: Number(p.employeeId),
+        }))
+      : [];
+    const matchOnly = Array.isArray(matchOnlyCustomerIds)
+      ? matchOnlyCustomerIds.map(Number)
+      : undefined;
+
+    if (!poolIds?.length) {
+      const fullHit = tryGetFullMatchDispatch(DATA_DIR, selectedCustomerIds, locked, matchOnly);
+      if (fullHit?.mode === 'full') {
+        console.log(
+          `[dispatch/select] full-match cache hit ${fullHit.dispatch.stats.matched}/${fullHit.dispatch.stats.selected}`
+        );
+        res.json(fullHit.dispatch);
+        return;
+      }
+      if (fullHit?.mode === 'partial') {
+        const t0 = Date.now();
+        const response = await dispatchSelectedCompanies(
+          data,
+          selectedCustomerIds,
+          employeeIds?.length ? employeeIds : undefined,
+          {
+            lockedPairings: fullHit.lockedPairings,
+            matchOnlyCustomerIds: fullHit.rematchCustomerIds,
+            commuteMode: mode,
+            preferShortestCommute: true,
+            legCache,
+            transitWarmMaxFetches: 0,
+          }
+        );
+        console.log(
+          `[dispatch/select] full-match partial locked=${fullHit.lockedPairings.length} rematch=${fullHit.rematchCustomerIds.length} in ${Date.now() - t0}ms`
+        );
+        res.json(response);
+        return;
+      }
+    }
+
+    const poolHit = tryGetManualPoolDispatch(DATA_DIR, selectedCustomerIds, poolIds);
 
     if (poolHit?.mode === 'full') {
       console.log(
