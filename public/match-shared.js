@@ -4,7 +4,7 @@ const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
 /** 与 integrated-cache.ts INTEGRATED_DATA_VERSION 保持一致，用于静态 JSON 缓存穿透 */
-const STATIC_CACHE_BUST = '20260624-manual-pool-71';
+const STATIC_CACHE_BUST = '20260624-manual-pool-72';
 
 function getSampleDataCacheUrl() {
   return `/cache/sample-data.json?v=${STATIC_CACHE_BUST}`;
@@ -90,6 +90,78 @@ function sameIdSet(a, b) {
   const sb = [...b].sort((x, y) => x - y);
   if (sa.length !== sb.length) return false;
   return sa.every((v, i) => v === sb[i]);
+}
+
+function isIdSubset(sub, sup) {
+  const set = new Set(sup);
+  return sub.every((id) => set.has(id));
+}
+
+function sliceManualPoolFromCache(fullDispatch, customerIds, employeePoolIds) {
+  const customerSet = new Set(customerIds);
+  const poolSet = new Set(employeePoolIds);
+  const pairings = [];
+  const lockedPairings = [];
+  const matchedIds = new Set();
+
+  for (const p of fullDispatch.pairings || []) {
+    if (!customerSet.has(p.customerId)) continue;
+    if (poolSet.has(p.employeeId)) {
+      pairings.push(p);
+      matchedIds.add(p.customerId);
+      lockedPairings.push({ customerId: p.customerId, employeeId: p.employeeId });
+    }
+  }
+
+  const rematchCustomerIds = customerIds.filter((id) => !matchedIds.has(id));
+  for (const u of fullDispatch.unmatchedCompanies || []) {
+    if (customerSet.has(u.customerId) && !matchedIds.has(u.customerId)) {
+      if (!rematchCustomerIds.includes(u.customerId)) rematchCustomerIds.push(u.customerId);
+    }
+  }
+
+  if (!rematchCustomerIds.length) {
+    const unmatched = (fullDispatch.unmatchedCompanies || []).filter((u) => customerSet.has(u.customerId));
+    const empIds = new Set(pairings.map((p) => p.employeeId));
+    const schedules = (fullDispatch.employeeSchedules || [])
+      .filter((s) => empIds.has(s.employeeId))
+      .map((s) => {
+        const orders = s.orders.filter((o) => customerSet.has(o.customerId));
+        return {
+          ...s,
+          orders,
+          totalOrders: orders.length,
+          morningOrders: orders.filter((o) => o.timeSlot === '上午').length,
+          afternoonOrders: orders.filter((o) => o.timeSlot !== '上午').length,
+          totalCommuteMinutes: orders.reduce((sum, o) => sum + (o.commuteMinutes || 0), 0),
+        };
+      })
+      .filter((s) => s.orders.length > 0);
+    const matched = pairings.length;
+    const failed = unmatched.length;
+    return {
+      complete: true,
+      dispatch: {
+        ...fullDispatch,
+        success: failed === 0,
+        message: failed === 0
+          ? `已为 ${customerIds.length} 家公司匹配 ${matched} 单，全部合规（缓存切片）`
+          : `已为 ${customerIds.length} 家公司匹配 ${matched} 单，${failed} 单待处理（缓存切片）`,
+        stats: {
+          selected: customerIds.length,
+          matched,
+          unmatched: failed,
+          totalScore: pairings.reduce((s, p) => s + p.score, 0),
+          avgCommute: calcAvgCommute(pairings),
+        },
+        pairings,
+        unmatchedCompanies: unmatched,
+        employeeSchedules: schedules,
+      },
+    };
+  }
+
+  return { complete: false, lockedPairings, rematchCustomerIds };
 }
 
 /** 脚本加载时立即预取静态数据与会话 */

@@ -183,11 +183,30 @@ async function tryManualPoolCacheHit(customerIds, employeePoolIds) {
   for (const kind of ['back', 'front']) {
     const pool = manualPoolMeta[kind];
     if (!pool) continue;
-    if (!sameIdSet(customerIds, pool.customerIds)) continue;
-    if (!sameIdSet(employeePoolIds, pool.employeePoolIds)) continue;
     const cached = await prefetchManualPoolCache(kind);
-    if (cached?.dispatch && cached.dataVersion === dataVersion) {
-      return { ...cached.dispatch, _cached: true, _poolKind: kind };
+    if (!cached?.dispatch || cached.dataVersion !== dataVersion) continue;
+
+    const exactCo = sameIdSet(customerIds, pool.customerIds);
+    const exactEmp = sameIdSet(employeePoolIds, pool.employeePoolIds);
+    const subsetCo = isIdSubset(customerIds, pool.customerIds);
+    const subsetEmp = isIdSubset(employeePoolIds, pool.employeePoolIds);
+
+    if (exactCo && exactEmp) {
+      return { ...cached.dispatch, _cached: true, _poolKind: kind, _cacheMode: 'full' };
+    }
+    if (!subsetCo || !subsetEmp) continue;
+
+    const sliced = sliceManualPoolFromCache(cached.dispatch, customerIds, employeePoolIds);
+    if (sliced.complete) {
+      return { ...sliced.dispatch, _cached: true, _poolKind: kind, _cacheMode: 'slice' };
+    }
+    if (sliced.lockedPairings.length) {
+      return {
+        _partial: true,
+        _poolKind: kind,
+        lockedPairings: sliced.lockedPairings,
+        rematchCustomerIds: sliced.rematchCustomerIds,
+      };
     }
   }
   return null;
@@ -841,7 +860,7 @@ async function onManualMatch() {
   showMatchProgress(customerIds.length);
 
   const cachedHit = await tryManualPoolCacheHit(customerIds, employeePoolIds);
-  if (cachedHit) {
+  if (cachedHit?._cached) {
     applyMatchResult(cachedHit);
     completeMatchProgress(cachedHit.stats?.matched ?? lastMatchPairings.length, customerIds.length);
     showMatchSuccessBanner(cachedHit, customerIds);
@@ -850,7 +869,8 @@ async function onManualMatch() {
     updateManualStats();
     persistState();
     scrollToManualResults();
-    showToast(`${cachedHit.message || '匹配完成'} · 缓存秒开`);
+    const modeLabel = cachedHit._cacheMode === 'slice' ? '缓存切片' : '缓存秒开';
+    showToast(`${cachedHit.message || '匹配完成'} · ${modeLabel}`);
     isMatching = false;
     btn.classList.remove('loading');
     btn.textContent = '确认匹配';
@@ -861,6 +881,10 @@ async function onManualMatch() {
 
   const body = { sessionId, customerIds, commuteMode: 'transit' };
   if (employeePoolIds.length) body.employeePoolIds = employeePoolIds;
+  if (cachedHit?._partial) {
+    body.lockedPairings = cachedHit.lockedPairings;
+    body.matchOnlyCustomerIds = cachedHit.rematchCustomerIds;
+  }
 
   try {
     const data = await fetchJsonWithTimeout('/api/dispatch/select', {

@@ -25,6 +25,7 @@ import { buildParseMetadata, buildSampleDataPayload } from './services/parse-met
 import { buildMatchTestReport } from './services/match-test-report';
 import { lookupAdhocMatch } from './services/adhoc-match';
 import { getManualPoolMeta, tryGetManualPoolDispatch } from './services/manual-pool-cache';
+import { getServerLegCache } from './services/server-leg-cache';
 import { CustomerType, TimeSlot } from './types';
 
 loadEnvFile();
@@ -308,7 +309,10 @@ app.post('/api/dispatch/select', async (req, res) => {
 
     const poolIds = Array.isArray(employeePoolIds) ? employeePoolIds : undefined;
     const poolHit = tryGetManualPoolDispatch(DATA_DIR, selectedCustomerIds, poolIds);
-    if (poolHit) {
+    const legCache = getServerLegCache();
+    const mode = resolveCommuteMode(commuteMode);
+
+    if (poolHit?.mode === 'full') {
       console.log(
         `[dispatch/select] manual-pool cache hit (${poolHit.poolKind}) ${poolHit.dispatch.stats.matched}/${poolHit.dispatch.stats.selected}`
       );
@@ -316,8 +320,30 @@ app.post('/api/dispatch/select', async (req, res) => {
       return;
     }
 
+    if (poolHit?.mode === 'partial') {
+      const t0 = Date.now();
+      const response = await dispatchSelectedCompanies(
+        data,
+        selectedCustomerIds,
+        employeeIds?.length ? employeeIds : undefined,
+        {
+          lockedPairings: poolHit.lockedPairings,
+          matchOnlyCustomerIds: poolHit.rematchCustomerIds,
+          employeePoolIds: poolIds,
+          commuteMode: mode,
+          preferShortestCommute: true,
+          legCache,
+          transitWarmMaxFetches: 0,
+        }
+      );
+      console.log(
+        `[dispatch/select] manual-pool partial (${poolHit.poolKind}) locked=${poolHit.lockedPairings.length} rematch=${poolHit.rematchCustomerIds.length} in ${Date.now() - t0}ms`
+      );
+      res.json(response);
+      return;
+    }
+
     const t0 = Date.now();
-    const mode = resolveCommuteMode(commuteMode);
     const response = await dispatchSelectedCompanies(
       data,
       selectedCustomerIds,
@@ -327,6 +353,9 @@ app.post('/api/dispatch/select', async (req, res) => {
         matchOnlyCustomerIds: Array.isArray(matchOnlyCustomerIds) ? matchOnlyCustomerIds : undefined,
         employeePoolIds: Array.isArray(employeePoolIds) ? employeePoolIds : undefined,
         commuteMode: mode,
+        preferShortestCommute: true,
+        legCache,
+        transitWarmMaxFetches: 0,
       }
     );
     const elapsed = Date.now() - t0;

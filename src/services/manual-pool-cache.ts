@@ -10,8 +10,9 @@ import {
   Employee,
 } from '../types';
 import { IntegratedData } from '../data/integrated-data';
-import { SelectDispatchResponse } from './select-dispatch';
+import { SelectDispatchResponse, SelectDispatchPairing } from './select-dispatch';
 import { getIntegratedDataVersion } from './integrated-cache';
+import { LockedPairing } from './pairing-optimizer';
 
 export type ManualPoolKind = 'back' | 'front';
 
@@ -25,6 +26,15 @@ export interface ManualPoolCacheFile {
   employeePoolIds: number[];
   dispatch: SelectDispatchResponse;
 }
+
+export type ManualPoolHit =
+  | { mode: 'full'; dispatch: SelectDispatchResponse; poolKind: ManualPoolKind }
+  | {
+      mode: 'partial';
+      poolKind: ManualPoolKind;
+      lockedPairings: LockedPairing[];
+      rematchCustomerIds: number[];
+    };
 
 const CACHE_FILES: Record<ManualPoolKind, string> = {
   back: 'manual-pool-back.json',
@@ -74,6 +84,11 @@ function sameIdSet(a: number[], b: number[]): boolean {
   return sa.every((v, i) => v === sb[i]);
 }
 
+export function isIdSubset(sub: number[], sup: number[]): boolean {
+  const set = new Set(sup);
+  return sub.every((id) => set.has(id));
+}
+
 /** 员工池去同名（与手动页「全选员工」一致） */
 export function dedupeEmployeePoolIds(employees: Employee[]): number[] {
   const seen = new Set<string>();
@@ -113,22 +128,136 @@ export function buildManualPoolIds(
   };
 }
 
+function buildSlicedDispatch(
+  full: SelectDispatchResponse,
+  pairings: SelectDispatchPairing[],
+  unmatched: SelectDispatchResponse['unmatchedCompanies'],
+  customerIds: number[]
+): SelectDispatchResponse {
+  const customerSet = new Set(customerIds);
+  const empIds = new Set(pairings.map((p) => p.employeeId));
+  const schedules = (full.employeeSchedules || [])
+    .filter((s) => empIds.has(s.employeeId))
+    .map((s) => {
+      const orders = s.orders.filter((o) => customerSet.has(o.customerId));
+      return {
+        ...s,
+        orders,
+        totalOrders: orders.length,
+        morningOrders: orders.filter((o) => o.timeSlot === '上午').length,
+        afternoonOrders: orders.filter((o) => o.timeSlot !== '上午').length,
+        totalCommuteMinutes: orders.reduce((sum, o) => sum + (o.commuteMinutes || 0), 0),
+        routeSegments: s.routeSegments.filter((seg, i) => i < orders.length),
+      };
+    })
+    .filter((s) => s.orders.length > 0);
+
+  const matched = pairings.length;
+  const failed = unmatched.length;
+  const avgCommute =
+    matched > 0
+      ? Math.round(pairings.reduce((s, p) => s + p.commuteMinutes, 0) / matched)
+      : 0;
+
+  return {
+    success: failed === 0,
+    message:
+      failed === 0
+        ? `已为 ${customerIds.length} 家公司匹配 ${matched} 单，全部合规（缓存切片）`
+        : `已为 ${customerIds.length} 家公司匹配 ${matched} 单，${failed} 单待处理（缓存切片）`,
+    maxCommuteMinutes: full.maxCommuteMinutes,
+    distanceSource: full.distanceSource,
+    stats: {
+      selected: customerIds.length,
+      matched,
+      unmatched: failed,
+      totalScore: pairings.reduce((s, p) => s + p.score, 0),
+      avgCommute,
+    },
+    pairings,
+    unmatchedCompanies: unmatched,
+    employeeSchedules: schedules,
+  };
+}
+
+/** 从全量池缓存中切出子集；员工不在池内则进入 rematch */
+export function sliceManualPoolDispatch(
+  full: SelectDispatchResponse,
+  customerIds: number[],
+  employeePoolIds: number[]
+):
+  | { complete: true; dispatch: SelectDispatchResponse }
+  | { complete: false; lockedPairings: LockedPairing[]; rematchCustomerIds: number[] } {
+  const customerSet = new Set(customerIds);
+  const poolSet = new Set(employeePoolIds);
+  const pairings: SelectDispatchPairing[] = [];
+  const lockedPairings: LockedPairing[] = [];
+  const matchedIds = new Set<number>();
+
+  for (const p of full.pairings || []) {
+    if (!customerSet.has(p.customerId)) continue;
+    if (poolSet.has(p.employeeId)) {
+      pairings.push(p);
+      matchedIds.add(p.customerId);
+      lockedPairings.push({ customerId: p.customerId, employeeId: p.employeeId });
+    }
+  }
+
+  const rematchCustomerIds = customerIds.filter((id) => !matchedIds.has(id));
+  for (const u of full.unmatchedCompanies || []) {
+    if (customerSet.has(u.customerId) && !matchedIds.has(u.customerId)) {
+      if (!rematchCustomerIds.includes(u.customerId)) {
+        rematchCustomerIds.push(u.customerId);
+      }
+    }
+  }
+
+  if (rematchCustomerIds.length === 0) {
+    const unmatched = (full.unmatchedCompanies || []).filter((u) => customerSet.has(u.customerId));
+    return {
+      complete: true,
+      dispatch: buildSlicedDispatch(full, pairings, unmatched, customerIds),
+    };
+  }
+
+  return { complete: false, lockedPairings, rematchCustomerIds };
+}
+
 export function tryGetManualPoolDispatch(
   dataDir: string,
   customerIds: number[],
   employeePoolIds?: number[]
-): { dispatch: SelectDispatchResponse; poolKind: ManualPoolKind; cached: true } | null {
+): ManualPoolHit | null {
   if (!employeePoolIds?.length || !customerIds.length) return null;
 
   for (const kind of ['back', 'front'] as ManualPoolKind[]) {
     const file = loadManualPoolCacheFile(dataDir, kind);
     if (!file) continue;
     if (file.dataVersion !== getIntegratedDataVersion()) continue;
+
     if (
       sameIdSet(customerIds, file.customerIds) &&
       sameIdSet(employeePoolIds, file.employeePoolIds)
     ) {
-      return { dispatch: file.dispatch, poolKind: kind, cached: true };
+      return { mode: 'full', dispatch: file.dispatch, poolKind: kind };
+    }
+
+    if (
+      isIdSubset(customerIds, file.customerIds) &&
+      isIdSubset(employeePoolIds, file.employeePoolIds)
+    ) {
+      const sliced = sliceManualPoolDispatch(file.dispatch, customerIds, employeePoolIds);
+      if (sliced.complete) {
+        return { mode: 'full', dispatch: sliced.dispatch, poolKind: kind };
+      }
+      if (sliced.lockedPairings.length > 0) {
+        return {
+          mode: 'partial',
+          poolKind: kind,
+          lockedPairings: sliced.lockedPairings,
+          rematchCustomerIds: sliced.rematchCustomerIds,
+        };
+      }
     }
   }
   return null;
