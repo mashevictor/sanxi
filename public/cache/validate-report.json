@@ -1,17 +1,71 @@
 {
-  "generatedAt": "2026-06-22T09:20:24.865Z",
+  "generatedAt": "2026-06-24T02:50:14.699Z",
   "total": 55,
   "matched": 55,
   "unmatched": 0,
   "errors": 0,
-  "warnings": 0,
+  "warnings": 8,
   "allReasonable": true,
   "issues": [
     {
       "level": "info",
-      "company": "上海地通汽车部件有限公司",
+      "company": "上海天元新能源材料有限公司",
+      "employee": "刘勇",
+      "message": "指定人单通勤 88 分（指定人优先，合理）"
+    },
+    {
+      "level": "warn",
+      "company": "上海协尔泰控制技术有限公司",
+      "employee": "姚焕",
+      "message": "通勤 62 分超过 60 分上限（软约束，仍合规）"
+    },
+    {
+      "level": "info",
+      "company": "上海惠铎环境能源科技股份有限公司",
+      "employee": "姚洁",
+      "message": "指定人单通勤 83 分（指定人优先，合理）"
+    },
+    {
+      "level": "warn",
+      "company": "上海安睿特生物医药科技有限公司",
+      "employee": "刘勇",
+      "message": "通勤 77 分超过 60 分上限（软约束，仍合规）"
+    },
+    {
+      "level": "warn",
+      "company": "上海无忧供应链管理有限公司",
+      "employee": "杨芳",
+      "message": "通勤 82 分超过 60 分上限（软约束，仍合规）"
+    },
+    {
+      "level": "warn",
+      "company": "上海无忧供应链管理有限公司",
+      "employee": "演示-范金山",
+      "message": "通勤 67 分超过 60 分上限（软约束，仍合规）"
+    },
+    {
+      "level": "warn",
+      "company": "宝山高新-上海炳唐国际贸易有限公司",
+      "employee": "补位-周浦后",
+      "message": "通勤 73 分超过 60 分上限（软约束，仍合规）"
+    },
+    {
+      "level": "warn",
+      "company": "上海宝屋房地产经纪有限公司",
+      "employee": "刘勇",
+      "message": "通勤 89 分超过 60 分上限（软约束，仍合规）"
+    },
+    {
+      "level": "warn",
+      "company": "上海华烁投资管理有限公司",
       "employee": "李路路",
-      "message": "指定人单通勤 65 分（指定人优先，合理）"
+      "message": "通勤 64 分超过 60 分上限（软约束，仍合规）"
+    },
+    {
+      "level": "warn",
+      "company": "上海鸣旭电子科技有限公司",
+      "employee": "傅丽",
+      "message": "通勤 62 分超过 60 分上限（软约束，仍合规）"
     }
   ],
   "pairings": [
@@ -20,7 +74,7 @@
       "employee": "柴强",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 30,
+      "commute": 31,
       "corePass": 6
     },
     {
@@ -28,7 +82,7 @@
       "employee": "刘勇",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 50,
+      "commute": 88,
       "corePass": 6
     },
     {
@@ -36,36 +90,60 @@
       "employee": "李路路",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 65,
+      "commute": 15,
       "corePass": 6
     },
     {
-      "company": "上海京泉投资管理有限公司",
-      "employee": "贾文霆",
+      "company": "山东济南-上海涌艺影视投资有限公司",
+      "employee": "补位-松江项目",
+      "type": "项目",
+      "slot": "上午",
+      "commute": 10,
+      "corePass": 6
+    },
+    {
+      "company": "江苏徐州-纽珑实业（上海）有限公司",
+      "employee": "补位-青浦项目",
+      "type": "项目",
+      "slot": "上午",
+      "commute": 10,
+      "corePass": 6
+    },
+    {
+      "company": "上海众家物业有限公司",
+      "employee": "补位-川周后",
       "type": "回访（后道）",
       "slot": "上午",
       "commute": 20,
       "corePass": 6
     },
     {
-      "company": "上海协尔泰控制技术有限公司",
-      "employee": "梁素梅",
-      "type": "首访（前道）",
-      "slot": "上午",
-      "commute": 25,
-      "corePass": 6
-    },
-    {
-      "company": "上海德红化工科技有限公司",
-      "employee": "吴佳键",
+      "company": "上海昊上电子科技有限公司",
+      "employee": "补位-龙东后",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 26,
+      "commute": 28,
       "corePass": 6
     },
     {
       "company": "上海波汇科技有限公司",
-      "employee": "宋亚军",
+      "employee": "补位-大川后",
+      "type": "回访（后道）",
+      "slot": "上午",
+      "commute": 21,
+      "corePass": 6
+    },
+    {
+      "company": "上海万沃建筑工程咨询有限公司",
+      "employee": "补位-周泰后",
+      "type": "回访（后道）",
+      "slot": "上午",
+      "commute": 29,
+      "corePass": 6
+    },
+    {
+      "company": "上海益充电子商务有限公司",
+      "employee": "补位-浦东后",
       "type": "回访（后道）",
       "slot": "上午",
       "commute": 39,
@@ -73,15 +151,71 @@
     },
     {
       "company": "上海响山文化传播有限公司",
-      "employee": "杨芳",
+      "employee": "补位-曹杨前",
       "type": "首访（前道）",
       "slot": "上午",
       "commute": 20,
       "corePass": 6
     },
     {
-      "company": "上海众家物业有限公司",
-      "employee": "陈胤",
+      "company": "上海季龄网络科技有限公司",
+      "employee": "补位-延安后",
+      "type": "回访（后道）",
+      "slot": "上午",
+      "commute": 20,
+      "corePass": 6
+    },
+    {
+      "company": "上海喜福来朝阳食品贸易行",
+      "employee": "补位-宝山全",
+      "type": "回访（后道）",
+      "slot": "上午",
+      "commute": 23,
+      "corePass": 6
+    },
+    {
+      "company": "宝山高新-上海博泰悦臻网络技术服务有限公司",
+      "employee": "补位-徐汇后",
+      "type": "回访（后道）",
+      "slot": "上午",
+      "commute": 36,
+      "corePass": 6
+    },
+    {
+      "company": "上海鑫邦旅游发展有限公司",
+      "employee": "补位-周浦后",
+      "type": "回访（后道）",
+      "slot": "上午",
+      "commute": 39,
+      "corePass": 6
+    },
+    {
+      "company": "徐州工程机械配件公司",
+      "employee": "补位-徐州全",
+      "type": "项目",
+      "slot": "上午",
+      "commute": 45,
+      "corePass": 6
+    },
+    {
+      "company": "上海京泉投资管理有限公司",
+      "employee": "盛雅琴",
+      "type": "回访（后道）",
+      "slot": "上午",
+      "commute": 28,
+      "corePass": 6
+    },
+    {
+      "company": "上海协尔泰控制技术有限公司",
+      "employee": "杨芳",
+      "type": "首访（前道）",
+      "slot": "上午",
+      "commute": 33,
+      "corePass": 6
+    },
+    {
+      "company": "上海德红化工科技有限公司",
+      "employee": "姚洁",
       "type": "回访（后道）",
       "slot": "上午",
       "commute": 30,
@@ -89,15 +223,15 @@
     },
     {
       "company": "爱豆科技（上海）有限公司",
-      "employee": "张小平",
+      "employee": "温作良",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 30,
+      "commute": 39,
       "corePass": 6
     },
     {
       "company": "济南瑞丰化工有限公司",
-      "employee": "殷汝飞",
+      "employee": "梁素梅",
       "type": "项目",
       "slot": "上午",
       "commute": 45,
@@ -105,10 +239,10 @@
     },
     {
       "company": "上海协尔泰控制技术有限公司",
-      "employee": "演示-范金山",
+      "employee": "姚焕",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 22,
+      "commute": 62,
       "corePass": 6
     },
     {
@@ -116,39 +250,7 @@
       "employee": "演示-沈镇江",
       "type": "首访（前道）",
       "slot": "上午",
-      "commute": 45,
-      "corePass": 6
-    },
-    {
-      "company": "上海喜福来朝阳食品贸易行",
-      "employee": "演示-顾宝山",
-      "type": "回访（后道）",
-      "slot": "上午",
-      "commute": 20,
-      "corePass": 6
-    },
-    {
-      "company": "徐州工程机械配件公司",
-      "employee": "王睿",
-      "type": "项目",
-      "slot": "上午",
-      "commute": 45,
-      "corePass": 6
-    },
-    {
-      "company": "山东济南-上海涌艺影视投资有限公司",
-      "employee": "补位-济南全",
-      "type": "项目",
-      "slot": "上午",
-      "commute": 45,
-      "corePass": 6
-    },
-    {
-      "company": "江苏徐州-纽珑实业（上海）有限公司",
-      "employee": "演示-钱徐州",
-      "type": "项目",
-      "slot": "上午",
-      "commute": 45,
+      "commute": 46,
       "corePass": 6
     },
     {
@@ -156,87 +258,23 @@
       "employee": "孟祥龙",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 26,
-      "corePass": 6
-    },
-    {
-      "company": "宝山高新-上海博泰悦臻网络技术服务有限公司",
-      "employee": "侯婷婷",
-      "type": "回访（后道）",
-      "slot": "上午",
-      "commute": 30,
-      "corePass": 6
-    },
-    {
-      "company": "上海季龄网络科技有限公司",
-      "employee": "盛雅琴",
-      "type": "回访（后道）",
-      "slot": "上午",
-      "commute": 30,
+      "commute": 45,
       "corePass": 6
     },
     {
       "company": "上海禾深通信技术有限公司",
-      "employee": "许珊珊",
+      "employee": "陈胤",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 25,
-      "corePass": 6
-    },
-    {
-      "company": "上海鑫邦旅游发展有限公司",
-      "employee": "丁苏姗",
-      "type": "回访（后道）",
-      "slot": "上午",
-      "commute": 55,
-      "corePass": 6
-    },
-    {
-      "company": "上海益充电子商务有限公司",
-      "employee": "崔宏芝",
-      "type": "回访（后道）",
-      "slot": "上午",
-      "commute": 55,
+      "commute": 33,
       "corePass": 6
     },
     {
       "company": "上海多隆信息科技有限公司",
-      "employee": "补位-金山全1",
+      "employee": "傅丽",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 50,
-      "corePass": 6
-    },
-    {
-      "company": "上海昊上电子科技有限公司",
-      "employee": "补位-金山全2",
-      "type": "回访（后道）",
-      "slot": "上午",
-      "commute": 60,
-      "corePass": 6
-    },
-    {
-      "company": "上海万沃建筑工程咨询有限公司",
-      "employee": "补位-宝山全",
-      "type": "回访（后道）",
-      "slot": "上午",
-      "commute": 30,
-      "corePass": 6
-    },
-    {
-      "company": "宝山高新-上海房屋工程建设技术发展有限公司",
-      "employee": "柴强",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 50,
-      "corePass": 6
-    },
-    {
-      "company": "上海宝冶工程技术有限公司",
-      "employee": "补位-宝山全",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 30,
+      "commute": 44,
       "corePass": 6
     },
     {
@@ -244,79 +282,31 @@
       "employee": "姚洁",
       "type": "回访（后道）",
       "slot": "下午1",
-      "commute": 60,
-      "corePass": 6
-    },
-    {
-      "company": "上海安睿特生物医药科技有限公司",
-      "employee": "温作良",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 50,
-      "corePass": 6
-    },
-    {
-      "company": "上海筱胜企业管理咨询有限公司",
-      "employee": "宋樑",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 25,
+      "commute": 83,
       "corePass": 6
     },
     {
       "company": "上海界龙现代印刷纸品有限公司",
-      "employee": "傅丽",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 20,
-      "corePass": 6
-    },
-    {
-      "company": "上海智彩电子科技有限公司",
-      "employee": "舒立旻",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 20,
-      "corePass": 6
-    },
-    {
-      "company": "上海无忧供应链管理有限公司",
-      "employee": "姚焕",
+      "employee": "补位-延安后",
       "type": "回访（后道）",
       "slot": "下午1",
       "commute": 26,
       "corePass": 6
     },
     {
-      "company": "上海由绮置业有限公司",
-      "employee": "韩哲川",
+      "company": "上海筱胜企业管理咨询有限公司",
+      "employee": "补位-普陀后",
       "type": "回访（后道）",
       "slot": "下午1",
-      "commute": 35,
+      "commute": 24,
       "corePass": 6
     },
     {
-      "company": "上海君正船务有限公司",
-      "employee": "李路路",
+      "company": "上海智彩电子科技有限公司",
+      "employee": "补位-徐汇后",
       "type": "回访（后道）",
       "slot": "下午1",
-      "commute": 25,
-      "corePass": 6
-    },
-    {
-      "company": "上海无忧供应链管理有限公司",
-      "employee": "补位-杨浦前",
-      "type": "首访（前道）",
-      "slot": "下午1",
-      "commute": 40,
-      "corePass": 6
-    },
-    {
-      "company": "济南华创科技有限公司",
-      "employee": "演示-蒋济南",
-      "type": "首访（前道）",
-      "slot": "下午1",
-      "commute": 45,
+      "commute": 39,
       "corePass": 6
     },
     {
@@ -324,103 +314,87 @@
       "employee": "补位-镇江全",
       "type": "项目",
       "slot": "下午1",
-      "commute": 45,
+      "commute": 27,
       "corePass": 6
     },
     {
-      "company": "徐州智联物流有限公司",
-      "employee": "黄健",
-      "type": "项目",
+      "company": "济南华创科技有限公司",
+      "employee": "补位-济南全",
+      "type": "首访（前道）",
       "slot": "下午1",
-      "commute": 45,
+      "commute": 38,
+      "corePass": 6
+    },
+    {
+      "company": "上海安睿特生物医药科技有限公司",
+      "employee": "刘勇",
+      "type": "回访（后道）",
+      "slot": "下午1",
+      "commute": 77,
+      "corePass": 6
+    },
+    {
+      "company": "上海由绮置业有限公司",
+      "employee": "李路路",
+      "type": "回访（后道）",
+      "slot": "下午1",
+      "commute": 31,
       "corePass": 6
     },
     {
       "company": "上海得韬会展服务有限公司",
-      "employee": "盛雅琴",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 20,
-      "corePass": 6
-    },
-    {
-      "company": "宝山高新-点意空间（上海）展览设计工程有限公司",
-      "employee": "柴强",
-      "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 20,
-      "corePass": 6
-    },
-    {
-      "company": "宝山高新-上海炳唐国际贸易有限公司",
       "employee": "补位-宝山全",
       "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 35,
+      "slot": "下午1",
+      "commute": 53,
       "corePass": 6
     },
     {
-      "company": "上海宝屋房地产经纪有限公司",
-      "employee": "姚洁",
-      "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 39,
+      "company": "上海无忧供应链管理有限公司",
+      "employee": "杨芳",
+      "type": "首访（前道）",
+      "slot": "下午1",
+      "commute": 82,
       "corePass": 6
     },
     {
-      "company": "上海全一物资有限公司",
-      "employee": "温作良",
-      "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 35,
-      "corePass": 6
-    },
-    {
-      "company": "上海鸣旭电子科技有限公司",
-      "employee": "宋樑",
-      "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 35,
-      "corePass": 6
-    },
-    {
-      "company": "古疁（上海）文化发展有限公司",
-      "employee": "傅丽",
-      "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 45,
-      "corePass": 6
-    },
-    {
-      "company": "上海华烁投资管理有限公司",
+      "company": "宝山高新-上海房屋工程建设技术发展有限公司",
       "employee": "舒立旻",
       "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 25,
+      "slot": "下午1",
+      "commute": 44,
       "corePass": 6
     },
     {
-      "company": "数数信息科技（上海）有限公司",
-      "employee": "姚焕",
+      "company": "上海无忧供应链管理有限公司",
+      "employee": "演示-范金山",
       "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 60,
+      "slot": "下午1",
+      "commute": 67,
       "corePass": 6
     },
     {
-      "company": "上海柯寅建材有限公司",
-      "employee": "韩哲川",
-      "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 45,
+      "company": "徐州智联物流有限公司",
+      "employee": "王睿",
+      "type": "项目",
+      "slot": "下午1",
+      "commute": 57,
       "corePass": 6
     },
     {
-      "company": "上海甄会贸易有限公司",
-      "employee": "李路路",
+      "company": "上海君正船务有限公司",
+      "employee": "张小平",
       "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 25,
+      "slot": "下午1",
+      "commute": 24,
+      "corePass": 6
+    },
+    {
+      "company": "上海宝冶工程技术有限公司",
+      "employee": "陈胤",
+      "type": "回访（后道）",
+      "slot": "下午1",
+      "commute": 39,
       "corePass": 6
     },
     {
@@ -428,31 +402,111 @@
       "employee": "刘帅",
       "type": "项目",
       "slot": "下午2",
-      "commute": 45,
+      "commute": 11,
+      "corePass": 6
+    },
+    {
+      "company": "上海全一物资有限公司",
+      "employee": "温作良",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 48,
       "corePass": 6
     },
     {
       "company": "上海喜福来朝阳食品贸易行",
-      "employee": "补位-卫金山前",
+      "employee": "补位-曹杨前",
       "type": "首访（前道）",
       "slot": "下午2",
-      "commute": 55,
+      "commute": 37,
+      "corePass": 6
+    },
+    {
+      "company": "古疁（上海）文化发展有限公司",
+      "employee": "补位-嘉定后",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 12,
+      "corePass": 6
+    },
+    {
+      "company": "数数信息科技（上海）有限公司",
+      "employee": "补位-徐汇后",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 23,
+      "corePass": 6
+    },
+    {
+      "company": "宝山高新-上海酒韵贸易有限公司",
+      "employee": "补位-延安后",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 31,
+      "corePass": 6
+    },
+    {
+      "company": "宝山高新-点意空间（上海）展览设计工程有限公司",
+      "employee": "补位-普陀后",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 31,
+      "corePass": 6
+    },
+    {
+      "company": "宝山高新-上海炳唐国际贸易有限公司",
+      "employee": "补位-周浦后",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 73,
       "corePass": 6
     },
     {
       "company": "山东济南-上海浪拓智能科技股份有限公司",
-      "employee": "补位-济南项目",
+      "employee": "补位-杨浦前",
       "type": "项目",
       "slot": "下午2",
       "commute": 45,
       "corePass": 6
     },
     {
-      "company": "宝山高新-上海酒韵贸易有限公司",
-      "employee": "补位-蒋宝山",
+      "company": "上海宝屋房地产经纪有限公司",
+      "employee": "刘勇",
       "type": "回访（后道）",
       "slot": "下午2",
-      "commute": 30,
+      "commute": 89,
+      "corePass": 6
+    },
+    {
+      "company": "上海华烁投资管理有限公司",
+      "employee": "李路路",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 64,
+      "corePass": 6
+    },
+    {
+      "company": "上海甄会贸易有限公司",
+      "employee": "补位-宝山全",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 45,
+      "corePass": 6
+    },
+    {
+      "company": "上海鸣旭电子科技有限公司",
+      "employee": "傅丽",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 62,
+      "corePass": 6
+    },
+    {
+      "company": "上海柯寅建材有限公司",
+      "employee": "姚焕",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 48,
       "corePass": 6
     }
   ]

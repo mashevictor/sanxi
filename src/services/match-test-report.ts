@@ -610,6 +610,27 @@ interface ScenarioExpectations {
   expectUnmatched?: number;
 }
 
+import { getIntegratedDataVersion } from './integrated-cache';
+import type { LegCache } from './distance-service';
+
+function dispatchOptionsForScenario(
+  meta: { dataSource?: MatchTestScenario['dataSource'] } | undefined,
+  legCache?: LegCache
+) {
+  if (meta?.dataSource === 'production') {
+    return {
+      commuteMode: 'transit' as const,
+      preferShortestCommute: true,
+      legCache,
+      transitWarmMaxFetches: 0,
+    };
+  }
+  return {
+    commuteMode: 'local' as const,
+    preferShortestCommute: false,
+  };
+}
+
 async function runScenarioReport(
   id: string,
   name: string,
@@ -623,10 +644,12 @@ async function runScenarioReport(
     coverage?: MatchTestScenario['coverage'];
     roleCategory?: MatchTestScenario['roleCategory'];
     employeePoolIds?: number[];
-  }
+  },
+  legCache?: LegCache
 ): Promise<MatchTestScenario> {
+  const dispatchOpts = dispatchOptionsForScenario(meta, legCache);
   const result = await dispatchSelectedCompanies(data, customerIds, undefined, {
-    commuteMode: 'local',
+    ...dispatchOpts,
     employeePoolIds: meta?.employeePoolIds,
   });
   const { rows, ruleViolations } = buildPairingRows(data, result);
@@ -692,7 +715,7 @@ async function runScenarioReport(
   };
 }
 
-export async function buildMatchTestReport(dataDir?: string): Promise<MatchTestReport> {
+export async function buildMatchTestReport(dataDir?: string, legCache?: LegCache): Promise<MatchTestReport> {
   const root = dataDir || path.join(__dirname, '..', '..');
   const synthetic = buildSyntheticTestData();
   const integrated = buildIntegratedData(root);
@@ -731,7 +754,8 @@ export async function buildMatchTestReport(dataDir?: string): Promise<MatchTestR
           employees: integrated.employees.length,
           customers: integrated.customers.length,
         },
-      }
+      },
+      legCache
     )
   );
 
@@ -832,7 +856,8 @@ export async function buildMatchTestReport(dataDir?: string): Promise<MatchTestR
             employees: poolIds?.length ?? integrated.employees.length,
             customers: customerIds.length,
           },
-        }
+        },
+        legCache
       )
     );
   }

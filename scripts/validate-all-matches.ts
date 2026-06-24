@@ -11,6 +11,8 @@ import { matchCustomerToEmployee } from '../src/services/match-rules';
 import { CUSTOMER_TYPE_LABELS, TIME_SLOT_LABELS } from '../src/types';
 import { getGaodeCommuteStats, loadEnvFile } from '../src/services/distance-service';
 import { flushTransitDiskCache } from '../src/services/transit-disk-cache';
+import { preloadTransitLegCache, useDiskTransitOnly } from './transit-leg-cache';
+import { MAX_REALISTIC_COMMUTE_MINUTES } from '../src/utils/commute';
 
 const DATA_DIR = path.join(__dirname, '..');
 const CORE_RULES = ['城市匹配', '职责匹配', '时段匹配', '指定人', '放弃人', '园区匹配'];
@@ -25,9 +27,16 @@ interface Issue {
 
 async function main() {
   loadEnvFile();
+  useDiskTransitOnly();
+  const legCache = preloadTransitLegCache(DATA_DIR);
   const data = buildIntegratedData(DATA_DIR);
   const ids = data.fullMatchCustomerIds;
-  const result = await dispatchSelectedCompanies(data, ids);
+  const result = await dispatchSelectedCompanies(data, ids, undefined, {
+    commuteMode: 'transit',
+    preferShortestCommute: true,
+    legCache,
+    transitWarmMaxFetches: 0,
+  });
 
   const issues: Issue[] = [];
   const customerById = new Map(data.customers.map((c) => [c.id, c]));
@@ -35,6 +44,7 @@ async function main() {
   const availableNames = new Set(data.employees.map((e) => e.name));
 
   console.log(`\n=== 全量匹配合理性校验 (${ids.length} 家) ===\n`);
+  console.log(`通勤: transit（磁盘 ${legCache.size} 条）  选优: 通勤最短优先`);
   console.log(`匹配: ${result.stats.matched}/${result.stats.selected}  未匹配: ${result.unmatchedCompanies.length}`);
 
   if (result.unmatchedCompanies.length) {
@@ -84,13 +94,16 @@ async function main() {
 
     if (p.commuteMinutes > MAX_COMMUTE) {
       const designatedOk = customer.designatedPerson === employee.name;
+      const over90 = p.commuteMinutes > MAX_REALISTIC_COMMUTE_MINUTES;
       issues.push({
-        level: designatedOk ? 'info' : 'warn',
+        level: designatedOk ? 'info' : over90 ? 'warn' : 'warn',
         company: customer.companyName,
         employee: employee.name,
         message: designatedOk
           ? `指定人单通勤 ${p.commuteMinutes} 分（指定人优先，合理）`
-          : `通勤 ${p.commuteMinutes} 分超过 ${MAX_COMMUTE} 分上限（软约束，仍合规）`,
+          : over90
+            ? `通勤 ${p.commuteMinutes} 分超过 ${MAX_REALISTIC_COMMUTE_MINUTES} 分现实上限（建议换人/补位）`
+            : `通勤 ${p.commuteMinutes} 分超过 ${MAX_COMMUTE} 分上限（软约束，仍合规）`,
       });
     }
 
@@ -186,7 +199,11 @@ async function main() {
     console.log('\n✗ 存在不合理匹配，需补充模拟员工或修正数据');
     process.exit(1);
   }
-  console.log('\n✓ 全部 55 条匹配结果合理（6 项核心规则 + 时段无冲突）');
+  const over90 = issues.filter(
+    (i) => i.level === 'warn' && i.message.includes(`${MAX_REALISTIC_COMMUTE_MINUTES} 分现实上限`)
+  ).length;
+  console.log(`\n✓ 全部 55 条匹配合规（核心规则 + 时段无冲突）`);
+  if (over90) console.log(`  其中 ${over90} 条仍超过 ${MAX_REALISTIC_COMMUTE_MINUTES} 分，建议人工复核或增派就近补位员工`);
 }
 
 main().catch((err) => {

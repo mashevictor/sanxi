@@ -106,6 +106,28 @@ function scheduleFlush(): void {
   }, 2000);
 }
 
+/** 将全部磁盘公交缓存灌入内存 legCache（匹配前调用，避免串联段降级本地矩阵） */
+export function hydrateLegCacheFromDisk(legCache: Map<string, {
+  minutes: number;
+  distanceKm?: number;
+  pathSummary: string;
+  source: 'transit';
+}>): number {
+  loadTransitDiskCache();
+  let added = 0;
+  for (const [key, hit] of Object.entries(store)) {
+    if (legCache.has(key)) continue;
+    legCache.set(key, {
+      minutes: hit.minutes,
+      distanceKm: hit.distanceKm,
+      pathSummary: hit.pathSummary,
+      source: hit.source,
+    });
+    added++;
+  }
+  return added;
+}
+
 export function flushTransitDiskCache(): void {
   if (!dirty) return;
   try {

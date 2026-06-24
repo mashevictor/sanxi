@@ -100,7 +100,10 @@ function extractDistrict(address: string): string {
 }
 
 /** 选择模式允许的最大单程通勤（分钟），超过仅影响排序，不导致匹配失败 */
+/** 软提示上限（UI 警告） */
 export const MAX_ACCEPTABLE_COMMUTE_MINUTES = 60;
+/** 硬现实上限：单段串联通勤超过此值视为不可派（除非全员超标） */
+export const MAX_REALISTIC_COMMUTE_MINUTES = 90;
 
 const DISTRICT_COMMUTE: Record<string, Record<string, number>> = {
   '浦东新区': { '浦东新区': 30, '黄浦区': 40, '徐汇区': 35, '长宁区': 45, '静安区': 40, '普陀区': 50, '虹口区': 45, '杨浦区': 40, '闵行区': 35, '宝山区': 30, '嘉定区': 45, '金山区': 60, '松江区': 55, '青浦区': 60, '奉贤区': 50 },

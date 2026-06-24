@@ -6,11 +6,16 @@
 import fs from 'fs';
 import path from 'path';
 import { buildMatchTestReport } from '../src/services/match-test-report';
+import { loadEnvFile } from '../src/services/distance-service';
+import { preloadTransitLegCache, useDiskTransitOnly } from './transit-leg-cache';
 
 const ROOT = path.join(__dirname, '..');
 
 async function main() {
-  const report = await buildMatchTestReport(ROOT);
+  loadEnvFile();
+  useDiskTransitOnly();
+  const legCache = preloadTransitLegCache(ROOT);
+  const report = await buildMatchTestReport(ROOT, legCache);
   const cacheDir = path.join(ROOT, 'public', 'cache');
   fs.mkdirSync(cacheDir, { recursive: true });
   const outPath = path.join(cacheDir, 'test-match-report.json');

@@ -9,20 +9,24 @@ import {
   buildChainedRouteEstimate,
   sortCustomersByVisitOrder,
   getCommuteOriginForNextStop,
+  MAX_REALISTIC_COMMUTE_MINUTES,
+  MAX_ACCEPTABLE_COMMUTE_MINUTES,
 } from '../utils/commute';
 import {
   buildCommuteMatrix,
   CommuteMatrix,
   CommuteMode,
   DistanceSource,
-  estimateRouteWithMode,
   getLegFromCache,
+  legCacheKey,
   LegCache,
   resolveDistanceSource,
   RouteEstimate,
   warmChainedTransitLegs,
 } from './distance-service';
+import { getTransitFromDisk, hydrateLegCacheFromDisk } from './transit-disk-cache';
 import { buildAfternoonParkPairs, AfternoonParkPair } from './afternoon-park-pairs';
+import { GAP_FILL_TAG, REGIONAL_GAP_FILL_BINDINGS, resolveRegionalGapFillEmployee } from '../data/gap-fill-employees';
 
 export interface LockedPairing {
   customerId: number;
@@ -34,6 +38,10 @@ export interface PairingOptions {
   matchOnlyCustomerIds?: number[];
   commuteMode?: CommuteMode;
   legCache?: LegCache;
+  /** 默认 true：合规候选中串联通勤最短优先，同通勤再比 match.score */
+  preferShortestCommute?: boolean;
+  /** transit 串联预热最多新调 API 条数；0=仅用磁盘/内存缓存 */
+  transitWarmMaxFetches?: number;
 }
 
 export interface CompanyEmployeePairing {
@@ -85,18 +93,37 @@ const SLOT_ORDER: Record<TimeSlot, number> = {
   [TimeSlot.AFTERNOON_2]: 2,
 };
 
+function resolveChainedLeg(
+  from: string,
+  to: string,
+  commuteMode: CommuteMode | undefined,
+  legCache?: LegCache
+): RouteEstimate | undefined {
+  const hit = getLegFromCache(from, to, legCache);
+  if (hit) return hit;
+  if (commuteMode === 'transit') {
+    const disk = getTransitFromDisk(legCacheKey(from, to));
+    if (disk) {
+      legCache?.set(legCacheKey(from, to), disk);
+      return disk;
+    }
+  }
+  return undefined;
+}
+
 function getChainedCommuteMinutes(
   customer: Customer,
   employee: Employee,
   assignedBefore: Customer[],
   commuteCell?: RouteEstimate,
-  legCache?: LegCache
+  legCache?: LegCache,
+  commuteMode?: CommuteMode
 ): number {
   const from = getCommuteOriginForNextStop(employee, assignedBefore, customer);
   if (from === employee.departureAddress && commuteCell && commuteCell.minutes > 0) {
     return commuteCell.minutes;
   }
-  const leg = getLegFromCache(from, customer.address, legCache);
+  const leg = resolveChainedLeg(from, customer.address, commuteMode, legCache);
   if (leg) return leg.minutes;
   return estimateChainedLegMinutes(employee, assignedBefore, customer, commuteCell);
 }
@@ -106,7 +133,8 @@ function getChainedRoute(
   employee: Employee,
   assignedBefore: Customer[],
   commuteCell?: RouteEstimate,
-  legCache?: LegCache
+  legCache?: LegCache,
+  commuteMode?: CommuteMode
 ): RouteEstimate {
   const from = getCommuteOriginForNextStop(employee, assignedBefore, customer);
   if (from === employee.departureAddress && commuteCell && commuteCell.minutes > 0) {
@@ -116,7 +144,7 @@ function getChainedRoute(
       source: commuteCell.source,
     };
   }
-  const leg = getLegFromCache(from, customer.address, legCache);
+  const leg = resolveChainedLeg(from, customer.address, commuteMode, legCache);
   if (leg) return leg;
   return buildChainedRouteEstimate(employee, assignedBefore, customer, commuteCell);
 }
@@ -128,9 +156,10 @@ function buildPairing(
   assignedBefore: Customer[],
   commuteCell?: RouteEstimate,
   locked = false,
-  legCache?: LegCache
+  legCache?: LegCache,
+  commuteMode?: CommuteMode
 ): CompanyEmployeePairing {
-  const route = getChainedRoute(customer, employee, assignedBefore, commuteCell, legCache);
+  const route = getChainedRoute(customer, employee, assignedBefore, commuteCell, legCache, commuteMode);
   return {
     customerId: customer.id,
     customerName: customer.companyName,
@@ -160,17 +189,66 @@ function findCommuteCell(
 }
 
 function isBetterEmployeePick(
+  preferShortestCommute: boolean,
   commuteMode: CommuteMode | undefined,
   newCommute: number,
   newScore: number,
   bestCommute: number,
   bestScore: number
 ): boolean {
-  if (commuteMode === 'transit') {
+  if (preferShortestCommute) {
     if (newCommute !== bestCommute) return newCommute < bestCommute;
     return newScore > bestScore;
   }
   return newScore - newCommute * 0.2 > bestScore - bestCommute * 0.2;
+}
+
+/** 优先在 ≤90 分候选中选优；仅当全员超标时才允许 >90 */
+function withinRealisticCommute(minutes: number): boolean {
+  return minutes <= MAX_REALISTIC_COMMUTE_MINUTES;
+}
+
+function computeMaxRouteLegMinutes(
+  employee: Employee,
+  routeCustomers: Customer[],
+  customers: Customer[],
+  employees: Employee[],
+  commuteMatrix: CommuteMatrix | undefined,
+  legCache?: LegCache,
+  commuteMode?: CommuteMode
+): number {
+  const sorted = sortCustomersByVisitOrder(routeCustomers);
+  let maxLeg = 0;
+  const assigned: Customer[] = [];
+  for (const customer of sorted) {
+    const cell = findCommuteCell(customer, employee, customers, employees, commuteMatrix);
+    const leg = getChainedCommuteMinutes(customer, employee, assigned, cell, legCache, commuteMode);
+    maxLeg = Math.max(maxLeg, leg);
+    assigned.push(customer);
+  }
+  return maxLeg;
+}
+
+function pickNextCustomer(
+  remaining: Customer[],
+  _employees: Employee[],
+  _assignedPerEmp: Map<number, Customer[]>,
+  _availableNames: Set<string>,
+  _preferShortestCommute: boolean
+): Customer {
+  const sorted = sortCustomersForDispatch(remaining);
+  const morning = sorted.filter((c) => c.timeSlot === TimeSlot.MORNING);
+  return morning[0] ?? sorted[0];
+}
+
+function sortAfternoonPairsByScarcity(
+  pairs: AfternoonParkPair[],
+  _employees: Employee[],
+  _assignedPerEmp: Map<number, Customer[]>,
+  _availableNames: Set<string>,
+  _preferShortestCommute: boolean
+): AfternoonParkPair[] {
+  return pairs;
 }
 
 function combinedScore(
@@ -179,9 +257,17 @@ function combinedScore(
   match: MatchResult,
   assignedBefore: Customer[],
   commuteCell?: RouteEstimate,
-  legCache?: LegCache
+  legCache?: LegCache,
+  commuteMode?: CommuteMode
 ): number {
-  const commute = getChainedCommuteMinutes(customer, employee, assignedBefore, commuteCell, legCache);
+  const commute = getChainedCommuteMinutes(
+    customer,
+    employee,
+    assignedBefore,
+    commuteCell,
+    legCache,
+    commuteMode
+  );
   return match.score - commute * 0.2;
 }
 
@@ -194,13 +280,22 @@ function combinedPairScore(
   customers: Customer[],
   employees: Employee[],
   commuteMatrix?: CommuteMatrix,
-  legCache?: LegCache
+  legCache?: LegCache,
+  commuteMode?: CommuteMode
 ): number {
   const cell1 = findCommuteCell(pair.afternoon1, employee, customers, employees, commuteMatrix);
   const cell2 = findCommuteCell(pair.afternoon2, employee, customers, employees, commuteMatrix);
   return (
-    combinedScore(pair.afternoon1, employee, match1, assignedBefore, cell1, legCache) +
-    combinedScore(pair.afternoon2, employee, match2, [...assignedBefore, pair.afternoon1], cell2, legCache)
+    combinedScore(pair.afternoon1, employee, match1, assignedBefore, cell1, legCache, commuteMode) +
+    combinedScore(
+      pair.afternoon2,
+      employee,
+      match2,
+      [...assignedBefore, pair.afternoon1],
+      cell2,
+      legCache,
+      commuteMode
+    )
   );
 }
 
@@ -273,18 +368,31 @@ function matchAfternoonParkPairs(
   assignedPerEmp: Map<number, Customer[]>,
   pairings: CompanyEmployeePairing[],
   legCache?: LegCache,
-  commuteMode?: CommuteMode
+  commuteMode?: CommuteMode,
+  preferShortestCommute = true,
+  splitToSingle: Customer[] = []
 ): AfternoonParkPair[] {
   const failed: AfternoonParkPair[] = [];
+  const orderedPairs = sortAfternoonPairsByScarcity(
+    pairs,
+    employees,
+    assignedPerEmp,
+    availableNames,
+    preferShortestCommute
+  );
 
-  for (const pair of pairs) {
-    let bestEmp: Employee | null = null;
-    let bestMatch1: MatchResult | null = null;
-    let bestMatch2: MatchResult | null = null;
-    let bestScore = -Infinity;
-    let bestCommute = Infinity;
-    let bestCell1: RouteEstimate | undefined;
-    let bestCell2: RouteEstimate | undefined;
+  for (const pair of orderedPairs) {
+    type PairCand = {
+      employee: Employee;
+      match1: MatchResult;
+      match2: MatchResult;
+      c1: number;
+      c2: number;
+      sc: number;
+      cell1?: RouteEstimate;
+      cell2?: RouteEstimate;
+    };
+    const cands: PairCand[] = [];
 
     for (const employee of employees) {
       const assigned = assignedPerEmp.get(employee.id) || [];
@@ -303,45 +411,91 @@ function matchAfternoonParkPairs(
 
       const cell1 = findCommuteCell(pair.afternoon1, employee, customers, employees, commuteMatrix);
       const cell2 = findCommuteCell(pair.afternoon2, employee, customers, employees, commuteMatrix);
-      const c1 = getChainedCommuteMinutes(pair.afternoon1, employee, assigned, cell1, legCache);
+      const c1 = getChainedCommuteMinutes(pair.afternoon1, employee, assigned, cell1, legCache, commuteMode);
       const c2 = getChainedCommuteMinutes(
         pair.afternoon2,
         employee,
         [...assigned, pair.afternoon1],
         cell2,
-        legCache
+        legCache,
+        commuteMode
       );
-      const totalCommute = c1 + c2;
-      const sc =
-        commuteMode === 'transit'
-          ? match1.score + match2.score
-          : combinedPairScore(
-              pair,
-              employee,
-              match1,
-              match2,
-              assigned,
-              customers,
-              employees,
-              commuteMatrix,
-              legCache
+      const sc = preferShortestCommute
+        ? match1.score + match2.score
+        : combinedPairScore(
+            pair,
+            employee,
+            match1,
+            match2,
+            assigned,
+            customers,
+            employees,
+            commuteMatrix,
+            legCache,
+            commuteMode
+          );
+      cands.push({ employee, match1, match2, c1, c2, sc, cell1, cell2 });
+    }
+
+    let pool = cands.filter((c) => withinRealisticCommute(c.c1) && withinRealisticCommute(c.c2));
+    if (pool.length === 0) {
+      splitToSingle.push(pair.afternoon1, pair.afternoon2);
+      continue;
+    }
+
+    let bestEmp: Employee | null = null;
+    let bestMatch1: MatchResult | null = null;
+    let bestMatch2: MatchResult | null = null;
+    let bestScore = -Infinity;
+    let bestMaxLeg = Infinity;
+    let bestCommute = Infinity;
+    let bestCell1: RouteEstimate | undefined;
+    let bestCell2: RouteEstimate | undefined;
+
+    for (const c of pool) {
+      const totalCommute = c.c1 + c.c2;
+      const maxLeg = Math.max(c.c1, c.c2);
+      const better =
+        preferShortestCommute
+          ? maxLeg !== bestMaxLeg
+            ? maxLeg < bestMaxLeg
+            : totalCommute !== bestCommute
+              ? totalCommute < bestCommute
+              : c.sc > bestScore
+          : isBetterEmployeePick(
+              preferShortestCommute,
+              commuteMode,
+              totalCommute,
+              c.sc,
+              bestCommute,
+              bestScore
             );
 
-      if (isBetterEmployeePick(commuteMode, totalCommute, sc, bestCommute, bestScore)) {
-        bestScore = sc;
+      if (better) {
+        bestScore = c.sc;
+        bestMaxLeg = maxLeg;
         bestCommute = totalCommute;
-        bestEmp = employee;
-        bestMatch1 = match1;
-        bestMatch2 = match2;
-        bestCell1 = cell1;
-        bestCell2 = cell2;
+        bestEmp = c.employee;
+        bestMatch1 = c.match1;
+        bestMatch2 = c.match2;
+        bestCell1 = c.cell1;
+        bestCell2 = c.cell2;
       }
     }
 
     if (bestEmp && bestMatch1 && bestMatch2) {
       const assignedBefore = assignedPerEmp.get(bestEmp.id) || [];
       pairings.push({
-        ...buildPairing(pair.afternoon1, bestEmp, bestMatch1, assignedBefore, bestCell1, false, legCache),
+        ...buildPairing(
+          pair.afternoon1,
+          bestEmp,
+          bestMatch1,
+          assignedBefore,
+          bestCell1,
+          false,
+          legCache,
+          commuteMode
+        ),
         details: appendAfternoonBindDetail(bestMatch1.details),
       });
       pairings.push({
@@ -352,7 +506,8 @@ function matchAfternoonParkPairs(
           [...assignedBefore, pair.afternoon1],
           bestCell2,
           false,
-          legCache
+          legCache,
+          commuteMode
         ),
         details: appendAfternoonBindDetail(bestMatch2.details),
       });
@@ -365,6 +520,154 @@ function matchAfternoonParkPairs(
   }
 
   return failed;
+}
+
+/** 指定人客户优先锁定，避免时段被占导致无法合规 */
+function applyDesignatedPersonLocks(
+  customers: Customer[],
+  employees: Employee[],
+  availableNames: Set<string>,
+  assignedPerEmp: Map<number, Customer[]>,
+  lockedIds: Set<number>,
+  tryLock: (customer: Customer, employee: Employee) => boolean
+): void {
+  const sorted = sortCustomersForDispatch(
+    customers.filter((c) => c.designatedPerson && !lockedIds.has(c.id))
+  );
+  for (const customer of sorted) {
+    const employee = employees.find((e) => e.name === customer.designatedPerson);
+    if (employee) tryLock(customer, employee);
+  }
+}
+
+function makeTryLockCustomer(
+  allCustomers: Customer[],
+  allEmployees: Employee[],
+  commuteMatrix: CommuteMatrix | undefined,
+  availableNames: Set<string>,
+  assignedPerEmp: Map<number, Customer[]>,
+  pairings: CompanyEmployeePairing[],
+  lockedIds: Set<number>,
+  options: PairingOptions
+): (customer: Customer, employee: Employee) => boolean {
+  return (customer: Customer, employee: Employee): boolean => {
+    if (lockedIds.has(customer.id)) return false;
+    const assigned = assignedPerEmp.get(employee.id) || [];
+    const recheck = matchCustomerToEmployee(customer, employee, availableNames, assigned, {
+      requirePlus: false,
+    });
+    if (!recheck.eligible) return false;
+    const commuteCell = findCommuteCell(customer, employee, allCustomers, allEmployees, commuteMatrix);
+    const routeMaxLeg = computeMaxRouteLegMinutes(
+      employee,
+      [...assigned, customer],
+      allCustomers,
+      allEmployees,
+      commuteMatrix,
+      options.legCache,
+      options.commuteMode
+    );
+    if (!withinRealisticCommute(routeMaxLeg)) return false;
+    pairings.push(
+      buildPairing(
+        customer,
+        employee,
+        recheck,
+        assigned,
+        commuteCell,
+        true,
+        options.legCache,
+        options.commuteMode
+      )
+    );
+    assigned.push(customer);
+    assignedPerEmp.set(employee.id, assigned);
+    lockedIds.add(customer.id);
+    return true;
+  };
+}
+
+/** 出发地距客户 ≤60 分的补位员工优先锁定，避免被远单占满时段 */
+function applyRegionalGapFillLocks(
+  customers: Customer[],
+  employees: Employee[],
+  allCustomers: Customer[],
+  allEmployees: Employee[],
+  commuteMatrix: CommuteMatrix | undefined,
+  availableNames: Set<string>,
+  assignedPerEmp: Map<number, Customer[]>,
+  pairings: CompanyEmployeePairing[],
+  lockedIds: Set<number>,
+  options: PairingOptions,
+  tryLock: (customer: Customer, employee: Employee) => boolean
+): void {
+  const gapFillEmps = employees.filter((e) => e.remark?.includes(GAP_FILL_TAG));
+  if (gapFillEmps.length === 0) return;
+
+  for (const customer of customers) {
+    if (lockedIds.has(customer.id)) continue;
+    const boundName = resolveRegionalGapFillEmployee(customer, REGIONAL_GAP_FILL_BINDINGS);
+    if (!boundName) continue;
+    const employee = gapFillEmps.find((e) => e.name === boundName);
+    if (employee) tryLock(customer, employee);
+  }
+
+  type LockCand = {
+    customer: Customer;
+    employee: Employee;
+    commute: number;
+    match: MatchResult;
+    commuteCell?: RouteEstimate;
+  };
+  const candidates: LockCand[] = [];
+
+  for (const customer of customers) {
+    if (lockedIds.has(customer.id)) continue;
+    let best: LockCand | null = null;
+    for (const employee of gapFillEmps) {
+      const assigned = assignedPerEmp.get(employee.id) || [];
+      const match = matchCustomerToEmployee(customer, employee, availableNames, assigned, {
+        requirePlus: false,
+      });
+      if (!match.eligible) continue;
+      const commuteCell = findCommuteCell(customer, employee, allCustomers, allEmployees, commuteMatrix);
+      const commute = getChainedCommuteMinutes(
+        customer,
+        employee,
+        assigned,
+        commuteCell,
+        options.legCache,
+        options.commuteMode
+      );
+      if (commute > MAX_ACCEPTABLE_COMMUTE_MINUTES) continue;
+      if (!best || commute < best.commute) {
+        best = { customer, employee, commute, match, commuteCell };
+      }
+    }
+    if (best) candidates.push(best);
+  }
+
+  candidates.sort((a, b) => a.commute - b.commute);
+  for (const { customer, employee, commuteCell } of candidates) {
+    if (lockedIds.has(customer.id)) continue;
+    const assigned = assignedPerEmp.get(employee.id) || [];
+    const recheck = matchCustomerToEmployee(customer, employee, availableNames, assigned, {
+      requirePlus: false,
+    });
+    if (!recheck.eligible) continue;
+    const routeMaxLeg = computeMaxRouteLegMinutes(
+      employee,
+      [...assigned, customer],
+      allCustomers,
+      allEmployees,
+      commuteMatrix,
+      options.legCache,
+      options.commuteMode
+    );
+    if (!withinRealisticCommute(routeMaxLeg)) continue;
+
+    tryLock(customer, employee);
+  }
 }
 
 function analyzeUnmatched(
@@ -464,7 +767,18 @@ function findCapacitatedMatching(
     const match = matchCustomerToEmployee(customer, employee, availableNames, assigned, { requirePlus: false });
     if (!match.eligible) continue;
     const commuteCell = findCommuteCell(customer, employee, customers, employees, commuteMatrix);
-    pairings.push(buildPairing(customer, employee, match, assigned, commuteCell, true, options.legCache));
+    pairings.push(
+      buildPairing(
+        customer,
+        employee,
+        match,
+        assigned,
+        commuteCell,
+        true,
+        options.legCache,
+        options.commuteMode
+      )
+    );
     assigned.push(customer);
     assignedPerEmp.set(employee.id, assigned);
   }
@@ -475,7 +789,39 @@ function findCapacitatedMatching(
     return !pairings.some((p) => p.customerId === c.id);
   });
 
-  const { pairs: afternoonPairs, unpairedAfternoon, otherCustomers } = buildAfternoonParkPairs(toMatch);
+  const preferShortest = options.preferShortestCommute !== false;
+
+  const tryLock = makeTryLockCustomer(
+    customers,
+    employees,
+    commuteMatrix,
+    availableNames,
+    assignedPerEmp,
+    pairings,
+    lockedIds,
+    options
+  );
+
+  applyDesignatedPersonLocks(toMatch, employees, availableNames, assignedPerEmp, lockedIds, tryLock);
+
+  applyRegionalGapFillLocks(
+    toMatch,
+    employees,
+    customers,
+    employees,
+    commuteMatrix,
+    availableNames,
+    assignedPerEmp,
+    pairings,
+    lockedIds,
+    options,
+    tryLock
+  );
+
+  const toMatchAfterRegional = toMatch.filter((c) => !lockedIds.has(c.id));
+
+  const { pairs: afternoonPairs, unpairedAfternoon, otherCustomers } = buildAfternoonParkPairs(toMatchAfterRegional);
+  const splitAfternoon: Customer[] = [];
   const failedPairs = matchAfternoonParkPairs(
     afternoonPairs,
     customers,
@@ -485,21 +831,39 @@ function findCapacitatedMatching(
     assignedPerEmp,
     pairings,
     options.legCache,
-    options.commuteMode
+    options.commuteMode,
+    preferShortest,
+    splitAfternoon
   );
 
   const pairedIds = new Set(pairings.map((p) => p.customerId));
   const stillToMatch = [
     ...otherCustomers.filter((c) => !pairedIds.has(c.id)),
     ...unpairedAfternoon.filter((c) => !pairedIds.has(c.id)),
+    ...splitAfternoon.filter((c) => !pairedIds.has(c.id)),
   ];
 
-  for (const customer of sortCustomersForDispatch(stillToMatch)) {
-    let bestEmp: Employee | null = null;
-    let bestMatch: MatchResult | null = null;
-    let bestScore = -Infinity;
-    let bestCommute = Infinity;
-    let bestCommuteCell: RouteEstimate | undefined;
+  const remaining = [...stillToMatch];
+  while (remaining.length > 0) {
+    const customer = pickNextCustomer(
+      remaining,
+      employees,
+      assignedPerEmp,
+      availableNames,
+      preferShortest
+    );
+    const remIdx = remaining.findIndex((c) => c.id === customer.id);
+    remaining.splice(remIdx, 1);
+
+    type SingleCand = {
+      employee: Employee;
+      match: MatchResult;
+      commute: number;
+      routeMaxLeg: number;
+      sc: number;
+      commuteCell?: RouteEstimate;
+    };
+    const cands: SingleCand[] = [];
 
     for (const employee of employees) {
       const assigned = assignedPerEmp.get(employee.id) || [];
@@ -511,25 +875,79 @@ function findCapacitatedMatching(
         employee,
         assigned,
         commuteCell,
-        options.legCache
+        options.legCache,
+        options.commuteMode
       );
-      const sc =
-        options.commuteMode === 'transit'
-          ? match.score
-          : combinedScore(customer, employee, match, assigned, commuteCell, options.legCache);
+      const routeMaxLeg = computeMaxRouteLegMinutes(
+        employee,
+        [...assigned, customer],
+        customers,
+        employees,
+        commuteMatrix,
+        options.legCache,
+        options.commuteMode
+      );
+      const sc = preferShortest
+        ? match.score
+        : combinedScore(
+            customer,
+            employee,
+            match,
+            assigned,
+            commuteCell,
+            options.legCache,
+            options.commuteMode
+          );
+      cands.push({ employee, match, commute, routeMaxLeg, sc, commuteCell });
+    }
 
-      if (isBetterEmployeePick(options.commuteMode, commute, sc, bestCommute, bestScore)) {
-        bestScore = sc;
-        bestCommute = commute;
-        bestEmp = employee;
-        bestMatch = match;
-        bestCommuteCell = commuteCell;
+    let pool = cands.filter((c) => withinRealisticCommute(c.routeMaxLeg));
+    if (pool.length === 0) {
+      pool = cands.filter((c) => {
+        const a = assignedPerEmp.get(c.employee.id) || [];
+        return !a.some((x) => x.timeSlot !== TimeSlot.MORNING);
+      });
+    }
+    if (pool.length === 0) pool = cands;
+    let bestEmp: Employee | null = null;
+    let bestMatch: MatchResult | null = null;
+    let bestScore = -Infinity;
+    let bestCommute = Infinity;
+    let bestCommuteCell: RouteEstimate | undefined;
+
+    for (const c of pool) {
+      if (
+        isBetterEmployeePick(
+          preferShortest,
+          options.commuteMode,
+          c.commute,
+          c.sc,
+          bestCommute,
+          bestScore
+        )
+      ) {
+        bestScore = c.sc;
+        bestCommute = c.commute;
+        bestEmp = c.employee;
+        bestMatch = c.match;
+        bestCommuteCell = c.commuteCell;
       }
     }
 
     if (bestEmp && bestMatch) {
       const assigned = assignedPerEmp.get(bestEmp.id) || [];
-      pairings.push(buildPairing(customer, bestEmp, bestMatch, assigned, bestCommuteCell, false, options.legCache));
+      pairings.push(
+        buildPairing(
+          customer,
+          bestEmp,
+          bestMatch,
+          assigned,
+          bestCommuteCell,
+          false,
+          options.legCache,
+          options.commuteMode
+        )
+      );
       assigned.push(customer);
       assignedPerEmp.set(bestEmp.id, assigned);
     }
@@ -556,7 +974,16 @@ function findCapacitatedMatching(
     return (SLOT_ORDER[ca.timeSlot] ?? 0) - (SLOT_ORDER[cb.timeSlot] ?? 0);
   });
 
-  const recalculated = recalculateChainedPairings(pairings, customers, employees, options.legCache);
+  const recalculated =
+    options.commuteMode === 'transit'
+      ? pairings
+      : recalculateChainedPairings(
+          pairings,
+          customers,
+          employees,
+          options.legCache,
+          options.commuteMode
+        );
   return { pairings: recalculated, unmatched };
 }
 
@@ -587,21 +1014,7 @@ async function recalculateChainedPairingsAsync(
     for (const customer of customersForEmp) {
       const pairing = orders.find((p) => p.customerId === customer.id);
       if (!pairing) continue;
-      const from = getCommuteOriginForNextStop(emp, assigned, customer);
-      let route: RouteEstimate;
-      if (mode === 'transit') {
-        route =
-          getLegFromCache(from, customer.address, options.legCache) ||
-          (await estimateRouteWithMode(
-            from,
-            customer.address,
-            customer.parkName,
-            customer.companyName,
-            'transit'
-          ));
-      } else {
-        route = getChainedRoute(customer, emp, assigned, pairing.route, options.legCache);
-      }
+      const route = getChainedRoute(customer, emp, assigned, pairing.route, options.legCache, mode);
       updated.set(pairing.customerId, {
         ...pairing,
         commuteMinutes: route.minutes,
@@ -618,7 +1031,8 @@ function recalculateChainedPairings(
   pairings: CompanyEmployeePairing[],
   customers: Customer[],
   employees: Employee[],
-  legCache?: LegCache
+  legCache?: LegCache,
+  commuteMode?: CommuteMode
 ): CompanyEmployeePairing[] {
   const customerMap = new Map(customers.map((c) => [c.id, c]));
   const employeeMap = new Map(employees.map((e) => [e.id, e]));
@@ -639,7 +1053,7 @@ function recalculateChainedPairings(
     for (const customer of customersForEmp) {
       const pairing = orders.find((p) => p.customerId === customer.id);
       if (!pairing) continue;
-      const route = getChainedRoute(customer, emp, assigned, pairing.route, legCache);
+      const route = getChainedRoute(customer, emp, assigned, pairing.route, legCache, commuteMode);
       updated.set(pairing.customerId, {
         ...pairing,
         commuteMinutes: route.minutes,
@@ -677,9 +1091,8 @@ async function runCompliantPairingAsync(
     })
   );
 
-  if (mode === 'transit') {
-    const legCache = new Map<string, RouteEstimate>();
-    pairingOptions = { ...options, legCache };
+  if (mode === 'transit' && !options.legCache) {
+    pairingOptions = { ...options, legCache: new Map<string, RouteEstimate>() };
   }
 
   const commuteMatrix = await buildCommuteMatrix(
@@ -691,13 +1104,20 @@ async function runCompliantPairingAsync(
   );
 
   if (mode === 'transit' && pairingOptions.legCache) {
+    const fromDisk = hydrateLegCacheFromDisk(pairingOptions.legCache);
+    if (fromDisk > 0) {
+      console.log(`  [transit] 磁盘缓存载入 ${fromDisk} 条`);
+    }
+    const addresses = [
+      ...new Set([
+        ...customers.map((c) => c.address),
+        ...employees.map((e) => e.departureAddress),
+      ]),
+    ];
     const maxWarm =
-      customers.length <= 12 ? 800 : customers.length <= 25 ? 400 : 150;
-    await warmChainedTransitLegs(
-      customers.map((c) => c.address),
-      pairingOptions.legCache,
-      maxWarm
-    );
+      options.transitWarmMaxFetches ??
+      (customers.length <= 12 ? 800 : 8000);
+    await warmChainedTransitLegs(addresses, pairingOptions.legCache, maxWarm);
   }
 
   const { pairings, unmatched } = findCapacitatedMatching(

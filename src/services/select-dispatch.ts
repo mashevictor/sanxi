@@ -100,6 +100,11 @@ export interface DispatchOptions {
   matchOnlyCustomerIds?: number[];
   employeePoolIds?: number[];
   commuteMode?: CommuteMode;
+  /** 默认 true：合规候选中串联通勤最短优先 */
+  preferShortestCommute?: boolean;
+  legCache?: import('./distance-service').LegCache;
+  /** transit 串联预热 API 上限；0=仅磁盘/内存（对比脚本用） */
+  transitWarmMaxFetches?: number;
 }
 
 export async function dispatchSelectedCompanies(
@@ -115,10 +120,18 @@ export async function dispatchSelectedCompanies(
   if (customers.length !== customerIds.length) throw new Error('部分公司 ID 不存在');
   if (new Set(customerIds).size !== customerIds.length) throw new Error('公司不能重复选择');
 
+  let commuteMode = options.commuteMode ?? getDefaultCommuteMode();
+  if (options.preferShortestCommute !== false && commuteMode !== 'transit' && process.env.GAODE_API_KEY) {
+    commuteMode = 'transit';
+  }
+
   const pairingOptions: PairingOptions = {
     lockedPairings: options.lockedPairings,
     matchOnlyCustomerIds: options.matchOnlyCustomerIds,
-    commuteMode: options.commuteMode ?? getDefaultCommuteMode(),
+    commuteMode,
+    preferShortestCommute: options.preferShortestCommute,
+    legCache: options.legCache,
+    transitWarmMaxFetches: options.transitWarmMaxFetches,
   };
 
   let result;

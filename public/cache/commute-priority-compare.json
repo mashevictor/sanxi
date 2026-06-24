@@ -1,0 +1,206 @@
+{
+  "generatedAt": "2026-06-23T09:59:17.700Z",
+  "legacy": {
+    "matched": 55,
+    "avgCommute": 83,
+    "totalCommute": 4582,
+    "over60": 33
+  },
+  "modern": {
+    "matched": 55,
+    "avgCommute": 85,
+    "totalCommute": 4660,
+    "over60": 33
+  },
+  "changes": [
+    {
+      "company": "宝山高新-上海房屋工程建设技术发展有限公司",
+      "slot": "下午1",
+      "oldEmp": "柴强",
+      "oldMin": 154,
+      "newEmp": "舒立旻",
+      "newMin": 61,
+      "delta": 93
+    },
+    {
+      "company": "上海波汇科技有限公司",
+      "slot": "上午",
+      "oldEmp": "吴佳键",
+      "oldMin": 156,
+      "newEmp": "傅丽",
+      "newMin": 87,
+      "delta": 69
+    },
+    {
+      "company": "上海德红化工科技有限公司",
+      "slot": "上午",
+      "oldEmp": "贾文霆",
+      "oldMin": 79,
+      "newEmp": "张小平",
+      "newMin": 37,
+      "delta": 42
+    },
+    {
+      "company": "上海由绮置业有限公司",
+      "slot": "下午1",
+      "oldEmp": "宋樑",
+      "oldMin": 78,
+      "newEmp": "宋樑",
+      "newMin": 53,
+      "delta": 25
+    },
+    {
+      "company": "上海京泉投资管理有限公司",
+      "slot": "上午",
+      "oldEmp": "宋亚军",
+      "oldMin": 44,
+      "newEmp": "盛雅琴",
+      "newMin": 28,
+      "delta": 16
+    },
+    {
+      "company": "徐州智联物流有限公司",
+      "slot": "下午1",
+      "oldEmp": "黄健",
+      "oldMin": 57,
+      "newEmp": "演示-钱徐州",
+      "newMin": 45,
+      "delta": 12
+    },
+    {
+      "company": "上海众家物业有限公司",
+      "slot": "上午",
+      "oldEmp": "盛雅琴",
+      "oldMin": 102,
+      "newEmp": "韩哲川",
+      "newMin": 91,
+      "delta": 11
+    },
+    {
+      "company": "宝山高新-上海博泰悦臻网络技术服务有限公司",
+      "slot": "上午",
+      "oldEmp": "侯婷婷",
+      "oldMin": 47,
+      "newEmp": "舒立旻",
+      "newMin": 44,
+      "delta": 3
+    },
+    {
+      "company": "上海界龙现代印刷纸品有限公司",
+      "slot": "下午1",
+      "oldEmp": "傅丽",
+      "oldMin": 88,
+      "newEmp": "补位-宝山全",
+      "newMin": 88,
+      "delta": 0
+    },
+    {
+      "company": "宝山高新-点意空间（上海）展览设计工程有限公司",
+      "slot": "下午2",
+      "oldEmp": "柴强",
+      "oldMin": 27,
+      "newEmp": "舒立旻",
+      "newMin": 27,
+      "delta": 0
+    },
+    {
+      "company": "宝山高新-上海炳唐国际贸易有限公司",
+      "slot": "下午2",
+      "oldEmp": "补位-宝山全",
+      "oldMin": 123,
+      "newEmp": "柴强",
+      "newMin": 123,
+      "delta": 0
+    },
+    {
+      "company": "上海鸣旭电子科技有限公司",
+      "slot": "下午2",
+      "oldEmp": "舒立旻",
+      "oldMin": 71,
+      "newEmp": "傅丽",
+      "newMin": 71,
+      "delta": 0
+    },
+    {
+      "company": "古疁（上海）文化发展有限公司",
+      "slot": "下午2",
+      "oldEmp": "傅丽",
+      "oldMin": 92,
+      "newEmp": "补位-宝山全",
+      "newMin": 92,
+      "delta": 0
+    },
+    {
+      "company": "上海昊上电子科技有限公司",
+      "slot": "上午",
+      "oldEmp": "宋樑",
+      "oldMin": 95,
+      "newEmp": "贾文霆",
+      "newMin": 100,
+      "delta": -5
+    },
+    {
+      "company": "爱豆科技（上海）有限公司",
+      "slot": "上午",
+      "oldEmp": "张小平",
+      "oldMin": 46,
+      "newEmp": "宋樑",
+      "newMin": 54,
+      "delta": -8
+    },
+    {
+      "company": "上海鑫邦旅游发展有限公司",
+      "slot": "上午",
+      "oldEmp": "韩哲川",
+      "oldMin": 43,
+      "newEmp": "宋亚军",
+      "newMin": 57,
+      "delta": -14
+    },
+    {
+      "company": "上海季龄网络科技有限公司",
+      "slot": "上午",
+      "oldEmp": "舒立旻",
+      "oldMin": 35,
+      "newEmp": "侯婷婷",
+      "newMin": 57,
+      "delta": -22
+    },
+    {
+      "company": "上海益充电子商务有限公司",
+      "slot": "上午",
+      "oldEmp": "傅丽",
+      "oldMin": 67,
+      "newEmp": "补位-宝山全",
+      "newMin": 92,
+      "delta": -25
+    },
+    {
+      "company": "上海智彩电子科技有限公司",
+      "slot": "下午1",
+      "oldEmp": "韩哲川",
+      "oldMin": 62,
+      "newEmp": "韩哲川",
+      "newMin": 117,
+      "delta": -55
+    },
+    {
+      "company": "上海筱胜企业管理咨询有限公司",
+      "slot": "下午1",
+      "oldEmp": "舒立旻",
+      "oldMin": 33,
+      "newEmp": "傅丽",
+      "newMin": 128,
+      "delta": -95
+    },
+    {
+      "company": "上海宝冶工程技术有限公司",
+      "slot": "下午1",
+      "oldEmp": "补位-宝山全",
+      "oldMin": 59,
+      "newEmp": "柴强",
+      "newMin": 184,
+      "delta": -125
+    }
+  ]
+}

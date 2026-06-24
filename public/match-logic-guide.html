@@ -95,7 +95,7 @@
     <h1>完整匹配逻辑说明</h1>
     <p class="sub">
       AI 匹配（<code>match.html</code>）与手动派单（<code>manual-match.html</code>）共用后端引擎
-      <code>findCapacitatedMatching</code> · 文档版本 2026-06-22
+      <code>findCapacitatedMatching</code> · 文档版本 2026-06-23
     </p>
 
     <div class="nav">
@@ -270,9 +270,16 @@
       </ol>
 
       <div class="example">
-        <h4>配对得分</h4>
+        <h4>配对得分（2026-06 更新：通勤最短优先）</h4>
+        <p><strong>新规则（默认）</strong>：在全部合规员工中，<strong>串联通勤最短者优先</strong>；同通勤再比 <code>match.score</code>。</p>
+        <p><strong>通勤时间来源</strong>：必须使用 <code>commuteMode: transit</code>（高德公交/地铁 API + 磁盘缓存）。</p>
+        <p><strong>90 分现实上限</strong>：单段串联通勤 &gt;90 分不派（除非合规候选全员超标）；60 分仍为 UI 软提示。</p>
+        <p>下午捆绑：选<strong>下午1+下午2 串联总通勤</strong>最短者；同总通勤再比 score 之和。</p>
+        <p>客户/捆绑对处理顺序：指定人 → Plus 优先级 → 预约时间（与旧规则相同）。</p>
+        <hr style="margin:12px 0;border:none;border-top:1px dashed #ccc" />
+        <p><strong>旧规则（<code>preferShortestCommute: false</code>）</strong>：</p>
         <p><code>combinedPairScore = combinedScore(下午1) + combinedScore(下午2)</code></p>
-        <p><code>combinedScore = match.score − 本段串联通勤 × 0.2</code>（下午2 从下午1 地址出发）</p>
+        <p><code>combinedScore = match.score − 本段串联通勤 × 0.2</code>（Plus/园区分可压过通勤差）</p>
       </div>
     </section>
 
@@ -281,9 +288,9 @@
       <p>文件：<code>src/services/pairing-optimizer.ts</code></p>
 
       <div class="flow">① 处理 lockedPairings（AI 页已锁定 / 手动指定的配对，先占位）
-② 后道下午捆绑：成对 → 原子分配给同一员工
-③ 对其余客户（上午、未成对的下午单）按 sortCustomersForDispatch 排序后逐单贪心
-④ 每单：在 eligible 员工中选 combinedScore 最高者
+② 后道下午捆绑：成对 → 原子分配给同一员工（两单总通勤最短）
+③ 对其余客户：按 sortCustomersForDispatch 排序后逐单贪心
+④ 每单：在 eligible 员工中选<strong>串联通勤最短</strong> → 同通勤比 match.score
 ⑤ 未匹配分析：最近候选、失败规则、时段冲突员工
 ⑥ 输出 pairings + employeeSchedules（上午→下午1→下午2 + 段间路线）</div>
 
@@ -297,8 +304,9 @@
       <h3>通勤</h3>
       <ul>
         <li><strong>串联路程</strong>：一人多单时，本段通勤 = <strong>上一站地址 → 本单地址</strong>（首单仍为出发地 → 客户）；拜访顺序为 上午 → 下午1 → 下午2</li>
-        <li>匹配选优：<code>combinedScore = match.score − 本段通勤 × 0.2</code>（已按串联计算）</li>
-        <li>默认 <code>commuteMode: 'local'</code>：区县矩阵 + 地址差异因子；首段可走 DeepSeek 矩阵（若开启）</li>
+        <li>匹配选优（默认）：<strong>合规池中串联通勤最短 → 同通勤比 match.score</strong>；通勤一律来自<strong>高德公交/地铁</strong>（transit）</li>
+        <li>对比旧规则：<code>npx tsx scripts/compare-commute-priority.ts</code></li>
+        <li>默认 <code>commuteMode: 'transit'</code>：高德公交/地铁 + 磁盘缓存；无 key 时降级本地矩阵</li>
         <li><strong>超过 60 分钟不导致匹配失败</strong>，只影响排序；UI 显示软提示</li>
         <li>员工行程 <code>routeSegments</code> 与单条 <code>commuteMinutes</code> 均与串联逻辑一致</li>
       </ul>
