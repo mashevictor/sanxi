@@ -1,15 +1,13 @@
-/**
- * 公交/地铁路线磁盘缓存：避免重复调用高德 API
- */
-
 import fs from 'fs';
 import path from 'path';
+import { isSuspiciousCachedTransit } from '../utils/transit-reasonable';
 
 interface DiskRoute {
   minutes: number;
   distanceKm?: number;
   pathSummary: string;
   source: 'transit' | 'walking';
+  straightKm?: number;
   savedAt: string;
 }
 
@@ -64,6 +62,7 @@ export function getTransitFromDisk(key: string): {
   distanceKm?: number;
   pathSummary: string;
   source: 'transit' | 'walking';
+  straightKm?: number;
 } | undefined {
   loadTransitDiskCache();
   const hit = store[key];
@@ -77,12 +76,19 @@ export function getTransitFromDisk(key: string): {
     distanceKm: hit.distanceKm,
     pathSummary: hit.pathSummary,
     source: hit.source,
+    straightKm: hit.straightKm,
   };
 }
 
 export function saveTransitToDisk(
   key: string,
-  route: { minutes: number; distanceKm?: number; pathSummary: string; source: string }
+  route: {
+    minutes: number;
+    distanceKm?: number;
+    pathSummary: string;
+    source: string;
+    straightKm?: number;
+  }
 ): void {
   if (route.source !== 'transit' && route.source !== 'walking') return;
   loadTransitDiskCache();
@@ -91,6 +97,7 @@ export function saveTransitToDisk(
     distanceKm: route.distanceKm,
     pathSummary: route.pathSummary,
     source: route.source,
+    straightKm: route.straightKm,
     savedAt: new Date().toISOString(),
   };
   stats.saved++;
@@ -117,6 +124,8 @@ export function hydrateLegCacheFromDisk(legCache: Map<string, {
   let added = 0;
   for (const [key, hit] of Object.entries(store)) {
     if (legCache.has(key)) continue;
+    const [from, to] = key.split('|');
+    if (from && to && isSuspiciousCachedTransit(hit, from, to)) continue;
     legCache.set(key, {
       minutes: hit.minutes,
       distanceKm: hit.distanceKm,

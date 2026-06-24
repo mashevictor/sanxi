@@ -1,29 +1,17 @@
 {
-  "generatedAt": "2026-06-24T03:44:50.175Z",
+  "generatedAt": "2026-06-24T05:48:44.000Z",
   "total": 55,
   "matched": 55,
   "unmatched": 0,
   "errors": 0,
-  "warnings": 8,
+  "warnings": 5,
   "allReasonable": true,
   "issues": [
     {
       "level": "info",
-      "company": "上海天元新能源材料有限公司",
-      "employee": "刘勇",
-      "message": "指定人单通勤 88 分（指定人优先，合理）"
-    },
-    {
-      "level": "warn",
-      "company": "上海协尔泰控制技术有限公司",
-      "employee": "姚焕",
-      "message": "通勤 62 分超过 60 分上限（软约束，仍合规）"
-    },
-    {
-      "level": "info",
       "company": "上海惠铎环境能源科技股份有限公司",
       "employee": "姚洁",
-      "message": "指定人单通勤 83 分（指定人优先，合理）"
+      "message": "指定人单通勤 75 分（指定人优先，合理）"
     },
     {
       "level": "warn",
@@ -33,39 +21,27 @@
     },
     {
       "level": "warn",
-      "company": "上海安睿特生物医药科技有限公司",
-      "employee": "刘勇",
-      "message": "通勤 77 分超过 60 分上限（软约束，仍合规）"
-    },
-    {
-      "level": "warn",
-      "company": "上海无忧供应链管理有限公司",
-      "employee": "演示-范金山",
-      "message": "通勤 67 分超过 60 分上限（软约束，仍合规）"
-    },
-    {
-      "level": "warn",
-      "company": "宝山高新-上海炳唐国际贸易有限公司",
-      "employee": "补位-周浦后",
+      "company": "上海由绮置业有限公司",
+      "employee": "补位-莘庄新龙",
       "message": "通勤 73 分超过 60 分上限（软约束，仍合规）"
     },
     {
       "level": "warn",
-      "company": "上海宝屋房地产经纪有限公司",
-      "employee": "刘勇",
-      "message": "通勤 89 分超过 60 分上限（软约束，仍合规）"
-    },
-    {
-      "level": "warn",
-      "company": "上海华烁投资管理有限公司",
-      "employee": "李路路",
-      "message": "通勤 64 分超过 60 分上限（软约束，仍合规）"
+      "company": "上海智彩电子科技有限公司",
+      "employee": "补位-周浦后",
+      "message": "通勤 62 分超过 60 分上限（软约束，仍合规）"
     },
     {
       "level": "warn",
       "company": "上海鸣旭电子科技有限公司",
-      "employee": "傅丽",
-      "message": "通勤 62 分超过 60 分上限（软约束，仍合规）"
+      "employee": "补位-周浦后",
+      "message": "通勤 72 分超过 60 分上限（软约束，仍合规）"
+    },
+    {
+      "level": "warn",
+      "company": "上海柯寅建材有限公司",
+      "employee": "姚焕",
+      "message": "通勤 88 分超过 60 分上限（软约束，仍合规）"
     }
   ],
   "pairings": [
@@ -82,7 +58,7 @@
       "employee": "刘勇",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 88,
+      "commute": 50,
       "corePass": 6
     },
     {
@@ -190,6 +166,14 @@
       "corePass": 6
     },
     {
+      "company": "上海协尔泰控制技术有限公司",
+      "employee": "补位-金山全1",
+      "type": "回访（后道）",
+      "slot": "上午",
+      "commute": 22,
+      "corePass": 6
+    },
+    {
       "company": "上海喜福来朝阳食品贸易行",
       "employee": "补位-宝山全",
       "type": "回访（后道）",
@@ -198,19 +182,19 @@
       "corePass": 6
     },
     {
-      "company": "宝山高新-上海博泰悦臻网络技术服务有限公司",
-      "employee": "补位-徐汇后",
+      "company": "宝山高新-上海桔子摄影有限公司",
+      "employee": "补位-莘庄新龙",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 36,
+      "commute": 26,
       "corePass": 6
     },
     {
-      "company": "上海鑫邦旅游发展有限公司",
-      "employee": "补位-周浦后",
+      "company": "上海多隆信息科技有限公司",
+      "employee": "补位-莘庄后",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 39,
+      "commute": 26,
       "corePass": 6
     },
     {
@@ -231,10 +215,10 @@
     },
     {
       "company": "上海德红化工科技有限公司",
-      "employee": "姚洁",
+      "employee": "吴佳键",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 30,
+      "commute": 26,
       "corePass": 6
     },
     {
@@ -246,35 +230,27 @@
       "corePass": 6
     },
     {
-      "company": "上海协尔泰控制技术有限公司",
-      "employee": "姚焕",
+      "company": "宝山高新-上海博泰悦臻网络技术服务有限公司",
+      "employee": "补位-徐汇后",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 62,
-      "corePass": 6
-    },
-    {
-      "company": "宝山高新-上海桔子摄影有限公司",
-      "employee": "孟祥龙",
-      "type": "回访（后道）",
-      "slot": "上午",
-      "commute": 45,
+      "commute": 36,
       "corePass": 6
     },
     {
       "company": "上海禾深通信技术有限公司",
-      "employee": "陈胤",
+      "employee": "姚洁",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 33,
+      "commute": 30,
       "corePass": 6
     },
     {
-      "company": "上海多隆信息科技有限公司",
-      "employee": "傅丽",
+      "company": "上海鑫邦旅游发展有限公司",
+      "employee": "补位-周浦后",
       "type": "回访（后道）",
       "slot": "上午",
-      "commute": 44,
+      "commute": 39,
       "corePass": 6
     },
     {
@@ -282,12 +258,20 @@
       "employee": "姚洁",
       "type": "回访（后道）",
       "slot": "下午1",
-      "commute": 83,
+      "commute": 75,
       "corePass": 6
     },
     {
       "company": "上海界龙现代印刷纸品有限公司",
       "employee": "补位-延安后",
+      "type": "回访（后道）",
+      "slot": "下午1",
+      "commute": 26,
+      "corePass": 6
+    },
+    {
+      "company": "上海安睿特生物医药科技有限公司",
+      "employee": "补位-莘庄后",
       "type": "回访（后道）",
       "slot": "下午1",
       "commute": 26,
@@ -326,35 +310,27 @@
       "corePass": 6
     },
     {
-      "company": "上海智彩电子科技有限公司",
-      "employee": "补位-徐汇后",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 39,
-      "corePass": 6
-    },
-    {
-      "company": "上海安睿特生物医药科技有限公司",
-      "employee": "刘勇",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 77,
-      "corePass": 6
-    },
-    {
       "company": "上海由绮置业有限公司",
-      "employee": "李路路",
+      "employee": "补位-莘庄新龙",
       "type": "回访（后道）",
       "slot": "下午1",
-      "commute": 31,
+      "commute": 73,
       "corePass": 6
     },
     {
-      "company": "上海得韬会展服务有限公司",
-      "employee": "补位-宝山全",
+      "company": "上海无忧供应链管理有限公司",
+      "employee": "补位-金山全1",
       "type": "回访（后道）",
       "slot": "下午1",
-      "commute": 53,
+      "commute": 26,
+      "corePass": 6
+    },
+    {
+      "company": "上海智彩电子科技有限公司",
+      "employee": "补位-周浦后",
+      "type": "回访（后道）",
+      "slot": "下午1",
+      "commute": 62,
       "corePass": 6
     },
     {
@@ -367,26 +343,26 @@
     },
     {
       "company": "宝山高新-上海房屋工程建设技术发展有限公司",
-      "employee": "舒立旻",
+      "employee": "丁苏姗",
       "type": "回访（后道）",
       "slot": "下午1",
-      "commute": 44,
-      "corePass": 6
-    },
-    {
-      "company": "上海无忧供应链管理有限公司",
-      "employee": "演示-范金山",
-      "type": "回访（后道）",
-      "slot": "下午1",
-      "commute": 67,
+      "commute": 40,
       "corePass": 6
     },
     {
       "company": "上海君正船务有限公司",
-      "employee": "张小平",
+      "employee": "宋樑",
       "type": "回访（后道）",
       "slot": "下午1",
-      "commute": 24,
+      "commute": 20,
+      "corePass": 6
+    },
+    {
+      "company": "上海得韬会展服务有限公司",
+      "employee": "贾文霆",
+      "type": "回访（后道）",
+      "slot": "下午1",
+      "commute": 27,
       "corePass": 6
     },
     {
@@ -394,7 +370,7 @@
       "employee": "陈胤",
       "type": "回访（后道）",
       "slot": "下午1",
-      "commute": 39,
+      "commute": 22,
       "corePass": 6
     },
     {
@@ -442,7 +418,15 @@
       "employee": "补位-徐汇后",
       "type": "回访（后道）",
       "slot": "下午2",
-      "commute": 23,
+      "commute": 45,
+      "corePass": 6
+    },
+    {
+      "company": "宝山高新-上海炳唐国际贸易有限公司",
+      "employee": "补位-莘庄后",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 26,
       "corePass": 6
     },
     {
@@ -462,43 +446,27 @@
       "corePass": 6
     },
     {
-      "company": "宝山高新-上海炳唐国际贸易有限公司",
-      "employee": "补位-周浦后",
-      "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 73,
-      "corePass": 6
-    },
-    {
       "company": "上海宝屋房地产经纪有限公司",
-      "employee": "刘勇",
+      "employee": "补位-莘庄新龙",
       "type": "回访（后道）",
       "slot": "下午2",
-      "commute": 89,
-      "corePass": 6
-    },
-    {
-      "company": "上海华烁投资管理有限公司",
-      "employee": "李路路",
-      "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 64,
-      "corePass": 6
-    },
-    {
-      "company": "上海甄会贸易有限公司",
-      "employee": "补位-宝山全",
-      "type": "回访（后道）",
-      "slot": "下午2",
-      "commute": 45,
+      "commute": 32,
       "corePass": 6
     },
     {
       "company": "上海鸣旭电子科技有限公司",
-      "employee": "傅丽",
+      "employee": "补位-周浦后",
       "type": "回访（后道）",
       "slot": "下午2",
-      "commute": 62,
+      "commute": 72,
+      "corePass": 6
+    },
+    {
+      "company": "上海华烁投资管理有限公司",
+      "employee": "刘勇",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 26,
       "corePass": 6
     },
     {
@@ -506,7 +474,15 @@
       "employee": "姚焕",
       "type": "回访（后道）",
       "slot": "下午2",
-      "commute": 48,
+      "commute": 88,
+      "corePass": 6
+    },
+    {
+      "company": "上海甄会贸易有限公司",
+      "employee": "李路路",
+      "type": "回访（后道）",
+      "slot": "下午2",
+      "commute": 24,
       "corePass": 6
     }
   ]

@@ -27,6 +27,7 @@ import {
 import { getTransitFromDisk, hydrateLegCacheFromDisk } from './transit-disk-cache';
 import { buildAfternoonParkPairs, AfternoonParkPair } from './afternoon-park-pairs';
 import { GAP_FILL_TAG, REGIONAL_GAP_FILL_BINDINGS, resolveRegionalGapFillEmployee } from '../data/gap-fill-employees';
+import { isSuspiciousCachedTransit } from '../utils/transit-reasonable';
 
 export interface LockedPairing {
   customerId: number;
@@ -103,7 +104,7 @@ function resolveChainedLeg(
   if (hit) return hit;
   if (commuteMode === 'transit') {
     const disk = getTransitFromDisk(legCacheKey(from, to));
-    if (disk) {
+    if (disk && !isSuspiciousCachedTransit(disk, from, to)) {
       legCache?.set(legCacheKey(from, to), disk);
       return disk;
     }

@@ -173,6 +173,20 @@ const GAP_TEMPLATES: GapTemplate[] = [
     departure: '上海市松江区江田东路180号',
   },
   {
+    name: '补位-莘庄后',
+    park: '加盟-金山资本现代产业园',
+    roles: [EmployeeRole.BACK],
+    slots: ALL_SLOTS,
+    departure: '上海市闵行区都市路2350号',
+  },
+  {
+    name: '补位-莘庄新龙',
+    park: '加盟-金山资本现代产业园',
+    roles: [EmployeeRole.BACK],
+    slots: ALL_SLOTS,
+    departure: '上海市闵行区新龙路1333弄66号',
+  },
+  {
     name: '补位-周浦后',
     park: '加盟-金山资本现代产业园',
     roles: [EmployeeRole.BACK],
@@ -218,6 +232,8 @@ export const EMPLOYEE_FULL_MATCH_PATCHES: Record<
   '补位-周浦后': { departureAddress: '上海市浦东新区周浦镇沪南公路2218号', orderCapacity: ALL_SLOTS },
   '补位-松江车墩': { departureAddress: '上海市松江区车墩镇香闵路601号', orderCapacity: ALL_SLOTS },
   '补位-松江江田': { departureAddress: '上海市松江区江田东路180号', orderCapacity: ALL_SLOTS },
+  '补位-莘庄后': { departureAddress: '上海市闵行区都市路2350号', orderCapacity: ALL_SLOTS },
+  '补位-莘庄新龙': { departureAddress: '上海市闵行区新龙路1333弄66号', orderCapacity: ALL_SLOTS },
 };
 
 /** 片区补位/就近员工与客户绑定（确保单程 ≤90 分） */
@@ -240,6 +256,8 @@ export const REGIONAL_GAP_FILL_BINDINGS: Record<string, string | RegionalGapFill
   '徐州智联物流有限公司': '补位-徐州全',
   '镇江新材料科技股份公司': '补位-镇江全',
   '镇江港口物流发展公司': '补位-镇江全',
+  '上海安睿特生物医药科技有限公司': '补位-莘庄后',
+  '上海天元新能源材料有限公司': '补位-莘庄新龙',
   '上海昊上电子科技有限公司': '补位-龙东后',
   '上海万沃建筑工程咨询有限公司': '补位-周泰后',
   '上海界龙现代印刷纸品有限公司': '补位-延安后',

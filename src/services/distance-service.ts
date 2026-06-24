@@ -14,6 +14,13 @@ import fs from 'fs';
 import path from 'path';
 import { estimateCommuteMinutes, estimateSameRoadWalkMinutes } from '../utils/commute';
 import {
+  estimateReasonableTransitFallback,
+  estimateStraightKmHeuristic,
+  isSuspiciousCachedTransit,
+  pickBestReasonableTransit,
+  RawTransitOption,
+} from '../utils/transit-reasonable';
+import {
   configureGaodeLimiter,
   enqueueGaodeRequest,
   getGaodeLimiterStats,
@@ -37,6 +44,8 @@ export interface RouteEstimate {
   distanceKm?: number;
   pathSummary: string;
   source: RouteSource;
+  /** 起终点直线距离（km），用于缓存合理性校验 */
+  straightKm?: number;
 }
 
 export type LegCache = Map<string, RouteEstimate>;
@@ -245,63 +254,64 @@ function summarizeTransitLines(segments: unknown[]): string {
 async function fetchGaodeTransitRaw(
   fromGeo: GeoPoint,
   toGeo: GeoPoint,
-  fromAddress: string
+  fromAddress: string,
+  toAddress: string,
+  straightKm: number
 ): Promise<{
   minutes: number;
   distanceKm?: number;
   pathSummary: string;
+  straightKm: number;
 } | null> {
   const apiKey = getGaodeKey();
   if (!apiKey) return null;
 
   const city = fromGeo.city || toGeo.city || inferCity(fromAddress);
-  const url =
-    `https://restapi.amap.com/v3/direction/transit/integrated?origin=${fromGeo.lng},${fromGeo.lat}` +
-    `&destination=${toGeo.lng},${toGeo.lat}&city=${encodeURIComponent(city)}&key=${apiKey}`;
+  /** 0=最快捷 2=最少换乘 5=不乘地铁（莘庄等短途常需多策略） */
+  const strategies = [0, 2, 5];
+  const allTransits: RawTransitOption[] = [];
 
-  apiCalls++;
-  const data = await withGaodeRetry(
-    async () => {
-      const res = await fetch(url);
-      return (await res.json()) as {
-        status?: string;
-        info?: string;
-        infocode?: string;
-        route?: {
-          transits?: {
-            duration?: string | number;
-            distance?: string | number;
-            segments?: unknown[];
-          }[];
+  for (const strategy of strategies) {
+    const url =
+      `https://restapi.amap.com/v3/direction/transit/integrated?origin=${fromGeo.lng},${fromGeo.lat}` +
+      `&destination=${toGeo.lng},${toGeo.lat}&city=${encodeURIComponent(city)}` +
+      `&strategy=${strategy}&key=${apiKey}`;
+
+    apiCalls++;
+    const data = await withGaodeRetry(
+      async () => {
+        const res = await fetch(url);
+        return (await res.json()) as {
+          status?: string;
+          info?: string;
+          infocode?: string;
+          route?: { transits?: RawTransitOption[] };
         };
-      };
-    },
-    (payload) =>
-      typeof payload === 'object' &&
-      payload !== null &&
-      isGaodeRateLimitError(
-        (payload as { info?: string }).info,
-        (payload as { infocode?: string }).infocode
-      )
-  );
+      },
+      (payload) =>
+        typeof payload === 'object' &&
+        payload !== null &&
+        isGaodeRateLimitError(
+          (payload as { info?: string }).info,
+          (payload as { infocode?: string }).infocode
+        )
+    );
 
-  if (isGaodeRateLimitError(data.info, data.infocode)) return null;
-  if (data.status !== '1' || !data.route?.transits?.length) return null;
+    if (isGaodeRateLimitError(data.info, data.infocode)) continue;
+    if (data.status === '1' && data.route?.transits?.length) {
+      allTransits.push(...data.route.transits);
+    }
+  }
 
-  const best = data.route.transits.reduce((a, b) =>
-    Number(a.duration || 0) <= Number(b.duration || 0) ? a : b
-  );
-  const seconds = Number(best.duration || 0);
-  const minutes = Math.max(5, Math.round(seconds / 60));
-  if (!minutes || minutes > 600) return null;
+  if (allTransits.length === 0) return null;
 
-  const lineSummary = summarizeTransitLines(best.segments || []);
-  const distanceKm = best.distance ? Math.round(Number(best.distance) / 100) / 10 : undefined;
-  return {
-    minutes,
-    distanceKm,
-    pathSummary: `公交/地铁：${lineSummary}，约 ${minutes} 分钟`,
-  };
+  const best = pickBestReasonableTransit(allTransits, straightKm, summarizeTransitLines);
+  if (best) {
+    return { ...best, straightKm };
+  }
+
+  const fallback = estimateReasonableTransitFallback(straightKm, fromAddress, toAddress);
+  return { ...fallback, straightKm };
 }
 
 async function fetchGaodeWalkingRaw(
@@ -372,7 +382,9 @@ async function callGaodeTransit(
   const fromGeo = await geocodeAddress(fromAddress);
   const toGeo = await geocodeAddress(toAddress);
   if (!fromGeo || !toGeo) {
-    return localFallback(fromAddress, toAddress, parkName);
+    const sk = estimateStraightKmHeuristic(fromAddress, toAddress);
+    const fb = estimateReasonableTransitFallback(sk, fromAddress, toAddress);
+    return { ...fb, source: 'transit', straightKm: sk };
   }
 
   const straightKm = haversineKm(fromGeo, toGeo);
@@ -381,7 +393,7 @@ async function callGaodeTransit(
     walkingRaw = await fetchGaodeWalkingRaw(fromGeo, toGeo);
   }
 
-  const transitRaw = await fetchGaodeTransitRaw(fromGeo, toGeo, fromAddress);
+  const transitRaw = await fetchGaodeTransitRaw(fromGeo, toGeo, fromAddress, toAddress, straightKm);
 
   if (walkingRaw && transitRaw) {
     if (shouldPreferWalking(walkingRaw, transitRaw, straightKm)) {
@@ -395,8 +407,11 @@ async function callGaodeTransit(
     return {
       minutes: transitRaw.minutes,
       distanceKm: transitRaw.distanceKm,
-      pathSummary: `公交/地铁：${fromAddress} → ${toAddress}，${transitRaw.pathSummary.replace(/^公交\/地铁：/, '')}`,
+      pathSummary: transitRaw.pathSummary.includes(fromAddress)
+        ? transitRaw.pathSummary
+        : `公交/地铁：${fromAddress} → ${toAddress}，${transitRaw.pathSummary.replace(/^公交\/地铁：/, '')}`,
       source: 'transit',
+      straightKm: transitRaw.straightKm,
     };
   }
 
@@ -413,12 +428,24 @@ async function callGaodeTransit(
     return {
       minutes: transitRaw.minutes,
       distanceKm: transitRaw.distanceKm,
-      pathSummary: `公交/地铁：${fromAddress} → ${toAddress}，${transitRaw.pathSummary.replace(/^公交\/地铁：/, '')}`,
+      pathSummary: transitRaw.pathSummary.includes(fromAddress)
+        ? transitRaw.pathSummary
+        : `公交/地铁：${fromAddress} → ${toAddress}，${transitRaw.pathSummary.replace(/^公交\/地铁：/, '')}`,
       source: 'transit',
+      straightKm: transitRaw.straightKm,
     };
   }
 
-  return localFallback(fromAddress, toAddress, parkName);
+  return transitFallbackFromHeuristic(fromAddress, toAddress);
+}
+
+function transitFallbackFromHeuristic(
+  fromAddress: string,
+  toAddress: string
+): RouteEstimate {
+  const sk = estimateStraightKmHeuristic(fromAddress, toAddress);
+  const fb = estimateReasonableTransitFallback(sk, fromAddress, toAddress);
+  return { ...fb, source: 'transit', straightKm: sk };
 }
 
 async function callDeepSeek(
@@ -514,9 +541,11 @@ export async function estimateRouteWithMode(
     const disk = getTransitFromDisk(diskKey);
     const walkLocal = estimateSameRoadWalkMinutes(fromAddress, toAddress);
     const staleTransit =
-      disk?.source === 'transit' &&
-      walkLocal != null &&
-      disk.minutes > walkLocal + 3;
+      disk &&
+      (isSuspiciousCachedTransit(disk, fromAddress, toAddress) ||
+        (disk.source === 'transit' &&
+          walkLocal != null &&
+          disk.minutes > walkLocal + 3));
     if (disk && !staleTransit) {
       diskHits++;
       routeCache.set(key, disk);
