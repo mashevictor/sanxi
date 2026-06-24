@@ -4,7 +4,7 @@ const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
 /** 与 integrated-cache.ts INTEGRATED_DATA_VERSION 保持一致，用于静态 JSON 缓存穿透 */
-const STATIC_CACHE_BUST = '20260624-ai-cache-73';
+const STATIC_CACHE_BUST = '20260624-ai-cache-74';
 
 function getSampleDataCacheUrl() {
   return `/cache/sample-data.json?v=${STATIC_CACHE_BUST}`;
@@ -92,9 +92,13 @@ function sameIdSet(a, b) {
   return sa.every((v, i) => v === sb[i]);
 }
 
+function normalizeIdList(ids) {
+  return (ids || []).map((id) => Number(id)).filter((id) => !Number.isNaN(id));
+}
+
 function isIdSubset(sub, sup) {
-  const set = new Set(sup);
-  return sub.every((id) => set.has(id));
+  const set = new Set(normalizeIdList(sup));
+  return normalizeIdList(sub).every((id) => set.has(id));
 }
 
 function sliceManualPoolFromCache(fullDispatch, customerIds, employeePoolIds) {
@@ -165,25 +169,27 @@ function sliceManualPoolFromCache(fullDispatch, customerIds, employeePoolIds) {
 }
 
 function isCacheVersionOk(cache, dataVersion) {
-  if (!cache?.dataVersion) return false;
+  if (!cache?.pairings?.length) return false;
   if (dataVersion && cache.dataVersion === dataVersion) return true;
   if (cache.dataVersion === STATIC_CACHE_BUST) return true;
-  return false;
+  // 部署时 JS 与 JSON 版本偶发不同步，pairings 仍可用于预览
+  return true;
 }
 
 /** AI 匹配：从 full-match.json 切出选中公司（无需 session / API） */
 function sliceFullMatchCacheForAi(cache, customerIds, lockedPairings, matchOnlyCustomerIds) {
   if (!cache?.pairings?.length) return null;
-  const pool = cache.fullMatchCustomerIds || [];
-  if (!isIdSubset(customerIds, pool)) return null;
+  const ids = normalizeIdList(customerIds);
+  const pool = normalizeIdList(cache.fullMatchCustomerIds || []);
+  if (!ids.length || !isIdSubset(ids, pool)) return null;
 
-  const lockedSet = new Set((lockedPairings || []).map((p) => p.customerId));
-  const customerSet = new Set(customerIds);
-  const resolveIds = (matchOnlyCustomerIds?.length ? matchOnlyCustomerIds : customerIds).filter(
+  const lockedSet = new Set(normalizeIdList((lockedPairings || []).map((p) => p.customerId)));
+  const customerSet = new Set(ids);
+  const resolveIds = (matchOnlyCustomerIds?.length ? normalizeIdList(matchOnlyCustomerIds) : ids).filter(
     (id) => customerSet.has(id) && !lockedSet.has(id)
   );
 
-  const byCid = new Map(cache.pairings.map((p) => [p.customerId, p]));
+  const byCid = new Map(cache.pairings.map((p) => [Number(p.customerId), p]));
   const rematchCustomerIds = [];
   const newLocks = [];
 
@@ -202,9 +208,9 @@ function sliceFullMatchCacheForAi(cache, customerIds, lockedPairings, matchOnlyC
   }
 
   const pairings = cache.pairings
-    .filter((p) => customerSet.has(p.customerId))
+    .filter((p) => customerSet.has(Number(p.customerId)))
     .map((p) => ({ ...p, locked: true }));
-  const unmatched = (cache.unmatchedCompanies || []).filter((u) => customerSet.has(u.customerId));
+  const unmatched = (cache.unmatchedCompanies || []).filter((u) => customerSet.has(Number(u.customerId)));
   const empIds = new Set(pairings.map((p) => p.employeeId));
   const employeeSchedules = (cache.employeeSchedules || [])
     .filter((s) => empIds.has(s.employeeId))

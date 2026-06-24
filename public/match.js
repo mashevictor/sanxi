@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   showPageLoader('加载派单数据...', '正在读取公司与员工列表');
   prefetchFullMatchCache().then((cache) => {
     if (cache) fullMatchCache = cache;
+    if (getSelectedIds().length) schedulePreview();
   });
   prefetchSampleData().then((cached) => {
     if (cached?.companies?.length) {
@@ -143,7 +144,7 @@ async function loadIntegratedData() {
     });
     applySessionMeta(data);
     if (stored?.selectedCompanies?.length) {
-      stored.selectedCompanies.forEach((id) => selectedCompanies.add(id));
+      stored.selectedCompanies.forEach((id) => selectedCompanies.add(Number(id)));
     }
     if (stored?.assignmentMap?.length) {
       assignmentMap = deserializeAssignmentMap(stored.assignmentMap);
@@ -153,6 +154,7 @@ async function loadIntegratedData() {
     renderBoard();
     updateStats();
     persistDispatchState();
+    if (getSelectedIds().length) schedulePreview();
   } catch (err) {
     showToast(err.message);
   } finally {
@@ -177,11 +179,12 @@ function isFullMatchCacheUsable(cache) {
 }
 
 async function tryPreviewFromFullMatchCache() {
+  const instant = tryInstantFullMatchCache();
+  if (instant) return instant;
   const cache = await resolveFullMatchCache();
   if (!cache) return null;
-  const selectedIds = getSelectedIds();
-  if (!selectedIds.length) return null;
-  return sliceFullMatchCacheForAi(cache, selectedIds, getLockedPairings(), getMatchOnlyIds());
+  fullMatchCache = cache;
+  return sliceFullMatchCacheForAi(cache, getSelectedIds(), getLockedPairings(), getMatchOnlyIds());
 }
 
 async function ensureSessionReady() {
@@ -462,7 +465,24 @@ function renderCompanies() {
 }
 
 function getSelectedIds() {
-  return Array.from(selectedCompanies);
+  return normalizeIdList(Array.from(selectedCompanies));
+}
+
+function tryInstantFullMatchCache() {
+  const cache = fullMatchCache;
+  if (!cache?.pairings?.length) return null;
+  if (!isFullMatchCacheUsable(cache)) return null;
+  return sliceFullMatchCacheForAi(cache, getSelectedIds(), getLockedPairings(), getMatchOnlyIds());
+}
+
+function applyCachePreviewHit(hit) {
+  if (!hit?.complete) return false;
+  isMatching = false;
+  applyDispatchResult(hit);
+  renderBoard();
+  renderSchedules();
+  updateStats();
+  return true;
 }
 
 function getCompanyTimeSlot(customerId) {
@@ -1275,16 +1295,12 @@ function schedulePreview() {
     return;
   }
 
+  // 同步命中内存缓存：勾选后立即显示员工（不等 session / API）
+  if (applyCachePreviewHit(tryInstantFullMatchCache())) return;
+
   const runCachePreview = async () => {
     const hit = await tryPreviewFromFullMatchCache();
-    if (hit?.complete) {
-      isMatching = false;
-      applyDispatchResult(hit);
-      renderBoard();
-      renderSchedules();
-      updateStats();
-      return true;
-    }
+    if (applyCachePreviewHit(hit)) return true;
     if (hit?.partial && sessionId) {
       isMatching = true;
       renderBoard();
@@ -1332,14 +1348,7 @@ async function fetchPreview() {
   if (getSelectedIds().length === 0) return;
 
   const cacheHit = await tryPreviewFromFullMatchCache();
-  if (cacheHit?.complete) {
-    applyDispatchResult(cacheHit);
-    isMatching = false;
-    renderBoard();
-    renderSchedules();
-    updateStats();
-    return;
-  }
+  if (applyCachePreviewHit(cacheHit)) return;
 
   if (!(await ensureSessionReady())) {
     isMatching = false;
