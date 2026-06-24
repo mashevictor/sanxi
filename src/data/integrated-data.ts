@@ -10,6 +10,7 @@ import {
   getGapFillEmployeeIds,
   GAP_FILL_TAG,
 } from './gap-fill-employees';
+import { applyCustomerParkCorrections } from './customer-park-corrections';
 import { assertUniqueEmployeeNames } from '../utils/employee-names';
 import { Customer, Employee, CustomerType } from '../types';
 
@@ -79,9 +80,14 @@ export function buildIntegratedData(dataDir: string): IntegratedData {
   const patchedEmployees = applyEmployeePatches([...mergedEmployees, ...gapFillEmployees]);
   assertUniqueEmployeeNames(patchedEmployees);
 
+  const parkCorrected = applyCustomerParkCorrections(mergedCustomers, base.parks);
+  for (const p of parkCorrected.parks) {
+    if (!parkIdByName.has(p.name)) parkIdByName.set(p.name, p.id);
+  }
+
   return {
-    parks: base.parks,
-    customers: mergedCustomers,
+    parks: parkCorrected.parks,
+    customers: parkCorrected.customers,
     employees: patchedEmployees,
     cities: [...new Set([...base.cities, ...showcase.cities])],
     stats: {

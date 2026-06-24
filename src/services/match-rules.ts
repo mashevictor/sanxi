@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { customerTypeToRole, isFrontOrProject } from '../utils/parsers';
 import { canDepartureServePark, explainParkMatchFailure } from '../utils/park-match';
+import { inferProvinceFromAddress } from '../utils/address-region';
 
 export interface MatchResult {
   employee: Employee;
@@ -29,6 +30,19 @@ function checkCityMatch(customer: Customer, employee: Employee): MatchDetail {
     message: passed
       ? `城市匹配: ${customer.cityName}`
       : `城市不匹配: 客户${customer.cityName} vs 员工${employee.cityName}`,
+  };
+}
+
+function checkRegionMatch(customer: Customer, employee: Employee): MatchDetail {
+  const custRegion = inferProvinceFromAddress(customer.address);
+  const empRegion = inferProvinceFromAddress(employee.departureAddress);
+  const passed = custRegion !== '未知' && custRegion === empRegion;
+  return {
+    rule: '区域匹配',
+    passed,
+    message: passed
+      ? `区域匹配: ${custRegion}（客户地址 ↔ 员工出发地）`
+      : `区域不匹配: 客户地址在${custRegion}，员工出发地在${empRegion}，禁止跨省派单`,
   };
 }
 
@@ -156,6 +170,7 @@ export function matchCustomerToEmployee(
   const requirePlus = options.requirePlus !== false;
   const details: MatchDetail[] = [
     checkCityMatch(customer, employee),
+    checkRegionMatch(customer, employee),
     checkRoleMatch(customer, employee),
     checkTimeSlotMatch(customer, employee, assignedCustomers),
     checkDesignatedPerson(customer, employee, availableEmployeeNames),

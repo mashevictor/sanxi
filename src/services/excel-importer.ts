@@ -5,6 +5,7 @@
 import * as XLSX from 'xlsx';
 import * as path from 'path';
 import * as fs from 'fs';
+import { applyCustomerParkCorrections } from '../data/customer-park-corrections';
 import {
   Customer,
   Employee,
@@ -290,9 +291,17 @@ export function importAllData(dataDir: string): ImportResult {
     allCustomers.filter((c) => c.handInHandGroup).map((c) => c.handInHandGroup)
   ).size;
 
+  const { customers: correctedCustomers, parks } = applyCustomerParkCorrections(
+    allCustomers,
+    Array.from(parkMasterMap.values())
+  );
+  for (const p of parks) {
+    if (!parkMasterMap.has(p.name)) parkMasterMap.set(p.name, p);
+  }
+
   return {
-    parks: Array.from(parkMasterMap.values()),
-    customers: allCustomers,
+    parks,
+    customers: correctedCustomers,
     employees,
     cities: Array.from(cityMap.keys()),
     stats: {
@@ -464,9 +473,17 @@ export function importFullData(files: UploadFiles, requireEmployees = false): Im
     allCustomers.filter((c) => c.handInHandGroup).map((c) => c.handInHandGroup)
   ).size;
 
+  const { customers: correctedCustomers, parks } = applyCustomerParkCorrections(
+    allCustomers,
+    Array.from(parkMasterMap.values())
+  );
+  for (const p of parks) {
+    if (!parkMasterMap.has(p.name)) parkMasterMap.set(p.name, p);
+  }
+
   return {
-    parks: Array.from(parkMasterMap.values()),
-    customers: allCustomers,
+    parks,
+    customers: correctedCustomers,
     employees,
     cities: Array.from(cityMap.keys()),
     stats: {

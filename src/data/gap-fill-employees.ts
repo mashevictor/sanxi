@@ -139,14 +139,14 @@ const GAP_TEMPLATES: GapTemplate[] = [
   },
   {
     name: '补位-松江项目',
-    park: '山东济南',
+    park: '松江-项目',
     roles: [EmployeeRole.PROJECT, EmployeeRole.FRONT],
     slots: ALL_SLOTS,
     departure: '上海市松江区申港路2599号',
   },
   {
     name: '补位-青浦项目',
-    park: '江苏徐州',
+    park: '青浦-项目',
     roles: [EmployeeRole.PROJECT, EmployeeRole.FRONT],
     slots: ALL_SLOTS,
     departure: '上海市青浦区久远路89号',
@@ -157,6 +157,20 @@ const GAP_TEMPLATES: GapTemplate[] = [
     roles: [EmployeeRole.BACK],
     slots: ALL_SLOTS,
     departure: '上海市浦东新区大川公路2565号',
+  },
+  {
+    name: '补位-松江车墩',
+    park: '松江-项目',
+    roles: [EmployeeRole.PROJECT, EmployeeRole.FRONT],
+    slots: ALL_SLOTS,
+    departure: '上海市松江区车墩镇香闵路601号',
+  },
+  {
+    name: '补位-松江江田',
+    park: '松江-项目',
+    roles: [EmployeeRole.PROJECT, EmployeeRole.FRONT],
+    slots: ALL_SLOTS,
+    departure: '上海市松江区江田东路180号',
   },
   {
     name: '补位-周浦后',
@@ -202,6 +216,8 @@ export const EMPLOYEE_FULL_MATCH_PATCHES: Record<
   '补位-青浦项目': { departureAddress: '上海市青浦区久远路89号', orderCapacity: ALL_SLOTS },
   '补位-大川后': { departureAddress: '上海市浦东新区大川公路2565号', orderCapacity: ALL_SLOTS },
   '补位-周浦后': { departureAddress: '上海市浦东新区周浦镇沪南公路2218号', orderCapacity: ALL_SLOTS },
+  '补位-松江车墩': { departureAddress: '上海市松江区车墩镇香闵路601号', orderCapacity: ALL_SLOTS },
+  '补位-松江江田': { departureAddress: '上海市松江区江田东路180号', orderCapacity: ALL_SLOTS },
 };
 
 /** 片区补位/就近员工与客户绑定（确保单程 ≤90 分） */
@@ -215,7 +231,15 @@ export const REGIONAL_GAP_FILL_BINDINGS: Record<string, string | RegionalGapFill
   '上海益充电子商务有限公司': '补位-浦东后',
   '上海众家物业有限公司': '补位-川周后',
   '山东济南-上海涌艺影视投资有限公司': '补位-松江项目',
+  '山东济南-上海浪拓智能科技股份有限公司': '补位-松江车墩',
   '江苏徐州-纽珑实业（上海）有限公司': '补位-青浦项目',
+  '江苏镇江-上海日洁环境科技有限公司': '补位-松江江田',
+  '济南瑞丰化工有限公司': '补位-济南全',
+  '济南华创科技有限公司': '补位-济南全',
+  '徐州工程机械配件公司': '补位-徐州全',
+  '徐州智联物流有限公司': '补位-徐州全',
+  '镇江新材料科技股份公司': '补位-镇江全',
+  '镇江港口物流发展公司': '补位-镇江全',
   '上海昊上电子科技有限公司': '补位-龙东后',
   '上海万沃建筑工程咨询有限公司': '补位-周泰后',
   '上海界龙现代印刷纸品有限公司': '补位-延安后',

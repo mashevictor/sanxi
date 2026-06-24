@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-24T02:50:14.699Z",
+  "generatedAt": "2026-06-24T03:34:33.570Z",
   "total": 55,
   "matched": 55,
   "unmatched": 0,
@@ -27,15 +27,15 @@
     },
     {
       "level": "warn",
-      "company": "上海安睿特生物医药科技有限公司",
-      "employee": "刘勇",
-      "message": "通勤 77 分超过 60 分上限（软约束，仍合规）"
+      "company": "镇江港口物流发展公司",
+      "employee": "补位-镇江全",
+      "message": "通勤 71 分超过 60 分上限（软约束，仍合规）"
     },
     {
       "level": "warn",
-      "company": "上海无忧供应链管理有限公司",
-      "employee": "杨芳",
-      "message": "通勤 82 分超过 60 分上限（软约束，仍合规）"
+      "company": "上海安睿特生物医药科技有限公司",
+      "employee": "刘勇",
+      "message": "通勤 77 分超过 60 分上限（软约束，仍合规）"
     },
     {
       "level": "warn",
@@ -150,6 +150,30 @@
       "corePass": 6
     },
     {
+      "company": "济南瑞丰化工有限公司",
+      "employee": "补位-济南全",
+      "type": "项目",
+      "slot": "上午",
+      "commute": 46,
+      "corePass": 6
+    },
+    {
+      "company": "徐州工程机械配件公司",
+      "employee": "补位-徐州全",
+      "type": "项目",
+      "slot": "上午",
+      "commute": 45,
+      "corePass": 6
+    },
+    {
+      "company": "镇江新材料科技股份公司",
+      "employee": "补位-镇江全",
+      "type": "首访（前道）",
+      "slot": "上午",
+      "commute": 46,
+      "corePass": 6
+    },
+    {
       "company": "上海响山文化传播有限公司",
       "employee": "补位-曹杨前",
       "type": "首访（前道）",
@@ -190,14 +214,6 @@
       "corePass": 6
     },
     {
-      "company": "徐州工程机械配件公司",
-      "employee": "补位-徐州全",
-      "type": "项目",
-      "slot": "上午",
-      "commute": 45,
-      "corePass": 6
-    },
-    {
       "company": "上海京泉投资管理有限公司",
       "employee": "盛雅琴",
       "type": "回访（后道）",
@@ -230,27 +246,11 @@
       "corePass": 6
     },
     {
-      "company": "济南瑞丰化工有限公司",
-      "employee": "梁素梅",
-      "type": "项目",
-      "slot": "上午",
-      "commute": 45,
-      "corePass": 6
-    },
-    {
       "company": "上海协尔泰控制技术有限公司",
       "employee": "姚焕",
       "type": "回访（后道）",
       "slot": "上午",
       "commute": 62,
-      "corePass": 6
-    },
-    {
-      "company": "镇江新材料科技股份公司",
-      "employee": "演示-沈镇江",
-      "type": "首访（前道）",
-      "slot": "上午",
-      "commute": 46,
       "corePass": 6
     },
     {
@@ -294,6 +294,30 @@
       "corePass": 6
     },
     {
+      "company": "济南华创科技有限公司",
+      "employee": "补位-济南全",
+      "type": "首访（前道）",
+      "slot": "下午1",
+      "commute": 44,
+      "corePass": 6
+    },
+    {
+      "company": "徐州智联物流有限公司",
+      "employee": "补位-徐州全",
+      "type": "项目",
+      "slot": "下午1",
+      "commute": 58,
+      "corePass": 6
+    },
+    {
+      "company": "镇江港口物流发展公司",
+      "employee": "补位-镇江全",
+      "type": "项目",
+      "slot": "下午1",
+      "commute": 71,
+      "corePass": 6
+    },
+    {
       "company": "上海筱胜企业管理咨询有限公司",
       "employee": "补位-普陀后",
       "type": "回访（后道）",
@@ -307,22 +331,6 @@
       "type": "回访（后道）",
       "slot": "下午1",
       "commute": 39,
-      "corePass": 6
-    },
-    {
-      "company": "镇江港口物流发展公司",
-      "employee": "补位-镇江全",
-      "type": "项目",
-      "slot": "下午1",
-      "commute": 27,
-      "corePass": 6
-    },
-    {
-      "company": "济南华创科技有限公司",
-      "employee": "补位-济南全",
-      "type": "首访（前道）",
-      "slot": "下午1",
-      "commute": 38,
       "corePass": 6
     },
     {
@@ -351,10 +359,10 @@
     },
     {
       "company": "上海无忧供应链管理有限公司",
-      "employee": "杨芳",
+      "employee": "补位-松江江田",
       "type": "首访（前道）",
       "slot": "下午1",
-      "commute": 82,
+      "commute": 55,
       "corePass": 6
     },
     {
@@ -371,14 +379,6 @@
       "type": "回访（后道）",
       "slot": "下午1",
       "commute": 67,
-      "corePass": 6
-    },
-    {
-      "company": "徐州智联物流有限公司",
-      "employee": "王睿",
-      "type": "项目",
-      "slot": "下午1",
-      "commute": 57,
       "corePass": 6
     },
     {
@@ -422,6 +422,14 @@
       "corePass": 6
     },
     {
+      "company": "山东济南-上海浪拓智能科技股份有限公司",
+      "employee": "补位-松江车墩",
+      "type": "项目",
+      "slot": "下午2",
+      "commute": 12,
+      "corePass": 6
+    },
+    {
       "company": "古疁（上海）文化发展有限公司",
       "employee": "补位-嘉定后",
       "type": "回访（后道）",
@@ -459,14 +467,6 @@
       "type": "回访（后道）",
       "slot": "下午2",
       "commute": 73,
-      "corePass": 6
-    },
-    {
-      "company": "山东济南-上海浪拓智能科技股份有限公司",
-      "employee": "补位-杨浦前",
-      "type": "项目",
-      "slot": "下午2",
-      "commute": 45,
       "corePass": 6
     },
     {
