@@ -729,15 +729,16 @@ function renderCommuteCell(minutes, route) {
   if (!minutes && minutes !== 0) {
     return `<div class="cell-commute"><span class="commute-none">—</span></div>`;
   }
-  const src = route?.source === 'transit' ? '公交' : route?.source === 'deepseek' ? 'AI' : '本地';
+  const src = formatCommuteSource(route?.source);
+  const walkCls = isWalkingRoute(route) ? ' commute-walk' : '';
   const km = route?.distanceKm ? `<div class="commute-src">${route.distanceKm} km</div>` : '';
   const within = minutes <= maxCommuteMinutes;
   const cls = within ? 'commute-ok' : 'commute-warn';
-  const hint = within ? '≤60分可派' : '超60分仍可选';
+  const hint = isWalkingRoute(route) ? '步行可达' : (within ? '≤60分可派' : '超60分仍可选');
   return `
     <div class="cell-commute">
       <span class="commute-big ${cls}">${minutes}</span><span class="commute-unit">分</span>
-      <div class="commute-src">${src}</div>
+      <div class="commute-src${walkCls}">${src}</div>
       <div class="commute-hint">${hint}</div>
       ${km}
     </div>

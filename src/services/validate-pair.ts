@@ -6,7 +6,7 @@ import { CUSTOMER_TYPE_LABELS, TIME_SLOT_LABELS } from '../types';
 import { ImportResult } from './excel-importer';
 import { matchCustomerToEmployee } from './match-rules';
 import { getCommuteOriginForNextStop } from '../utils/commute';
-import { estimateRoute } from './distance-service';
+import { estimateRoute, RouteSource } from './distance-service';
 
 export interface PairValidationResponse {
   eligible: boolean;
@@ -25,7 +25,7 @@ export interface PairValidationResponse {
     minutes: number;
     distanceKm?: number;
     pathSummary: string;
-    source: 'deepseek' | 'local' | 'transit';
+    source: RouteSource;
   };
   rules: { rule: string; passed: boolean; message: string }[];
   failedRules: { rule: string; message: string }[];

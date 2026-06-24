@@ -12,7 +12,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { estimateCommuteMinutes } from '../utils/commute';
+import { estimateCommuteMinutes, estimateSameRoadWalkMinutes } from '../utils/commute';
 import {
   configureGaodeLimiter,
   enqueueGaodeRequest,
@@ -28,9 +28,9 @@ import {
   saveTransitToDisk,
 } from './transit-disk-cache';
 
-export type RouteSource = 'deepseek' | 'local' | 'transit';
+export type RouteSource = 'deepseek' | 'local' | 'transit' | 'walking';
 export type CommuteMode = 'local' | 'deepseek' | 'transit';
-export type DistanceSource = 'deepseek' | 'local' | 'transit' | 'mixed';
+export type DistanceSource = 'deepseek' | 'local' | 'transit' | 'walking' | 'mixed';
 
 export interface RouteEstimate {
   minutes: number;
@@ -100,10 +100,46 @@ export function resetGaodeCommuteStats(): void {
   localFallbacks = 0;
 }
 
+/** 直线距离低于此值（km）时调用高德步行路线 */
+const WALKING_PROBE_KM = 2.5;
+/** 直线距离低于此值且步行 API 成功时，优先步行而非公交 */
+const WALKING_PREFER_STRAIGHT_KM = 1.5;
+
+function haversineKm(a: GeoPoint, b: GeoPoint): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function shouldPreferWalking(
+  walking: { minutes: number; distanceKm?: number },
+  transit: { minutes: number },
+  straightKm: number
+): boolean {
+  if (straightKm <= WALKING_PREFER_STRAIGHT_KM) return true;
+  if (walking.minutes <= transit.minutes) return true;
+  if (walking.minutes <= 15 && straightKm <= WALKING_PROBE_KM) return true;
+  return false;
+}
+
 function localFallback(from: string, to: string, parkName: string): RouteEstimate {
   localFallbacks++;
-  const minutes = estimateCommuteMinutes(from, to);
   const parkHint = parkName ? `（园区 ${parkName}）` : '';
+  const walkMinutes = estimateSameRoadWalkMinutes(from, to);
+  if (walkMinutes != null) {
+    return {
+      minutes: walkMinutes,
+      pathSummary: `步行估算：${from} → ${to}${parkHint}，约 ${walkMinutes} 分钟（同路近距离）`,
+      source: 'walking',
+    };
+  }
+  const minutes = estimateCommuteMinutes(from, to);
   return {
     minutes,
     pathSummary: `本地估算：${from} → ${to}${parkHint}，约 ${minutes} 分钟`,
@@ -268,6 +304,64 @@ async function fetchGaodeTransitRaw(
   };
 }
 
+async function fetchGaodeWalkingRaw(
+  fromGeo: GeoPoint,
+  toGeo: GeoPoint
+): Promise<{
+  minutes: number;
+  distanceKm?: number;
+  pathSummary: string;
+} | null> {
+  const apiKey = getGaodeKey();
+  if (!apiKey) return null;
+
+  const url =
+    `https://restapi.amap.com/v3/direction/walking?origin=${fromGeo.lng},${fromGeo.lat}` +
+    `&destination=${toGeo.lng},${toGeo.lat}&key=${apiKey}`;
+
+  apiCalls++;
+  const data = await withGaodeRetry(
+    async () => {
+      const res = await fetch(url);
+      return (await res.json()) as {
+        status?: string;
+        info?: string;
+        infocode?: string;
+        route?: {
+          paths?: { duration?: string | number; distance?: string | number }[];
+        };
+      };
+    },
+    (payload) =>
+      typeof payload === 'object' &&
+      payload !== null &&
+      isGaodeRateLimitError(
+        (payload as { info?: string }).info,
+        (payload as { infocode?: string }).infocode
+      )
+  );
+
+  if (isGaodeRateLimitError(data.info, data.infocode)) return null;
+  if (data.status !== '1' || !data.route?.paths?.length) return null;
+
+  const best = data.route.paths.reduce((a, b) =>
+    Number(a.duration || 0) <= Number(b.duration || 0) ? a : b
+  );
+  const seconds = Number(best.duration || 0);
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  if (!minutes || minutes > 120) return null;
+
+  const distanceKm = best.distance
+    ? Math.round(Number(best.distance) / 100) / 10
+    : undefined;
+  const distHint = distanceKm != null ? `${distanceKm} km，` : '';
+  return {
+    minutes,
+    distanceKm,
+    pathSummary: `步行：${distHint}约 ${minutes} 分钟`,
+  };
+}
+
 async function callGaodeTransit(
   fromAddress: string,
   toAddress: string,
@@ -281,15 +375,50 @@ async function callGaodeTransit(
     return localFallback(fromAddress, toAddress, parkName);
   }
 
-  const raw = await fetchGaodeTransitRaw(fromGeo, toGeo, fromAddress);
-  if (!raw) return localFallback(fromAddress, toAddress, parkName);
+  const straightKm = haversineKm(fromGeo, toGeo);
+  let walkingRaw: Awaited<ReturnType<typeof fetchGaodeWalkingRaw>> = null;
+  if (straightKm <= WALKING_PROBE_KM) {
+    walkingRaw = await fetchGaodeWalkingRaw(fromGeo, toGeo);
+  }
 
-  return {
-    minutes: raw.minutes,
-    distanceKm: raw.distanceKm,
-    pathSummary: `公交/地铁：${fromAddress} → ${toAddress}，${raw.pathSummary.replace(/^公交\/地铁：/, '')}`,
-    source: 'transit',
-  };
+  const transitRaw = await fetchGaodeTransitRaw(fromGeo, toGeo, fromAddress);
+
+  if (walkingRaw && transitRaw) {
+    if (shouldPreferWalking(walkingRaw, transitRaw, straightKm)) {
+      return {
+        minutes: walkingRaw.minutes,
+        distanceKm: walkingRaw.distanceKm,
+        pathSummary: `${fromAddress} → ${toAddress} · ${walkingRaw.pathSummary}`,
+        source: 'walking',
+      };
+    }
+    return {
+      minutes: transitRaw.minutes,
+      distanceKm: transitRaw.distanceKm,
+      pathSummary: `公交/地铁：${fromAddress} → ${toAddress}，${transitRaw.pathSummary.replace(/^公交\/地铁：/, '')}`,
+      source: 'transit',
+    };
+  }
+
+  if (walkingRaw) {
+    return {
+      minutes: walkingRaw.minutes,
+      distanceKm: walkingRaw.distanceKm,
+      pathSummary: `${fromAddress} → ${toAddress} · ${walkingRaw.pathSummary}`,
+      source: 'walking',
+    };
+  }
+
+  if (transitRaw) {
+    return {
+      minutes: transitRaw.minutes,
+      distanceKm: transitRaw.distanceKm,
+      pathSummary: `公交/地铁：${fromAddress} → ${toAddress}，${transitRaw.pathSummary.replace(/^公交\/地铁：/, '')}`,
+      source: 'transit',
+    };
+  }
+
+  return localFallback(fromAddress, toAddress, parkName);
 }
 
 async function callDeepSeek(
@@ -383,7 +512,12 @@ export async function estimateRouteWithMode(
   if (mode === 'transit') {
     const diskKey = legCacheKey(fromAddress, toAddress);
     const disk = getTransitFromDisk(diskKey);
-    if (disk) {
+    const walkLocal = estimateSameRoadWalkMinutes(fromAddress, toAddress);
+    const staleTransit =
+      disk?.source === 'transit' &&
+      walkLocal != null &&
+      disk.minutes > walkLocal + 3;
+    if (disk && !staleTransit) {
       diskHits++;
       routeCache.set(key, disk);
       return disk;
@@ -399,7 +533,7 @@ export async function estimateRouteWithMode(
   )
     .then((result) => {
       routeCache.set(key, result);
-      if (result.source === 'transit') {
+      if (result.source === 'transit' || result.source === 'walking') {
         saveTransitToDisk(legCacheKey(fromAddress, toAddress), result);
       }
       pending.delete(key);
@@ -545,16 +679,19 @@ export function resolveDistanceSource(commuteMatrix?: CommuteMatrix): DistanceSo
   if (!commuteMatrix) return 'local';
   let hasDeepseek = false;
   let hasTransit = false;
+  let hasWalking = false;
   let hasLocal = false;
   for (const row of commuteMatrix) {
     for (const cell of row) {
       if (cell.source === 'deepseek') hasDeepseek = true;
       if (cell.source === 'transit') hasTransit = true;
+      if (cell.source === 'walking') hasWalking = true;
       if (cell.source === 'local') hasLocal = true;
     }
   }
-  const kinds = [hasDeepseek, hasTransit, hasLocal].filter(Boolean).length;
+  const kinds = [hasDeepseek, hasTransit, hasWalking, hasLocal].filter(Boolean).length;
   if (kinds > 1) return 'mixed';
+  if (hasWalking) return 'walking';
   if (hasTransit) return 'transit';
   if (hasDeepseek) return 'deepseek';
   return 'local';

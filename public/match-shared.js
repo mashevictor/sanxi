@@ -4,7 +4,7 @@ const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
 /** 与 integrated-cache.ts INTEGRATED_DATA_VERSION 保持一致，用于静态 JSON 缓存穿透 */
-const STATIC_CACHE_BUST = '20260624-park-align-66';
+const STATIC_CACHE_BUST = '20260624-walking-67';
 
 function getSampleDataCacheUrl() {
   return `/cache/sample-data.json?v=${STATIC_CACHE_BUST}`;
@@ -12,6 +12,18 @@ function getSampleDataCacheUrl() {
 
 function getFullMatchCacheUrl() {
   return `/cache/full-match.json?v=${STATIC_CACHE_BUST}`;
+}
+
+/** 通勤路线来源标签（公交 / 步行 / 本地） */
+function formatCommuteSource(source) {
+  if (source === 'walking') return '步行';
+  if (source === 'transit') return '公交';
+  if (source === 'deepseek') return 'AI';
+  return '本地';
+}
+
+function isWalkingRoute(route) {
+  return route?.source === 'walking' || /^步行/.test(route?.pathSummary || '');
 }
 
 let _sampleDataPrefetch = null;

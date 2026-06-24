@@ -13,7 +13,7 @@ const EXCEL_FILES = [
 let cached: IntegratedData | null = null;
 let cachedSignature = '';
 
-const INTEGRATED_DATA_VERSION = '20260624-park-align-66';
+const INTEGRATED_DATA_VERSION = '20260624-walking-67';
 
 export function getIntegratedDataVersion(): string {
   return INTEGRATED_DATA_VERSION;

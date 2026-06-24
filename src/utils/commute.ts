@@ -35,7 +35,7 @@ export function getCommuteOriginForNextStop(
 export interface ChainedRouteEstimate {
   minutes: number;
   pathSummary: string;
-  source: 'deepseek' | 'local' | 'transit';
+  source: 'deepseek' | 'local' | 'transit' | 'walking';
   fromAddress: string;
 }
 
@@ -57,7 +57,7 @@ export function buildChainedRouteEstimate(
   employee: Employee,
   assignedBefore: Customer[],
   next: Customer,
-  departureLegCell?: { minutes: number; pathSummary?: string; source?: 'deepseek' | 'local' | 'transit' }
+  departureLegCell?: { minutes: number; pathSummary?: string; source?: 'deepseek' | 'local' | 'transit' | 'walking' }
 ): ChainedRouteEstimate {
   const from = getCommuteOriginForNextStop(employee, assignedBefore, next);
   if (from === employee.departureAddress && departureLegCell && departureLegCell.minutes > 0) {
@@ -136,8 +136,32 @@ function addressDistanceFactor(fromAddress: string, toAddress: string): number {
   return 1 - prefix / Math.max(a.length, b.length, 1);
 }
 
+/** 同路近距离步行估算（无 API 时，如 690 号 → 699 号） */
+export function estimateSameRoadWalkMinutes(fromAddress: string, toAddress: string): number | null {
+  const roadRe = /([\u4e00-\u9fa5]{2,}(?:路|公路|大道|街|巷|弄))/;
+  const fromRoad = fromAddress.match(roadRe)?.[1];
+  if (!fromRoad || !toAddress.includes(fromRoad)) return null;
+
+  const fromDistrict = extractDistrict(fromAddress);
+  const toDistrict = extractDistrict(toAddress);
+  if (fromDistrict !== '未知' && toDistrict !== '未知' && fromDistrict !== toDistrict) {
+    return null;
+  }
+
+  const numFrom = fromAddress.match(/(\d+)号/)?.[1];
+  const numTo = toAddress.match(/(\d+)号/)?.[1];
+  if (numFrom && numTo) {
+    const diff = Math.abs(Number(numFrom) - Number(numTo));
+    if (diff <= 800) return Math.max(3, Math.min(12, Math.round(diff / 100 + 3)));
+  }
+  return 8;
+}
+
 /** 估算两点间通勤时间（分钟） */
 export function estimateCommuteMinutes(fromAddress: string, toAddress: string): number {
+  const walk = estimateSameRoadWalkMinutes(fromAddress, toAddress);
+  if (walk != null) return walk;
+
   if (ADDRESS_COORDS[fromAddress] && ADDRESS_COORDS[toAddress]) {
     const [lat1, lng1] = ADDRESS_COORDS[fromAddress];
     const [lat2, lng2] = ADDRESS_COORDS[toAddress];

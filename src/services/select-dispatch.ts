@@ -19,7 +19,7 @@ import {
   LockedPairing,
   PairingOptions,
 } from './pairing-optimizer';
-import { CommuteMode, getDefaultCommuteMode } from './distance-service';
+import { CommuteMode, DistanceSource, getDefaultCommuteMode, RouteSource } from './distance-service';
 import { validateEmployeePoolNames } from '../utils/employee-names';
 
 export interface EmployeeSchedule {
@@ -55,7 +55,7 @@ export interface SelectDispatchPairing {
   score: number;
   commuteMinutes: number;
   locked?: boolean;
-  route?: { minutes: number; distanceKm?: number; pathSummary: string; source: 'deepseek' | 'local' | 'transit' };
+  route?: { minutes: number; distanceKm?: number; pathSummary: string; source: RouteSource };
   rules: { rule: string; passed: boolean; message: string }[];
 }
 
@@ -63,7 +63,7 @@ export interface SelectDispatchResponse {
   success: boolean;
   message: string;
   maxCommuteMinutes: number;
-  distanceSource?: 'deepseek' | 'local' | 'transit' | 'mixed';
+  distanceSource?: DistanceSource;
   stats: {
     selected: number;
     matched: number;
@@ -84,12 +84,12 @@ export interface SelectDispatchResponse {
       employeeName: string;
       departureAddress: string;
       failedRules: { rule: string; message: string }[];
-      route?: { minutes: number; distanceKm?: number; pathSummary: string; source: 'deepseek' | 'local' | 'transit' };
+      route?: { minutes: number; distanceKm?: number; pathSummary: string; source: RouteSource };
     };
     conflictWith?: {
       employeeName: string;
       takenByCompany: string;
-      route?: { minutes: number; distanceKm?: number; pathSummary: string; source: 'deepseek' | 'local' | 'transit' };
+      route?: { minutes: number; distanceKm?: number; pathSummary: string; source: RouteSource };
     };
   }[];
   employeeSchedules: EmployeeSchedule[];

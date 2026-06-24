@@ -9,7 +9,7 @@ interface DiskRoute {
   minutes: number;
   distanceKm?: number;
   pathSummary: string;
-  source: 'transit';
+  source: 'transit' | 'walking';
   savedAt: string;
 }
 
@@ -63,7 +63,7 @@ export function getTransitFromDisk(key: string): {
   minutes: number;
   distanceKm?: number;
   pathSummary: string;
-  source: 'transit';
+  source: 'transit' | 'walking';
 } | undefined {
   loadTransitDiskCache();
   const hit = store[key];
@@ -84,7 +84,7 @@ export function saveTransitToDisk(
   key: string,
   route: { minutes: number; distanceKm?: number; pathSummary: string; source: string }
 ): void {
-  if (route.source !== 'transit') return;
+  if (route.source !== 'transit' && route.source !== 'walking') return;
   loadTransitDiskCache();
   store[key] = {
     minutes: route.minutes,
@@ -111,7 +111,7 @@ export function hydrateLegCacheFromDisk(legCache: Map<string, {
   minutes: number;
   distanceKm?: number;
   pathSummary: string;
-  source: 'deepseek' | 'local' | 'transit';
+  source: 'deepseek' | 'local' | 'transit' | 'walking';
 }>): number {
   loadTransitDiskCache();
   let added = 0;
