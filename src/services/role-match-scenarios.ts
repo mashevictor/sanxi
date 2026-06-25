@@ -113,6 +113,15 @@ export function buildRoleScenarioDefs(data: IntegratedData): RoleScenarioDef[] {
       expectUnmatched: () => 0,
     },
     {
+      id: 'back-all-manual15',
+      name: '后道 · 全量41家+15人池',
+      description: '全部回访公司 + 截图15人后道员工池（常用组合）',
+      roleCategory: '后道',
+      customerIds: (d) => idsOf(d, (c) => c.customerType === CustomerType.FOLLOW_UP),
+      employeePoolIds: () => MANUAL_JINSHAN_BACK_POOL,
+      expectMatched: (d, ids) => ids.length,
+    },
+    {
       id: 'back-jinshan-morning',
       name: '后道 · 金山上午15家',
       description: '金山回访仅上午时段15家 + 15人池',

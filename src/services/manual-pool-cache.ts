@@ -18,6 +18,7 @@ import {
   findNearestPresetMeta,
   presetCacheFilename,
 } from './manual-pool-presets';
+import { MANUAL_JINSHAN_BACK_POOL } from './role-match-scenarios';
 
 export type ManualPoolKind = 'back' | 'front';
 
@@ -356,6 +357,7 @@ export function getManualPoolMeta(data: IntegratedData): {
     employeePoolIds: number[];
     cacheUrl: string;
   }[];
+  manual15: { employeePoolIds: number[]; label: string };
 } {
   const ver = getIntegratedDataVersion();
   const back = buildManualPoolIds(data, 'back');
@@ -364,6 +366,9 @@ export function getManualPoolMeta(data: IntegratedData): {
     ...p,
     cacheUrl: `/cache/${presetCacheFilename(p.id)}?v=${ver}`,
   }));
+  const manual15Ids = MANUAL_JINSHAN_BACK_POOL.filter((id) =>
+    data.employees.some((e) => e.id === id)
+  );
   return {
     back: {
       ...back,
@@ -374,5 +379,9 @@ export function getManualPoolMeta(data: IntegratedData): {
       cacheUrl: `/cache/manual-pool-front.json?v=${ver}`,
     },
     presets,
+    manual15: {
+      employeePoolIds: manual15Ids,
+      label: '常用15人后道员工池',
+    },
   };
 }

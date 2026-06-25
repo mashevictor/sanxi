@@ -46,6 +46,11 @@ function buildScenarios(): Scenario[] {
   return [
     { name: '后道全量41+48', customerIds: back.customerIds, employeePoolIds: back.employeePoolIds },
     {
+      name: '后道全量41+15人',
+      customerIds: back.customerIds,
+      employeePoolIds: basePool,
+    },
+    {
       name: '金山32+15人(截图池)',
       customerIds: jinshan,
       employeePoolIds: basePool,

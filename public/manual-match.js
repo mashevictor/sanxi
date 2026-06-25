@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('manual-match-btn').addEventListener('click', onManualMatch);
   document.getElementById('manual-clear-btn').addEventListener('click', clearManualSelection);
   document.getElementById('manual-pool-back-btn')?.addEventListener('click', () => selectManualPool('back'));
+  document.getElementById('manual-pool-back15-btn')?.addEventListener('click', () => selectManualPool('back15'));
   document.getElementById('manual-pool-front-btn')?.addEventListener('click', () => selectManualPool('front'));
   document.getElementById('manual-emp-info-btn').addEventListener('click', () => {
     const ids = Array.from(manualSelectedEmployees);
@@ -177,12 +178,35 @@ function selectManualPool(kind) {
     allCompanies.filter(isBackCompany).forEach((c) => manualSelectedCompanies.add(c.id));
     dedupeEmployeeIdsByName(allEmployees.filter(isBackEmployee)).forEach((id) => manualSelectedEmployees.add(id));
     showToast(`已选后道全量：${manualSelectedCompanies.size} 家公司 · ${manualSelectedEmployees.size} 名员工`);
+  } else if (kind === 'back15') {
+    allCompanies.filter(isBackCompany).forEach((c) => manualSelectedCompanies.add(c.id));
+    const ids = manualPoolMeta?.manual15?.employeePoolIds || [];
+    ids.forEach((id) => manualSelectedEmployees.add(id));
+    showToast(`已选后道 ${manualSelectedCompanies.size} 家 · 常用15人池（可秒开匹配）`);
   } else {
     allCompanies.filter(isFrontCompany).forEach((c) => manualSelectedCompanies.add(c.id));
     dedupeEmployeeIdsByName(allEmployees.filter(isFrontEmployee)).forEach((id) => manualSelectedEmployees.add(id));
     showToast(`已选前道全量：${manualSelectedCompanies.size} 家公司 · ${manualSelectedEmployees.size} 名员工`);
   }
   renderManualTables();
+}
+
+function isManual15Pool(employeePoolIds) {
+  const ref = manualPoolMeta?.manual15?.employeePoolIds || [];
+  return sameIdSet(normalizeIdList(employeePoolIds), ref);
+}
+
+function wouldLikelySlowManualMatch(customerIds, employeePoolIds) {
+  if (!employeePoolIds.length || customerIds.length < 25) return false;
+  if (isManual15Pool(employeePoolIds)) {
+    const preset = manualPoolMeta?.presets?.find((p) => p.id === 'back-all-manual15');
+    if (preset && sameIdSet(normalizeIdList(customerIds), preset.customerIds)) return false;
+  }
+  const backCount = customerIds.filter((id) => {
+    const c = allCompanies.find((x) => x.id === id);
+    return c && isBackCompany(c);
+  }).length;
+  return backCount >= 30 && employeePoolIds.length <= 18 && !isManual15Pool(employeePoolIds);
 }
 
 async function tryManualPoolCacheHit(customerIds, employeePoolIds) {
@@ -945,6 +969,8 @@ async function onManualMatch() {
   if (cachedHit?._partial) {
     body.lockedPairings = cachedHit.lockedPairings;
     body.matchOnlyCustomerIds = cachedHit.rematchCustomerIds;
+  } else if (wouldLikelySlowManualMatch(customerIds, employeePoolIds)) {
+    showToast('当前15人非「常用15人池」，将实时算路较慢；可点上方「后道+15人」秒开');
   }
 
   try {

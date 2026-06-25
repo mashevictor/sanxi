@@ -4,7 +4,7 @@ const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
 /** 与 integrated-cache.ts INTEGRATED_DATA_VERSION 保持一致，用于静态 JSON 缓存穿透 */
-const STATIC_CACHE_BUST = '20260625-manual-preset-75';
+const STATIC_CACHE_BUST = '20260625-manual-preset-76';
 
 function getSampleDataCacheUrl() {
   return `/cache/sample-data.json?v=${STATIC_CACHE_BUST}`;
@@ -111,17 +111,19 @@ function symmetricPoolDiffSize(a, b) {
   return n;
 }
 
-function findNearestManualPreset(customerIds, employeePoolIds, presets, maxPoolDiff = 6) {
+function findNearestManualPreset(customerIds, employeePoolIds, presets, maxPoolDiff = 6, maxCustomerDiff = 2) {
   const cids = normalizeIdList(customerIds);
   const pids = normalizeIdList(employeePoolIds);
   let best = null;
-  let bestDiff = Infinity;
+  let bestScore = Infinity;
   for (const p of presets || []) {
-    if (!sameIdSet(cids, p.customerIds)) continue;
-    const diff = symmetricPoolDiffSize(pids, p.employeePoolIds);
-    if (diff === 0 || diff > maxPoolDiff) continue;
-    if (diff < bestDiff) {
-      bestDiff = diff;
+    const coDiff = symmetricPoolDiffSize(cids, p.customerIds);
+    const empDiff = symmetricPoolDiffSize(pids, p.employeePoolIds);
+    if (empDiff > maxPoolDiff || coDiff > maxCustomerDiff) continue;
+    if (empDiff === 0 && coDiff === 0) continue;
+    const score = empDiff * 10 + coDiff;
+    if (score < bestScore) {
+      bestScore = score;
       best = p;
     }
   }

@@ -42,16 +42,19 @@ export function findNearestPresetMeta(
   customerIds: number[],
   employeePoolIds: number[],
   presets: ManualPoolPresetMeta[],
-  maxPoolDiff = 6
+  maxPoolDiff = 6,
+  maxCustomerDiff = 2
 ): ManualPoolPresetMeta | null {
   let best: ManualPoolPresetMeta | null = null;
-  let bestDiff = Infinity;
+  let bestScore = Infinity;
   for (const p of presets) {
-    if (!sameIdSet(customerIds, p.customerIds)) continue;
-    const diff = symmetricPoolDiffSize(employeePoolIds, p.employeePoolIds);
-    if (diff === 0 || diff > maxPoolDiff) continue;
-    if (diff < bestDiff) {
-      bestDiff = diff;
+    const coDiff = symmetricPoolDiffSize(customerIds, p.customerIds);
+    const empDiff = symmetricPoolDiffSize(employeePoolIds, p.employeePoolIds);
+    if (empDiff > maxPoolDiff || coDiff > maxCustomerDiff) continue;
+    if (empDiff === 0 && coDiff === 0) continue;
+    const score = empDiff * 10 + coDiff;
+    if (score < bestScore) {
+      bestScore = score;
       best = p;
     }
   }
