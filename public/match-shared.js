@@ -102,6 +102,32 @@ function prefetchAllManualPoolPresetsFromMeta(meta) {
   return Promise.all(presets.map((p) => prefetchManualPoolPresetCache(p.id)));
 }
 
+function symmetricPoolDiffSize(a, b) {
+  const sa = new Set(normalizeIdList(a));
+  const sb = new Set(normalizeIdList(b));
+  let n = 0;
+  for (const id of sa) if (!sb.has(id)) n++;
+  for (const id of sb) if (!sa.has(id)) n++;
+  return n;
+}
+
+function findNearestManualPreset(customerIds, employeePoolIds, presets, maxPoolDiff = 6) {
+  const cids = normalizeIdList(customerIds);
+  const pids = normalizeIdList(employeePoolIds);
+  let best = null;
+  let bestDiff = Infinity;
+  for (const p of presets || []) {
+    if (!sameIdSet(cids, p.customerIds)) continue;
+    const diff = symmetricPoolDiffSize(pids, p.employeePoolIds);
+    if (diff === 0 || diff > maxPoolDiff) continue;
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = p;
+    }
+  }
+  return best;
+}
+
 function sameIdSet(a, b) {
   const sa = [...a].sort((x, y) => x - y);
   const sb = [...b].sort((x, y) => x - y);

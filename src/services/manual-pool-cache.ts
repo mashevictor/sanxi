@@ -15,6 +15,7 @@ import { getIntegratedDataVersion } from './integrated-cache';
 import { LockedPairing } from './pairing-optimizer';
 import {
   buildManualPoolPresetMetas,
+  findNearestPresetMeta,
   presetCacheFilename,
 } from './manual-pool-presets';
 
@@ -262,6 +263,30 @@ export function sliceManualPoolDispatch(
   return { complete: false, lockedPairings, rematchCustomerIds };
 }
 
+function trySlicePoolHit(
+  dispatch: SelectDispatchResponse,
+  cids: number[],
+  pids: number[],
+  poolKind: ManualPoolKind,
+  maxRematchRatio = 0.5
+): ManualPoolHit | null {
+  const sliced = sliceManualPoolDispatch(dispatch, cids, pids);
+  if (sliced.complete) {
+    return { mode: 'full', dispatch: sliced.dispatch, poolKind };
+  }
+  if (sliced.lockedPairings.length > 0) {
+    const ratio = sliced.rematchCustomerIds.length / Math.max(cids.length, 1);
+    if (ratio > maxRematchRatio) return null;
+    return {
+      mode: 'partial',
+      poolKind,
+      lockedPairings: sliced.lockedPairings,
+      rematchCustomerIds: sliced.rematchCustomerIds,
+    };
+  }
+  return null;
+}
+
 export function tryGetManualPoolDispatch(
   dataDir: string,
   customerIds: unknown[],
@@ -279,6 +304,16 @@ export function tryGetManualPoolDispatch(
     if (sameIdSet(cids, file.customerIds) && sameIdSet(pids, file.employeePoolIds)) {
       const kind: ManualPoolKind = meta.id.startsWith('front') ? 'front' : 'back';
       return { mode: 'full', dispatch: file.dispatch, poolKind: kind };
+    }
+  }
+
+  const nearest = findNearestPresetMeta(cids, pids, presetMetas);
+  if (nearest) {
+    const file = loadManualPoolPresetFile(dataDir, nearest.id);
+    if (file && file.dataVersion === getIntegratedDataVersion()) {
+      const kind: ManualPoolKind = nearest.id.startsWith('front') ? 'front' : 'back';
+      const hit = trySlicePoolHit(file.dispatch, cids, pids, kind, 0.55);
+      if (hit) return hit;
     }
   }
 
@@ -303,12 +338,8 @@ export function tryGetManualPoolDispatch(
         return { mode: 'full', dispatch: sliced.dispatch, poolKind: kind };
       }
       if (sliced.lockedPairings.length > 0) {
-        return {
-          mode: 'partial',
-          poolKind: kind,
-          lockedPairings: sliced.lockedPairings,
-          rematchCustomerIds: sliced.rematchCustomerIds,
-        };
+        const hit = trySlicePoolHit(file.dispatch, cids, pids, kind, 0.35);
+        if (hit?.mode === 'partial') return hit;
       }
     }
   }

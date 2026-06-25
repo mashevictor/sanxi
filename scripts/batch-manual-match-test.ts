@@ -25,6 +25,18 @@ function buildScenarios(): Scenario[] {
     )
     .map((c) => c.id);
 
+  const basePool = MANUAL_JINSHAN_BACK_POOL.filter((id) =>
+    data.employees.some((e) => e.id === id)
+  );
+  const swap1 = [...basePool];
+  swap1[0] = back.employeePoolIds.find((id) => !basePool.includes(id)) ?? swap1[0];
+  const swap2 = [...basePool];
+  const extras = back.employeePoolIds.filter((id) => !basePool.includes(id));
+  if (extras.length >= 2) {
+    swap2[0] = extras[0];
+    swap2[1] = extras[1];
+  }
+
   const presets = buildManualPoolPresetMetas(data).map((p) => ({
     name: `预设:${p.label}`,
     customerIds: p.customerIds,
@@ -36,9 +48,17 @@ function buildScenarios(): Scenario[] {
     {
       name: '金山32+15人(截图池)',
       customerIds: jinshan,
-      employeePoolIds: MANUAL_JINSHAN_BACK_POOL.filter((id) =>
-        data.employees.some((e) => e.id === id)
-      ),
+      employeePoolIds: basePool,
+    },
+    {
+      name: '金山32+换1员工',
+      customerIds: jinshan,
+      employeePoolIds: swap1,
+    },
+    {
+      name: '金山32+换2员工',
+      customerIds: jinshan,
+      employeePoolIds: swap2,
     },
     {
       name: '金山32无员工池',
