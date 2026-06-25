@@ -13,13 +13,18 @@ import { IntegratedData } from '../data/integrated-data';
 import { SelectDispatchResponse, SelectDispatchPairing } from './select-dispatch';
 import { getIntegratedDataVersion } from './integrated-cache';
 import { LockedPairing } from './pairing-optimizer';
+import {
+  buildManualPoolPresetMetas,
+  presetCacheFilename,
+} from './manual-pool-presets';
 
 export type ManualPoolKind = 'back' | 'front';
 
 export interface ManualPoolCacheFile {
   version: 1;
   dataVersion: string;
-  poolKind: ManualPoolKind;
+  poolKind?: ManualPoolKind;
+  presetId?: string;
   poolLabel: string;
   generatedAt: string;
   customerIds: number[];
@@ -42,19 +47,49 @@ const CACHE_FILES: Record<ManualPoolKind, string> = {
 };
 
 let loaded: Partial<Record<ManualPoolKind, ManualPoolCacheFile>> = {};
+const loadedPresets: Map<string, ManualPoolCacheFile> = new Map();
 
 function cachePath(dataDir: string, kind: ManualPoolKind): string {
   return path.join(dataDir, 'public', 'cache', CACHE_FILES[kind]);
 }
 
+function presetCachePath(dataDir: string, presetId: string): string {
+  return path.join(dataDir, 'public', 'cache', presetCacheFilename(presetId));
+}
+
 export function resetManualPoolCacheMemory(): void {
   loaded = {};
+  loadedPresets.clear();
+}
+
+export function loadManualPoolPresetFile(
+  dataDir: string,
+  presetId: string
+): ManualPoolCacheFile | null {
+  const ver = getIntegratedDataVersion();
+  const mem = loadedPresets.get(presetId);
+  if (mem && mem.dataVersion === ver) return mem;
+  if (mem && mem.dataVersion !== ver) loadedPresets.delete(presetId);
+
+  const file = presetCachePath(dataDir, presetId);
+  if (!fs.existsSync(file)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as ManualPoolCacheFile;
+    loadedPresets.set(presetId, parsed);
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 export function loadManualPoolCacheFile(
   dataDir: string,
   kind: ManualPoolKind
 ): ManualPoolCacheFile | null {
+  const ver = getIntegratedDataVersion();
+  if (loaded[kind] && loaded[kind]!.dataVersion !== ver) {
+    delete loaded[kind];
+  }
   if (loaded[kind]) return loaded[kind]!;
   const file = cachePath(dataDir, kind);
   if (!fs.existsSync(file)) return null;
@@ -74,7 +109,11 @@ export function loadAllManualPoolCaches(dataDir: string): ManualPoolCacheFile[] 
 }
 
 function sortedNums(ids: number[]): number[] {
-  return [...ids].sort((a, b) => a - b);
+  return normalizeIdList(ids).sort((a, b) => a - b);
+}
+
+export function normalizeIdList(ids: unknown[]): number[] {
+  return (ids || []).map((id) => Number(id)).filter((id) => !Number.isNaN(id));
 }
 
 function sameIdSet(a: number[], b: number[]): boolean {
@@ -84,9 +123,9 @@ function sameIdSet(a: number[], b: number[]): boolean {
   return sa.every((v, i) => v === sb[i]);
 }
 
-export function isIdSubset(sub: number[], sup: number[]): boolean {
-  const set = new Set(sup);
-  return sub.every((id) => set.has(id));
+export function isIdSubset(sub: unknown[], sup: unknown[]): boolean {
+  const set = new Set(normalizeIdList(sup));
+  return normalizeIdList(sub).every((id) => set.has(id));
 }
 
 /** 员工池去同名（与手动页「全选员工」一致） */
@@ -225,10 +264,23 @@ export function sliceManualPoolDispatch(
 
 export function tryGetManualPoolDispatch(
   dataDir: string,
-  customerIds: number[],
-  employeePoolIds?: number[]
+  customerIds: unknown[],
+  employeePoolIds?: unknown[],
+  integratedData?: IntegratedData
 ): ManualPoolHit | null {
-  if (!employeePoolIds?.length || !customerIds.length) return null;
+  const cids = normalizeIdList(customerIds);
+  const pids = normalizeIdList(employeePoolIds || []);
+  if (!pids.length || !cids.length) return null;
+
+  const presetMetas = integratedData ? buildManualPoolPresetMetas(integratedData) : [];
+  for (const meta of presetMetas) {
+    const file = loadManualPoolPresetFile(dataDir, meta.id);
+    if (!file || file.dataVersion !== getIntegratedDataVersion()) continue;
+    if (sameIdSet(cids, file.customerIds) && sameIdSet(pids, file.employeePoolIds)) {
+      const kind: ManualPoolKind = meta.id.startsWith('front') ? 'front' : 'back';
+      return { mode: 'full', dispatch: file.dispatch, poolKind: kind };
+    }
+  }
 
   for (const kind of ['back', 'front'] as ManualPoolKind[]) {
     const file = loadManualPoolCacheFile(dataDir, kind);
@@ -236,17 +288,17 @@ export function tryGetManualPoolDispatch(
     if (file.dataVersion !== getIntegratedDataVersion()) continue;
 
     if (
-      sameIdSet(customerIds, file.customerIds) &&
-      sameIdSet(employeePoolIds, file.employeePoolIds)
+      sameIdSet(cids, file.customerIds) &&
+      sameIdSet(pids, file.employeePoolIds)
     ) {
       return { mode: 'full', dispatch: file.dispatch, poolKind: kind };
     }
 
     if (
-      isIdSubset(customerIds, file.customerIds) &&
-      isIdSubset(employeePoolIds, file.employeePoolIds)
+      isIdSubset(cids, file.customerIds) &&
+      isIdSubset(pids, file.employeePoolIds)
     ) {
-      const sliced = sliceManualPoolDispatch(file.dispatch, customerIds, employeePoolIds);
+      const sliced = sliceManualPoolDispatch(file.dispatch, cids, pids);
       if (sliced.complete) {
         return { mode: 'full', dispatch: sliced.dispatch, poolKind: kind };
       }
@@ -266,10 +318,21 @@ export function tryGetManualPoolDispatch(
 export function getManualPoolMeta(data: IntegratedData): {
   back: { customerIds: number[]; employeePoolIds: number[]; cacheUrl: string; poolLabel: string };
   front: { customerIds: number[]; employeePoolIds: number[]; cacheUrl: string; poolLabel: string };
+  presets: {
+    id: string;
+    label: string;
+    customerIds: number[];
+    employeePoolIds: number[];
+    cacheUrl: string;
+  }[];
 } {
   const ver = getIntegratedDataVersion();
   const back = buildManualPoolIds(data, 'back');
   const front = buildManualPoolIds(data, 'front');
+  const presets = buildManualPoolPresetMetas(data).map((p) => ({
+    ...p,
+    cacheUrl: `/cache/${presetCacheFilename(p.id)}?v=${ver}`,
+  }));
   return {
     back: {
       ...back,
@@ -279,5 +342,6 @@ export function getManualPoolMeta(data: IntegratedData): {
       ...front,
       cacheUrl: `/cache/manual-pool-front.json?v=${ver}`,
     },
+    presets,
   };
 }

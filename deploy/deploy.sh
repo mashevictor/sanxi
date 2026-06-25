@@ -67,6 +67,9 @@ else
 fi
 pm2 save
 
+echo "==> 生产冒烟测试..."
+npm run test:prod || echo "!! 冒烟测试未全通过，请检查 pm2 logs"
+
 # 提示配置开机自启（仅首次需要手动执行 pm2 startup 输出的命令）
 if ! systemctl is-enabled pm2-root &>/dev/null 2>&1; then
   echo "    首次部署请执行: pm2 startup  （然后运行它输出的 sudo 命令）"

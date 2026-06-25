@@ -35,6 +35,13 @@ async function ensureManualSession() {
 
 document.addEventListener('DOMContentLoaded', () => {
   showPageLoader('加载公司与员工列表…', '正在读取缓存…');
+  prefetchAllManualPoolCaches();
+  prefetchBootstrap().then((boot) => {
+    if (boot?.manualPoolMeta) {
+      manualPoolMeta = boot.manualPoolMeta;
+      prefetchAllManualPoolPresetsFromMeta(boot.manualPoolMeta);
+    }
+  });
   prefetchSampleData().then((cached) => {
     if (cached?.companies?.length) {
       allCompanies = cached.companies;
@@ -179,7 +186,24 @@ function selectManualPool(kind) {
 }
 
 async function tryManualPoolCacheHit(customerIds, employeePoolIds) {
-  if (!employeePoolIds.length || !manualPoolMeta) return null;
+  if (!employeePoolIds.length) return null;
+  const cids = normalizeIdList(customerIds);
+  const pids = normalizeIdList(employeePoolIds);
+
+  for (const preset of manualPoolMeta?.presets || []) {
+    if (!sameIdSet(cids, preset.customerIds) || !sameIdSet(pids, preset.employeePoolIds)) continue;
+    const cached = await prefetchManualPoolPresetCache(preset.id);
+    if (!cached?.dispatch || cached.dataVersion !== dataVersion) continue;
+    return {
+      ...cached.dispatch,
+      _cached: true,
+      _poolKind: preset.id.startsWith('front') ? 'front' : 'back',
+      _cacheMode: 'preset',
+      _presetId: preset.id,
+    };
+  }
+
+  if (!manualPoolMeta) return null;
   for (const kind of ['back', 'front']) {
     const pool = manualPoolMeta[kind];
     if (!pool) continue;
@@ -201,6 +225,8 @@ async function tryManualPoolCacheHit(customerIds, employeePoolIds) {
       return { ...sliced.dispatch, _cached: true, _poolKind: kind, _cacheMode: 'slice' };
     }
     if (sliced.lockedPairings.length) {
+      const rematchRatio = sliced.rematchCustomerIds.length / Math.max(cids.length, 1);
+      if (rematchRatio > 0.35) return null;
       return {
         _partial: true,
         _poolKind: kind,
@@ -869,7 +895,11 @@ async function onManualMatch() {
     updateManualStats();
     persistState();
     scrollToManualResults();
-    const modeLabel = cachedHit._cacheMode === 'slice' ? '缓存切片' : '缓存秒开';
+    const modeLabel = cachedHit._cacheMode === 'preset'
+      ? '预设缓存秒开'
+      : cachedHit._cacheMode === 'slice'
+        ? '缓存切片'
+        : '缓存秒开';
     showToast(`${cachedHit.message || '匹配完成'} · ${modeLabel}`);
     isMatching = false;
     btn.classList.remove('loading');
@@ -891,7 +921,7 @@ async function onManualMatch() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }, 90000);
+    }, 180000);
 
     applyMatchResult(data);
     completeMatchProgress(data.stats?.matched ?? lastMatchPairings.length, customerIds.length);

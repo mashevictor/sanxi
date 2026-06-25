@@ -95,7 +95,7 @@
     <h1>完整匹配逻辑说明</h1>
     <p class="sub">
       AI 匹配（<code>match.html</code>）与手动派单（<code>manual-match.html</code>）共用后端引擎
-      <code>findCapacitatedMatching</code> · 文档版本 2026-06-23
+      <code>findCapacitatedMatching</code> · 文档版本 20260624-ai-cache-74
     </p>
 
     <div class="nav">
@@ -110,8 +110,9 @@
       <h2>目录</h2>
       <ol class="toc">
         <li><a href="#arch">总体架构</a></li>
+        <li><a href="#cache">预计算缓存（秒开）</a></li>
         <li><a href="#data">数据层</a></li>
-        <li><a href="#rules">单条合规规则（7+1）</a></li>
+        <li><a href="#rules">单条合规规则（8+1）</a></li>
         <li><a href="#capacity">一人多单与容量</a></li>
         <li><a href="#afternoon">后道下午捆绑</a></li>
         <li><a href="#optimizer">全局优化算法</a></li>
@@ -130,18 +131,22 @@
       <h2>一、总体架构</h2>
       <div class="diagram">
         <strong>数据</strong>  Excel 存量 ─┐<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 演示 10 家 + 5 人 ─┼─→ buildIntegratedData ─→ 55 家 · 52 人<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 补位 20 人 + 员工补丁 ─┘<br><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 演示 10 家 + 5 人 ─┼─→ buildIntegratedData ─→ 55 家 · 69 人<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 补位 37 人 + 员工补丁 ─┘<br><br>
+        <strong>缓存</strong>  sample-data.json（首屏） · full-match.json（AI 全量）<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manual-pool-back/front.json（手动后道/前道全量）<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; transit-routes.json（公交/地铁磁盘缓存）<br><br>
         <strong>页面</strong>  AI 匹配 match.html ──────┐<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 手动派单 manual-match.html ─┼─→ POST /api/dispatch/select<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 手动派单 manual-match.html ─┼─→ 客户端缓存切片 或 POST /api/dispatch/select<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 服务端：full-match / manual-pool 内存命中 → 否则实时匹配<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dispatchSelectedCompanies<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ findOptimalAutoPairingAsync<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ findCapacitatedMatching<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├ matchCustomerToEmployee（规则）<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├ buildAfternoonParkPairs（下午捆绑）<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ buildCommuteMatrix（通勤，local / deepseek）
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ buildCommuteMatrix（高德 transit + 磁盘缓存）
       </div>
 
       <table>
@@ -152,14 +157,14 @@
           <tr>
             <td><span class="tag ai">AI 匹配</span></td>
             <td><code>/match.html</code></td>
-            <td>默认全员（52 人）</td>
-            <td>勾选即防抖预览、锁定已匹配、手动改派、增量重算</td>
+            <td>默认全员（69 人）</td>
+            <td>勾选即防抖预览；<strong>full-match 缓存即时切片</strong>；锁定/改派/增量重算</td>
           </tr>
           <tr>
             <td><span class="tag manual">手动派单</span></td>
             <td><code>/manual-match.html</code></td>
             <td>可选员工池或全员</td>
-            <td>勾选公司+员工池，点按钮匹配，容量提示，结果列表</td>
+            <td>后道/前道全选；<strong>manual-pool 缓存秒开</strong>；容量提示；确认匹配</td>
           </tr>
           <tr>
             <td><span class="tag legacy">Excel 上传</span></td>
@@ -171,21 +176,67 @@
       </table>
     </section>
 
+    <section id="cache">
+      <h2>二、预计算缓存（秒开）</h2>
+      <p>生成脚本在部署时运行；前端优先读静态 JSON，服务端 API 同样命中内存/磁盘缓存，避免重复实时匹配。</p>
+
+      <table>
+        <thead>
+          <tr><th>缓存文件</th><th>生成命令</th><th>用途</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/cache/sample-data.json</code></td>
+            <td><code>npm run cache:showcase</code></td>
+            <td>首屏 55 公司 + 69 员工列表，秒开表格</td>
+          </tr>
+          <tr>
+            <td><code>/cache/full-match.json</code></td>
+            <td><code>npm run cache:showcase</code></td>
+            <td>AI 全量 55 家匹配结果；勾选公司<strong>客户端同步切片</strong>即时显示员工</td>
+          </tr>
+          <tr>
+            <td><code>/cache/manual-pool-back.json</code></td>
+            <td><code>npm run cache:manual-pools</code></td>
+            <td>后道全量：41 家回访 × 48 人后道员工池</td>
+          </tr>
+          <tr>
+            <td><code>/cache/manual-pool-front.json</code></td>
+            <td><code>npm run cache:manual-pools</code></td>
+            <td>前道全量：6 家首访 × 前道员工池</td>
+          </tr>
+          <tr>
+            <td><code>/cache/transit-routes.json</code></td>
+            <td>匹配时自动写入</td>
+            <td>高德公交/地铁路段磁盘缓存，串联行程复用</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>命中逻辑</h3>
+      <ul>
+        <li><strong>AI 页</strong>：<code>tryInstantFullMatchCache()</code> — 勾选公司后从已预载的 <code>full-match.json</code> 切片，<strong>不等待 session</strong> 即可显示员工</li>
+        <li><strong>手动页</strong>：<code>tryManualPoolCacheHit()</code> — 后道/前道全选或子集勾选，若 ⊆ 预计算池则客户端秒开；否则调 API，服务端 <code>tryGetManualPoolDispatch</code> 命中</li>
+        <li><strong>服务端</strong>：无 <code>employeePoolIds</code> 时走 <code>tryGetFullMatchDispatch</code>；有员工池时走 <code>tryGetManualPoolDispatch</code>（支持 exact + subset 切片）</li>
+        <li><strong>版本</strong>：<code>dataVersion</code> 与 <code>integrated-cache.ts</code> 一致，变更后须重新生成缓存</li>
+      </ul>
+    </section>
+
     <section id="data">
-      <h2>二、数据层（匹配前）</h2>
+      <h2>三、数据层（匹配前）</h2>
       <p>函数：<code>buildIntegratedData</code>（<code>src/data/integrated-data.ts</code>）</p>
       <ol>
         <li>读取 <code>data/</code> 目录 Excel：首访 / 项目 / 回访 / 员工表</li>
         <li>追加 <strong>10 家演示公司</strong> + <strong>5 名演示员工</strong>（姓名带 <code>演示-</code> 前缀，如「演示-范金山」）</li>
-        <li>追加 <strong>20 名补位员工</strong>（<code>补位-*</code>，补下午2、外埠园区容量缺口）</li>
+        <li>追加 <strong>37 名补位员工</strong>（<code>补位-*</code>，补下午2、外埠园区、出发地就近容量缺口）</li>
         <li>应用 <strong>员工补丁</strong>（<code>gap-fill-employees.ts</code>）：修正出发地、扩展时段（如金山常用 15 人补下午2）</li>
         <li><strong>校验全员姓名唯一</strong>：Excel + 演示 + 补位不能同名（<code>assertUniqueEmployeeNames</code>）</li>
       </ol>
-      <p class="meta">整合结果：约 55 家公司、52 名员工。首屏可读缓存 <code>/cache/sample-data.json</code>。</p>
+      <p class="meta">整合结果：55 家公司、69 名员工（27 Excel + 5 演示 + 37 补位）。首屏可读缓存 <code>/cache/sample-data.json</code>。</p>
     </section>
 
     <section id="rules">
-      <h2>三、单条「公司 → 员工」合规规则</h2>
+      <h2>四、单条「公司 → 员工」合规规则</h2>
       <p>核心函数：<code>matchCustomerToEmployee</code>（<code>src/services/match-rules.ts</code>）</p>
       <p>对每一对客户，在<strong>该员工当前已分配的其他单</strong>上下文下逐条判定：</p>
 
@@ -199,38 +250,42 @@
             <td><code>customer.cityId === employee.cityId</code></td>
           </tr>
           <tr>
-            <td>2</td><td>职责匹配</td><td><span class="tag core">硬约束</span></td>
+            <td>2</td><td>区域匹配</td><td><span class="tag core">硬约束</span></td>
+            <td>从<strong>客户拜访地址</strong>与<strong>员工出发地</strong>推断省份（<code>inferProvinceFromAddress</code>），须一致；<strong>禁止跨省派单</strong>（如上海员工不能接山东济南客户）</td>
+          </tr>
+          <tr>
+            <td>3</td><td>职责匹配</td><td><span class="tag core">硬约束</span></td>
             <td>首访→前道 FRONT；项目→PROJECT；回访→后道 BACK</td>
           </tr>
           <tr>
-            <td>3</td><td>时段匹配</td><td><span class="tag core">硬约束</span></td>
+            <td>4</td><td>时段匹配</td><td><span class="tag core">硬约束</span></td>
             <td>员工 <code>orderCapacity</code> 含该时段；且该时段尚未被该员工其他单占用</td>
           </tr>
           <tr>
-            <td>4</td><td>指定人</td><td><span class="tag core">硬约束</span></td>
+            <td>5</td><td>指定人</td><td><span class="tag core">硬约束</span></td>
             <td>有指定人必须派给指定人；指定人在候选池则不能派给别人</td>
           </tr>
           <tr>
-            <td>5</td><td>放弃人</td><td><span class="tag core">硬约束</span></td>
+            <td>6</td><td>放弃人</td><td><span class="tag core">硬约束</span></td>
             <td>不能派给放弃人字段中的员工</td>
           </tr>
           <tr>
-            <td>6</td><td>园区匹配</td><td><span class="tag core">硬约束</span></td>
-            <td>员工<strong>出发地</strong>能否地理覆盖客户<strong>所属园区名</strong>（<code>canDepartureServePark</code>）</td>
+            <td>7</td><td>园区匹配</td><td><span class="tag core">硬约束</span></td>
+            <td>员工<strong>出发地</strong>能否地理覆盖客户<strong>所属园区名</strong>（<code>canDepartureServePark</code>）；外埠园区（山东济南、江苏徐州等）须员工出发地在对应省</td>
           </tr>
           <tr>
-            <td>7</td><td>下午捆绑</td><td><span class="tag core">硬约束</span></td>
+            <td>8</td><td>下午捆绑</td><td><span class="tag core">硬约束</span></td>
             <td>后道：同园区下午1+下午2 须同员工（在优化器层原子处理，成功后写入规则明细）</td>
           </tr>
           <tr>
-            <td>8</td><td>Plus 匹配</td><td><span class="tag soft">软约束</span></td>
+            <td>9</td><td>Plus 匹配</td><td><span class="tag soft">软约束</span></td>
             <td>AI / 手动模式默认<strong>不要求</strong>（<code>requirePlus: false</code>）；Excel 全量模式可要求</td>
           </tr>
         </tbody>
       </table>
 
       <h3>合规判定</h3>
-      <p>AI / 手动：<strong>6 条核心规则</strong>（不含 Plus）全部通过 → <code>eligible = true</code>。</p>
+      <p>AI / 手动：<strong>7 条核心规则</strong>（城市、区域、职责、时段、指定人、放弃人、园区；不含 Plus）全部通过 → <code>eligible = true</code>。下午捆绑在优化器层单独校验。</p>
 
       <h3>得分（选优用，非硬失败）</h3>
       <div class="flow">基础分 100
@@ -241,7 +296,7 @@
     </section>
 
     <section id="capacity">
-      <h2>四、一人多单与容量模型</h2>
+      <h2>五、一人多单与容量模型</h2>
       <p>优化器维护 <code>assignedPerEmp</code>：Map&lt;员工 ID, 已接客户列表&gt;。</p>
       <ul>
         <li>同一员工最多：<strong>上午 1 单 + 下午1 1 单 + 下午2 1 单</strong>（共 3 单，须不同时段）</li>
@@ -251,7 +306,7 @@
     </section>
 
     <section id="afternoon">
-      <h2>五、后道下午捆绑</h2>
+      <h2>六、后道下午捆绑</h2>
       <p>文件：<code>afternoon-park-pairs.ts</code> + <code>pairing-optimizer.ts</code></p>
       <p><strong>业务规则</strong>：后道回访，同一<strong>园区</strong>内，下午1 与 下午2 必须派给<strong>同一名员工</strong>（该员工下午跑 2 单）。</p>
 
@@ -273,7 +328,8 @@
         <h4>配对得分（2026-06 更新：通勤最短优先）</h4>
         <p><strong>新规则（默认）</strong>：在全部合规员工中，<strong>串联通勤最短者优先</strong>；同通勤再比 <code>match.score</code>。</p>
         <p><strong>通勤时间来源</strong>：必须使用 <code>commuteMode: transit</code>（高德公交/地铁 API + 磁盘缓存）。</p>
-        <p><strong>90 分现实上限</strong>：单段串联通勤 &gt;90 分不派（除非合规候选全员超标）；60 分仍为 UI 软提示。</p>
+        <p><strong>90 分现实上限</strong>：选优时优先 ≤90 分候选；仅当<strong>全员超标</strong>才允许 &gt;90（指定人单例外）。60 分为 UI 软提示，不导致匹配失败。</p>
+        <p><strong>路线合理性</strong>：高德 API 返回多条方案时，过滤绕远线路（机场线/磁浮短途、路径距离超直线倍数等）；短途优先公交，极短距离才用步行。</p>
         <p>下午捆绑：选<strong>下午1+下午2 串联总通勤</strong>最短者；同总通勤再比 score 之和。</p>
         <p>客户/捆绑对处理顺序：指定人 → Plus 优先级 → 预约时间（与旧规则相同）。</p>
         <hr style="margin:12px 0;border:none;border-top:1px dashed #ccc" />
@@ -284,7 +340,7 @@
     </section>
 
     <section id="optimizer">
-      <h2>六、全局优化算法 findCapacitatedMatching</h2>
+      <h2>七、全局优化算法 findCapacitatedMatching</h2>
       <p>文件：<code>src/services/pairing-optimizer.ts</code></p>
 
       <div class="flow">① 处理 lockedPairings（AI 页已锁定 / 手动指定的配对，先占位）
@@ -304,38 +360,39 @@
       <h3>通勤</h3>
       <ul>
         <li><strong>串联路程</strong>：一人多单时，本段通勤 = <strong>上一站地址 → 本单地址</strong>（首单仍为出发地 → 客户）；拜访顺序为 上午 → 下午1 → 下午2</li>
-        <li>匹配选优（默认）：<strong>合规池中串联通勤最短 → 同通勤比 match.score</strong>；通勤一律来自<strong>高德公交/地铁</strong>（transit）</li>
-        <li>对比旧规则：<code>npx tsx scripts/compare-commute-priority.ts</code></li>
-        <li>默认 <code>commuteMode: 'transit'</code>：高德公交/地铁 + 磁盘缓存；无 key 时降级本地矩阵</li>
-        <li><strong>超过 60 分钟不导致匹配失败</strong>，只影响排序；UI 显示软提示</li>
+        <li>匹配选优（默认）：<strong>合规池中串联通勤最短 → 同通勤比 match.score</strong>；优先 ≤90 分候选</li>
+        <li>通勤来源：<strong>高德公交/地铁</strong>（<code>commuteMode: transit</code>）+ <code>transit-routes.json</code> 磁盘缓存；配置 <code>GAODE_API_KEY</code> 后自动启用</li>
+        <li>无高德 key 时降级本地矩阵估算；生产环境应配置 key 以保证跨省/绕远判断准确</li>
+        <li><strong>超过 60 分钟不导致匹配失败</strong>，UI 显示软提示；&gt;90 分在选优阶段尽量排除</li>
         <li>员工行程 <code>routeSegments</code> 与单条 <code>commuteMinutes</code> 均与串联逻辑一致</li>
       </ul>
     </section>
 
     <section id="ai">
-      <h2>七、AI 匹配页流程（match.html）</h2>
+      <h2>八、AI 匹配页流程（match.html）</h2>
 
-      <h3>7.1 数据加载</h3>
+      <h3>8.1 数据加载</h3>
       <ol>
-        <li>首屏读缓存 <code>sample-data.json</code>（秒开）</li>
+        <li>并行预载 <code>sample-data.json</code> + <code>full-match.json</code>（秒开列表与全量缓存）</li>
         <li>后台 <code>bootstrapIntegratedData</code> 创建 session，之后可调 API</li>
       </ol>
 
-      <h3>7.2 选公司与自动预览</h3>
+      <h3>8.2 选公司与自动预览</h3>
       <ol>
         <li>用户勾选公司 → <code>selectedCompanies</code></li>
-        <li>防抖 400ms 调用 <code>POST /api/dispatch/select</code>（员工池=全员，不传 <code>employeePoolIds</code>）</li>
+        <li><strong>优先</strong> <code>tryInstantFullMatchCache()</code>：从内存中的 full-match 缓存同步切片，右侧<strong>立即</strong>显示员工（无需等 API）</li>
+        <li>缓存未覆盖时，防抖 400ms 调用 <code>POST /api/dispatch/select</code>（员工池=全员，<code>commuteMode: transit</code>）</li>
         <li>结果写入 <code>assignmentMap</code>，渲染看板 + 员工行程 Tab</li>
       </ol>
 
-      <h3>7.3 增量匹配（锁定 + 只重算未锁定）</h3>
+      <h3>8.3 增量匹配（锁定 + 只重算未锁定）</h3>
       <p>用户手动改派某行后，该行 <code>manual: true</code>。下次预览传：</p>
       <div class="flow">{
   "sessionId": "...",
   "customerIds": [全部仍选中的公司],
   "lockedPairings": [{ "customerId": 101, "employeeId": 7 }, ...],
-  "matchOnlyCustomerIds": [103, 104, ...],  // 未锁定的公司
-  "commuteMode": "local"
+  "matchOnlyCustomerIds": [103, 104, ...],
+  "commuteMode": "transit"
 }</div>
       <ul>
         <li><code>lockedPairings</code>：已成功匹配且仍被选中的公司（含未改动的自动匹配行）</li>
@@ -343,7 +400,7 @@
         <li>若全部锁定、无待重算 → 不调 API，仅本地展示</li>
       </ul>
 
-      <h3>7.4 手动改派（单条校验）</h3>
+      <h3>8.4 手动改派（单条校验）</h3>
       <p>下拉换员工 → <code>POST /api/dispatch/validate-pair</code>，传入 <code>existingPairings</code>（其他已分配）。</p>
       <ul>
         <li>同一套 <code>matchCustomerToEmployee</code> 规则</li>
@@ -351,31 +408,32 @@
         <li>合规 → 写入 assignmentMap，触发对其余单的增量重算</li>
       </ul>
 
-      <h3>7.5 一键全量匹配</h3>
-      <p>可读预生成 <code>/cache/full-match.json</code>，或调 API（<code>fullMatch: true</code>，不传 locked）匹配 55 家。</p>
+      <h3>8.5 一键全量匹配</h3>
+      <p>优先读预生成 <code>/cache/full-match.json</code> 客户端秒开；缓存缺失时再调 API（<code>fullMatch: true</code>）匹配 55 家。服务端同样命中 full-match 内存缓存。</p>
 
-      <h3>7.6 历史</h3>
+      <h3>8.6 历史</h3>
       <p>结果存浏览器 <code>localStorage</code>（<code>dispatch-ai-history</code>），不写服务器数据库。</p>
     </section>
 
     <section id="manual">
-      <h2>八、手动派单页流程（manual-match.html）</h2>
+      <h2>九、手动派单页流程（manual-match.html）</h2>
 
-      <h3>8.1 操作</h3>
+      <h3>9.1 操作</h3>
       <ol>
-        <li>表格勾选<strong>公司</strong>（可多选）</li>
-        <li>可选勾选<strong>员工池</strong>（不选则用全员）</li>
-        <li>点击「开始匹配」→ <code>POST /api/dispatch/select</code></li>
+        <li>首屏读 <code>sample-data.json</code> 秒开公司与员工表格</li>
+        <li>可点「<strong>后道全选</strong>」/「<strong>前道全选</strong>」一键选中对应全量公司与员工池</li>
+        <li>或手动表格勾选<strong>公司</strong> + 可选<strong>员工池</strong>（不选则用全员）</li>
+        <li>点击「<strong>确认匹配</strong>」→ 优先客户端 <code>tryManualPoolCacheHit</code> 秒开，否则 <code>POST /api/dispatch/select</code></li>
       </ol>
 
       <div class="flow">{
   "sessionId": "...",
   "customerIds": [选中的公司 ID],
   "employeePoolIds": [7, 8, 9, ...],   // 可选
-  "commuteMode": "local"
+  "commuteMode": "transit"
 }</div>
 
-      <h3>8.2 前置校验</h3>
+      <h3>9.2 前置校验</h3>
       <ul>
         <li>员工池不能为空（若指定了 pool）</li>
         <li>员工池<strong>姓名不能重复</strong>（前端 + 后端双重校验）</li>
@@ -383,7 +441,7 @@
         <li>公司不能重复选择</li>
       </ul>
 
-      <h3>8.3 结果</h3>
+      <h3>9.3 结果</h3>
       <ul>
         <li>成功 / 失败列表</li>
         <li><code>employeeSchedules</code>：多单员工全天行程</li>
@@ -392,7 +450,7 @@
     </section>
 
     <section id="compare">
-      <h2>九、AI 匹配 vs 手动派单</h2>
+      <h2>十、AI 匹配 vs 手动派单</h2>
       <table>
         <thead>
           <tr><th>项</th><th>AI 匹配</th><th>手动派单</th></tr>
@@ -400,18 +458,20 @@
         <tbody>
           <tr><td>后端引擎</td><td colspan="2" style="text-align:center">相同：<code>findCapacitatedMatching</code></td></tr>
           <tr><td>员工范围</td><td>固定全员</td><td>可限定员工池</td></tr>
-          <tr><td>触发方式</td><td>勾选公司 → 防抖自动预览</td><td>点按钮才匹配</td></tr>
-          <tr><td>锁定 / 增量</td><td class="ok">支持 lockedPairings</td><td class="fail">不支持</td></tr>
+          <tr><td>触发方式</td><td>勾选公司 → 缓存即时预览 / 防抖 API</td><td>点「确认匹配」；后道/前道全选</td></tr>
+          <tr><td>预计算缓存</td><td class="ok">full-match.json 客户端切片</td><td class="ok">manual-pool-back/front 客户端 + 服务端</td></tr>
+          <tr><td>锁定 / 增量</td><td class="ok">支持 lockedPairings</td><td class="warn">缓存 partial 时可传 locked 重算余单</td></tr>
           <tr><td>手动改派</td><td class="ok">validate-pair</td><td class="fail">仅展示结果</td></tr>
           <tr><td>容量提示</td><td>—</td><td>需求时段 vs 池容量</td></tr>
           <tr><td>同名校验</td><td>数据层保证唯一</td><td>选池时禁止同名</td></tr>
-          <tr><td>超时</td><td>默认 fetch 无特殊超时</td><td>90s 超时</td></tr>
+          <tr><td>通勤模式</td><td colspan="2" style="text-align:center"><code>transit</code>（高德公交/地铁）</td></tr>
+          <tr><td>超时</td><td>默认 fetch 无特殊超时</td><td>API 90s 超时</td></tr>
         </tbody>
       </table>
     </section>
 
     <section id="api">
-      <h2>十、API 与参数</h2>
+      <h2>十一、API 与参数</h2>
 
       <h3>POST /api/dispatch/select</h3>
       <table>
@@ -425,7 +485,7 @@
           <tr><td><code>employeeIds</code></td><td>—</td><td>—</td><td>1:1 固定配对（选公司页）</td></tr>
           <tr><td><code>lockedPairings</code></td><td>✓</td><td>—</td><td>锁定不重算</td></tr>
           <tr><td><code>matchOnlyCustomerIds</code></td><td>✓</td><td>—</td><td>只重算这些 ID</td></tr>
-          <tr><td><code>commuteMode</code></td><td>local</td><td>local</td><td><code>local</code> / <code>deepseek</code></td></tr>
+          <tr><td><code>commuteMode</code></td><td>transit</td><td>transit</td><td>默认 <code>transit</code>（高德公交/地铁）；可选 <code>local</code> / <code>deepseek</code></td></tr>
         </tbody>
       </table>
 
@@ -442,7 +502,7 @@
     </section>
 
     <section id="legacy">
-      <h2>十一、Excel 上传旧引擎（另路）</h2>
+      <h2>十二、Excel 上传旧引擎（另路）</h2>
       <p><code>POST /api/dispatch</code> → <code>DispatchEngine</code>（<code>dispatch-engine.ts</code>）</p>
       <ul>
         <li><strong>不经过</strong> <code>pairing-optimizer</code></li>
@@ -454,7 +514,7 @@
     </section>
 
     <section id="example">
-      <h2>十二、完整示例：金山 32 家回访 + 15 人池</h2>
+      <h2>十三、完整示例：金山 32 家回访 + 15 人池</h2>
       <div class="example">
         <h4>输入</h4>
         <ul>
@@ -484,15 +544,15 @@ Step 4  构建 employeeSchedules
     </section>
 
     <section id="fail">
-      <h2>十三、未匹配原因类型</h2>
+      <h2>十四、未匹配原因类型</h2>
       <table>
         <thead>
           <tr><th>原因</th><th>含义</th></tr>
         </thead>
         <tbody>
           <tr>
-            <td>无合规员工（城市/职责/时段/指定人/放弃人/园区）</td>
-            <td>6 条核心规则中有不满足项</td>
+            <td>无合规员工（城市/区域/职责/时段/指定人/放弃人/园区）</td>
+            <td>7 条核心规则中有不满足项；常见：<strong>区域不匹配</strong>（跨省）、<strong>园区不匹配</strong>（出发地无法覆盖园区）</td>
           </tr>
           <tr>
             <td>下午捆绑未满足</td>
@@ -501,6 +561,10 @@ Step 4  构建 employeeSchedules
           <tr>
             <td>该时段可用员工已满</td>
             <td>有合规员工，但该时段已被其他单占满</td>
+          </tr>
+          <tr>
+            <td>串联通勤超标（&gt;90 分）</td>
+            <td>合规候选全员单程/串联 &gt;90 分钟且无指定人豁免时，可能无法派单</td>
           </tr>
           <tr>
             <td>员工池容量不足</td>
@@ -515,22 +579,27 @@ Step 4  构建 employeeSchedules
     </section>
 
     <section id="files">
-      <h2>十四、代码索引</h2>
+      <h2>十五、代码索引</h2>
       <table>
         <thead>
           <tr><th>模块</th><th>文件</th></tr>
         </thead>
         <tbody>
-          <tr><td>单条规则</td><td><code>src/services/match-rules.ts</code></td></tr>
+          <tr><td>单条规则</td><td><code>src/services/match-rules.ts</code>（含区域匹配）</td></tr>
           <tr><td>下午捆绑</td><td><code>src/services/afternoon-park-pairs.ts</code></td></tr>
           <tr><td>全局优化</td><td><code>src/services/pairing-optimizer.ts</code></td></tr>
           <tr><td>派单编排</td><td><code>src/services/select-dispatch.ts</code></td></tr>
+          <tr><td>AI 全量缓存</td><td><code>src/services/full-match-cache.ts</code></td></tr>
+          <tr><td>手动池缓存</td><td><code>src/services/manual-pool-cache.ts</code></td></tr>
+          <tr><td>高德通勤</td><td><code>src/services/distance-service.ts</code> · <code>transit-disk-cache.ts</code></td></tr>
+          <tr><td>路线合理性</td><td><code>src/services/route-reasonableness.ts</code> · <code>utils/transit-reasonable.ts</code></td></tr>
           <tr><td>单条校验</td><td><code>src/services/validate-pair.ts</code></td></tr>
           <tr><td>整合数据</td><td><code>src/data/integrated-data.ts</code></td></tr>
           <tr><td>补位 / 补丁</td><td><code>src/data/gap-fill-employees.ts</code></td></tr>
           <tr><td>园区匹配</td><td><code>src/utils/park-match.ts</code></td></tr>
-          <tr><td>通勤估算</td><td><code>src/utils/commute.ts</code></td></tr>
-          <tr><td>姓名唯一</td><td><code>src/utils/employee-names.ts</code></td></tr>
+          <tr><td>省份推断</td><td><code>src/utils/address-region.ts</code></td></tr>
+          <tr><td>串联行程</td><td><code>src/utils/commute.ts</code></td></tr>
+          <tr><td>共享前端</td><td><code>public/match-shared.js</code></td></tr>
           <tr><td>AI 页前端</td><td><code>public/match.js</code></td></tr>
           <tr><td>手动页前端</td><td><code>public/manual-match.js</code></td></tr>
           <tr><td>API 入口</td><td><code>src/server.ts</code> → <code>/api/dispatch/select</code></td></tr>
@@ -540,7 +609,7 @@ Step 4  构建 employeeSchedules
     </section>
 
     <p class="meta" style="margin-top:24px;text-align:center">
-      派单系统 · 匹配逻辑文档 · 与线上一致 · 更新 2026-06-22
+      派单系统 · 匹配逻辑文档 · 与线上一致 · 更新 2026-06-24（20260624-ai-cache-74）
     </p>
   </div>
 </body>

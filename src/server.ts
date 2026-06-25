@@ -27,6 +27,7 @@ import { lookupAdhocMatch } from './services/adhoc-match';
 import { getManualPoolMeta, tryGetManualPoolDispatch } from './services/manual-pool-cache';
 import { tryGetFullMatchDispatch } from './services/full-match-cache';
 import { getServerLegCache } from './services/server-leg-cache';
+import { warmDispatchCaches } from './services/warm-dispatch-cache';
 import { CustomerType, TimeSlot } from './types';
 
 loadEnvFile();
@@ -294,7 +295,7 @@ app.post('/api/dispatch/select', async (req, res) => {
     let selectedCustomerIds: number[];
 
     if (customerIds && Array.isArray(customerIds)) {
-      selectedCustomerIds = customerIds;
+      selectedCustomerIds = customerIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id));
     } else if (parkNames && Array.isArray(parkNames)) {
       const parkSet = new Set(parkNames as string[]);
       selectedCustomerIds = data.customers.filter((c) => parkSet.has(c.parkName)).map((c) => c.id);
@@ -308,7 +309,9 @@ app.post('/api/dispatch/select', async (req, res) => {
       return;
     }
 
-    const poolIds = Array.isArray(employeePoolIds) ? employeePoolIds : undefined;
+    const poolIds = Array.isArray(employeePoolIds)
+      ? employeePoolIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id))
+      : undefined;
     const legCache = getServerLegCache();
     const mode = resolveCommuteMode(commuteMode);
     const locked = Array.isArray(lockedPairings)
@@ -321,11 +324,13 @@ app.post('/api/dispatch/select', async (req, res) => {
       ? matchOnlyCustomerIds.map(Number)
       : undefined;
 
+    const tDispatch = Date.now();
+
     if (!poolIds?.length) {
       const fullHit = tryGetFullMatchDispatch(DATA_DIR, selectedCustomerIds, locked, matchOnly);
       if (fullHit?.mode === 'full') {
         console.log(
-          `[dispatch/select] full-match cache hit ${fullHit.dispatch.stats.matched}/${fullHit.dispatch.stats.selected}`
+          `[dispatch/select] full-match cache hit ${fullHit.dispatch.stats.matched}/${fullHit.dispatch.stats.selected} in ${Date.now() - tDispatch}ms`
         );
         res.json(fullHit.dispatch);
         return;
@@ -353,11 +358,16 @@ app.post('/api/dispatch/select', async (req, res) => {
       }
     }
 
-    const poolHit = tryGetManualPoolDispatch(DATA_DIR, selectedCustomerIds, poolIds);
+    const poolHit = tryGetManualPoolDispatch(
+      DATA_DIR,
+      selectedCustomerIds,
+      poolIds,
+      getIntegratedData(DATA_DIR)
+    );
 
     if (poolHit?.mode === 'full') {
       console.log(
-        `[dispatch/select] manual-pool cache hit (${poolHit.poolKind}) ${poolHit.dispatch.stats.matched}/${poolHit.dispatch.stats.selected}`
+        `[dispatch/select] manual-pool cache hit (${poolHit.poolKind}) ${poolHit.dispatch.stats.matched}/${poolHit.dispatch.stats.selected} in ${Date.now() - tDispatch}ms`
       );
       res.json(poolHit.dispatch);
       return;
@@ -469,6 +479,7 @@ app.post('/api/export', (req, res) => {
 });
 
 warmIntegratedCache(DATA_DIR);
+warmDispatchCaches(DATA_DIR);
 
 app.listen(PORT, () => {
   console.log(`派单系统 Web 服务已启动: http://localhost:${PORT}`);

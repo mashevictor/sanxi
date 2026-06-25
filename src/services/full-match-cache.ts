@@ -8,7 +8,7 @@ import { SelectDispatchResponse, SelectDispatchPairing } from './select-dispatch
 import { DistanceSource } from './distance-service';
 import { getIntegratedDataVersion } from './integrated-cache';
 import { LockedPairing } from './pairing-optimizer';
-import { isIdSubset } from './manual-pool-cache';
+import { isIdSubset, normalizeIdList } from './manual-pool-cache';
 
 export interface FullMatchCacheFile {
   version: 1;
@@ -43,6 +43,10 @@ export function resetFullMatchCacheMemory(): void {
 }
 
 export function loadFullMatchCacheFile(dataDir: string): FullMatchCacheFile | null {
+  const ver = getIntegratedDataVersion();
+  if (loaded && loaded.dataVersion !== ver) {
+    loaded = null;
+  }
   if (loaded) return loaded;
   const file = cachePath(dataDir);
   if (!fs.existsSync(file)) return null;
@@ -153,17 +157,23 @@ export function sliceFullMatchCache(
 
 export function tryGetFullMatchDispatch(
   dataDir: string,
-  customerIds: number[],
+  customerIds: unknown[],
   lockedPairings: LockedPairing[] = [],
-  matchOnlyCustomerIds?: number[]
+  matchOnlyCustomerIds?: unknown[]
 ): FullMatchHit | null {
-  if (!customerIds.length) return null;
+  const cids = normalizeIdList(customerIds);
+  if (!cids.length) return null;
   const file = loadFullMatchCacheFile(dataDir);
   if (!file?.pairings?.length) return null;
   if (file.dataVersion !== getIntegratedDataVersion()) return null;
-  if (!isIdSubset(customerIds, file.fullMatchCustomerIds)) return null;
+  if (!isIdSubset(cids, file.fullMatchCustomerIds)) return null;
 
-  const sliced = sliceFullMatchCache(file, customerIds, lockedPairings, matchOnlyCustomerIds);
+  const sliced = sliceFullMatchCache(
+    file,
+    cids,
+    lockedPairings,
+    matchOnlyCustomerIds ? normalizeIdList(matchOnlyCustomerIds) : undefined
+  );
   if (sliced.complete) {
     return { mode: 'full', dispatch: sliced.dispatch };
   }

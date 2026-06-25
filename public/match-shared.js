@@ -4,7 +4,7 @@ const DISPATCH_STATE_KEYS = { ai: 'dispatch-ai-state', manual: 'dispatch-manual-
 const DISPATCH_HISTORY_KEYS = { ai: 'dispatch-ai-history', manual: 'dispatch-manual-history' };
 const MAX_MATCH_HISTORY = 40;
 /** 与 integrated-cache.ts INTEGRATED_DATA_VERSION 保持一致，用于静态 JSON 缓存穿透 */
-const STATIC_CACHE_BUST = '20260624-ai-cache-74';
+const STATIC_CACHE_BUST = '20260625-manual-preset-75';
 
 function getSampleDataCacheUrl() {
   return `/cache/sample-data.json?v=${STATIC_CACHE_BUST}`;
@@ -34,12 +34,14 @@ let _sampleDataPrefetch = null;
 let _bootstrapPrefetch = null;
 let _fullMatchPrefetch = null;
 const _manualPoolPrefetch = { back: null, front: null };
+const _manualPresetPrefetch = {};
 
 function resetStaticCachePrefetch() {
   _sampleDataPrefetch = null;
   _fullMatchPrefetch = null;
   _manualPoolPrefetch.back = null;
   _manualPoolPrefetch.front = null;
+  Object.keys(_manualPresetPrefetch).forEach((k) => delete _manualPresetPrefetch[k]);
 }
 
 function prefetchSampleData(force = false) {
@@ -83,6 +85,21 @@ function prefetchManualPoolCache(kind, force = false) {
 
 function prefetchAllManualPoolCaches() {
   return Promise.all([prefetchManualPoolCache('back'), prefetchManualPoolCache('front')]);
+}
+
+function prefetchManualPoolPresetCache(presetId, force = false) {
+  if (force) delete _manualPresetPrefetch[presetId];
+  if (!_manualPresetPrefetch[presetId]) {
+    _manualPresetPrefetch[presetId] = fetch(`/cache/manual-pool-preset-${presetId}.json?v=${STATIC_CACHE_BUST}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+  }
+  return _manualPresetPrefetch[presetId];
+}
+
+function prefetchAllManualPoolPresetsFromMeta(meta) {
+  const presets = meta?.presets || [];
+  return Promise.all(presets.map((p) => prefetchManualPoolPresetCache(p.id)));
 }
 
 function sameIdSet(a, b) {
